@@ -33,6 +33,57 @@
         <div class="shield-icon" id="shield-icon">1</div>
       </div>
 
+      <!-- MÀN HÌNH ĐĂNG NHẬP / ĐĂNG KÝ -->
+      <div id="screen-login" class="overlay hidden">
+        <div class="panel" style="max-width: 350px">
+          <h2 id="auth-title" class="title-main text-cyan">ĐĂNG NHẬP</h2>
+          <p class="desc" style="margin-bottom: 15px">
+            Kết nối với Database để lưu tiến trình
+          </p>
+
+          <input
+            type="text"
+            id="auth-username"
+            class="auth-input"
+            placeholder="Tên đăng nhập"
+            autocomplete="off"
+          />
+          <input
+            type="password"
+            id="auth-password"
+            class="auth-input"
+            placeholder="Mật khẩu"
+          />
+
+          <p
+            id="auth-error"
+            style="
+              color: #ff4444;
+              font-size: 13px;
+              margin-bottom: 10px;
+              height: 15px;
+            "
+          ></p>
+
+          <button id="btn-do-auth" style="width: 100%; margin: 0">
+            ĐĂNG NHẬP
+          </button>
+
+          <p style="margin-top: 20px; font-size: 14px; color: #aaa">
+            Chưa có tài khoản?
+            <span
+              id="btn-toggle-auth"
+              style="
+                color: #00ffcc;
+                cursor: pointer;
+                text-decoration: underline;
+              "
+              >Đăng ký ngay</span
+            >
+          </p>
+        </div>
+      </div>
+
       <!-- UI Screens -->
       <div id="screen-main" class="overlay">
         <div class="panel">
@@ -50,7 +101,18 @@
             id="btn-clear"
             style="background: #333; color: #aaa; font-size: 12px; padding: 8px"
           >
-            Reset Toàn Bộ Data
+            Xóa Data Local
+          </button>
+          <button
+            id="btn-logout"
+            style="
+              background: #ff4444;
+              color: #fff;
+              font-size: 12px;
+              padding: 8px;
+            "
+          >
+            Đăng Xuất
           </button>
         </div>
       </div>
@@ -74,6 +136,7 @@
           <div class="card-container" id="boss-cards"></div>
         </div>
       </div>
+
       <div id="screen-shop" class="overlay hidden">
         <div class="panel">
           <h2 class="title-main text-cyan">CỬA HÀNG NHÂN VẬT</h2>
@@ -92,6 +155,29 @@
           <div class="card-container" id="char-cards"></div>
           <button id="btn-char-back">Quay Lại</button>
         </div>
+      </div>
+    </div>
+
+    <div id="screen-upgrade-detail" class="overlay hidden">
+      <div class="panel" style="width: 500px">
+        <h2 id="upg-detail-title" class="title-main text-cyan">NÂNG CẤP</h2>
+        <p class="desc" style="margin-bottom: 10px">
+          Chỉ số cộng thêm sẽ áp dụng vĩnh viễn cho nhân vật này.
+        </p>
+        <div
+          id="upg-detail-coins"
+          class="shop-info"
+          style="font-size: 16px; margin-bottom: 20px"
+        >
+          Tiền: 0
+        </div>
+
+        <div
+          id="upg-detail-stats"
+          style="text-align: left; margin-bottom: 25px"
+        ></div>
+
+        <button id="btn-upg-detail-back" style="width: 100%">XONG</button>
       </div>
     </div>
 

@@ -41,20 +41,32 @@ export const CHARACTERS = [
     price: 300,
     baseStats: { hp: 3, speed: 6.5, fireRate: 18, multiShot: 1, bounces: 0 },
     skills: [
-      { name: "Phóng nhanh", desc: "+30% tốc độ trong 10 giây" },
-      { name: "Đạn laser", desc: "Tốc độ đạn +20%" },
-      { name: "Bước chân bóng", desc: "Giảm hồi chiêu lướt 15%" },
+      {
+        name: "Thân Pháp Kilowatt",
+        desc: "Tốc độ di chuyển cơ bản cực kỳ nhanh.",
+      },
+      { name: "Đạn Ánh Sáng", desc: "Độ trễ khi bắn thấp, xả đạn mượt mà." },
+      { name: "Nhanh Nhẹn", desc: "Dễ dàng luồn lách để né tránh sát thương." },
     ],
   },
   {
     id: "tank",
     name: "Pháo Đài",
     price: 300,
-    baseStats: { hp: 6, speed: 4, fireRate: 22, multiShot: 1, bounces: 1 },
+    baseStats: { hp: 4, speed: 4, fireRate: 22, multiShot: 1, bounces: 1 },
     skills: [
-      { name: "Giáp cứng", desc: "+1 khiên cơ bản" },
-      { name: "Mảnh vụn", desc: "Đạn nẩy +1" },
-      { name: "Hồi phục", desc: "Tăng hồi máu nhỏ" },
+      {
+        name: "Giáp Titanium",
+        desc: "Lượng Máu (HP) tối đa khởi đầu lớn hơn.",
+      },
+      {
+        name: "Lõi Năng Lượng",
+        desc: "Sở hữu 1 lớp khiên chặn sát thương, có thể tự hồi.",
+      },
+      {
+        name: "Đạn Đập Mảnh",
+        desc: "Đạn có khả năng nảy bật vào tường 1 lần.",
+      },
     ],
   },
   {
@@ -63,9 +75,12 @@ export const CHARACTERS = [
     price: 300,
     baseStats: { hp: 4, speed: 5, fireRate: 15, multiShot: 2, bounces: 0 },
     skills: [
-      { name: "Tập trung", desc: "Tăng sát thương đạn" },
-      { name: "Bắn chéo", desc: "Đạn thêm 1 tia" },
-      { name: "Định tâm", desc: "Giảm 5% tỉ lệ vắng" },
+      { name: "Súng Đôi", desc: "Mỗi lần bắn phóng ra 2 tia đạn cùng lúc." },
+      { name: "Cò Nhạy", desc: "Tốc độ xả đạn cơ bản ở mức rất cao." },
+      {
+        name: "Mắt Ưng",
+        desc: "Đường đạn bay sát nhau, dễ tập trung sát thương.",
+      },
     ],
   },
   {
@@ -74,9 +89,18 @@ export const CHARACTERS = [
     price: 300,
     baseStats: { hp: 3, speed: 4.5, fireRate: 16, multiShot: 1, bounces: 2 },
     skills: [
-      { name: "Nảy mạnh", desc: "Bounces +1" },
-      { name: "Mập mờ", desc: "Tăng gracePeriod" },
-      { name: "Lượn nhanh", desc: "Tăng tốc độ lướt" },
+      {
+        name: "Đạn Linh Hồn",
+        desc: "Đạn bay có khả năng nảy dội tường tối đa 2 lần.",
+      },
+      {
+        name: "Thoắt Ẩn",
+        desc: "Thời gian bất tử (chớp nháy) sau khi bị thương lâu hơn.",
+      },
+      {
+        name: "Góc Khuất",
+        desc: "Cực kỳ nguy hiểm khi chiến đấu trong không gian hẹp.",
+      },
     ],
   },
   {
@@ -85,9 +109,18 @@ export const CHARACTERS = [
     price: 300,
     baseStats: { hp: 4, speed: 5, fireRate: 12, multiShot: 3, bounces: 0 },
     skills: [
-      { name: "Lời nguyền", desc: "Thuốc tăng exp" },
-      { name: "Mưa đạn", desc: "Thêm 1 tia fire" },
-      { name: "Năng lượng", desc: "Hồi phục khi đánh" },
+      {
+        name: "Mưa Sao Băng",
+        desc: "Khởi đầu phóng ra 3 tia đạn tỏa theo hình nón.",
+      },
+      {
+        name: "Tụ Năng Lượng",
+        desc: "Tốc độ bắn liên tục (Fire Rate) nhanh nhất game.",
+      },
+      {
+        name: "Tri Thức",
+        desc: "Sinh ra để dọn dẹp số lượng lớn kẻ thù cùng lúc.",
+      },
     ],
   },
 ];

@@ -1,3 +1,6 @@
+export const TOKEN_KEY = "AsynchronousEchoes_Token";
+const API_URL = "http://localhost:3000/api";
+
 export function dist(x1, y1, x2, y2) {
   return Math.hypot(x2 - x1, y2 - y1);
 }
@@ -18,16 +21,44 @@ export function saveGame(state, GHOST_DATA_KEY) {
   );
 }
 
-export async function saveGameToServer(username, state, GHOST_DATA_KEY) {
+// GỌI API ĐĂNG KÝ
+export async function register(username, password) {
+  const res = await fetch(`${API_URL}/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Lỗi đăng ký");
+  return data;
+}
+
+// GỌI API ĐĂNG NHẬP
+export async function login(username, password) {
+  const res = await fetch(`${API_URL}/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || "Lỗi đăng nhập");
+  return data;
+}
+
+export async function saveGameToServer(state, GHOST_DATA_KEY) {
   saveGame(state, GHOST_DATA_KEY);
-  if (!username) return;
+
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) return;
 
   try {
-    await fetch("http://localhost:3000/api/save", {
+    await fetch(`${API_URL}/save`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
       body: JSON.stringify({
-        username,
         gameState: {
           level: state.currentLevel,
           runs: state.pastRuns,
@@ -47,16 +78,20 @@ export async function saveGameToServer(username, state, GHOST_DATA_KEY) {
   }
 }
 
-export async function loadGameFromServer(username) {
-  if (!username) return null;
+// GỌI API TẢI GAME TỪ SERVER (Dùng Token)
+export async function loadGameFromServer() {
+  const token = localStorage.getItem(TOKEN_KEY);
+  if (!token) return null;
 
   try {
-    let res = await fetch(
-      `http://localhost:3000/api/load?username=${encodeURIComponent(username)}`,
-    );
+    let res = await fetch(`${API_URL}/load`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
     if (!res.ok) return null;
-    let json = await res.json();
-    return json;
+    return await res.json();
   } catch (error) {
     console.warn("Load from server failed, offline mode:", error);
     return null;

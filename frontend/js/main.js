@@ -11,6 +11,9 @@ import {
   saveGame,
   saveGameToServer,
   loadGameFromServer,
+  TOKEN_KEY,
+  register,
+  login,
 } from "./utils.js";
 import { UI, updateHealthUI, generateCards, updateXPUI } from "./ui.js";
 import {
@@ -24,8 +27,8 @@ import {
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-import { TOKEN_KEY, register, login } from "./utils.js";
-
+// --- HỆ THỐNG ĐĂNG NHẬP / AUTH ---
+let isLoginMode = true;
 const showLoginScreen = () => {
   document.getElementById("screen-login").classList.remove("hidden");
   document.getElementById("screen-main").classList.add("hidden");
@@ -36,6 +39,76 @@ const showMainScreen = () => {
   document.getElementById("screen-main").classList.remove("hidden");
 };
 
+const btnToggleAuth = document.getElementById("btn-toggle-auth");
+const btnDoAuth = document.getElementById("btn-do-auth");
+const authTitle = document.getElementById("auth-title");
+const authError = document.getElementById("auth-error");
+const inUser = document.getElementById("auth-username");
+const inPass = document.getElementById("auth-password");
+
+btnToggleAuth.onclick = () => {
+  isLoginMode = !isLoginMode;
+  authError.innerText = "";
+  if (isLoginMode) {
+    authTitle.innerText = "ĐĂNG NHẬP";
+    btnDoAuth.innerText = "ĐĂNG NHẬP";
+    btnToggleAuth.innerText = "Đăng ký ngay";
+    btnToggleAuth.previousSibling.textContent = "Chưa có tài khoản? ";
+  } else {
+    authTitle.innerText = "ĐĂNG KÝ MỚI";
+    btnDoAuth.innerText = "TẠO TÀI KHOẢN";
+    btnToggleAuth.innerText = "Đăng nhập";
+    btnToggleAuth.previousSibling.textContent = "Đã có tài khoản? ";
+  }
+};
+
+btnDoAuth.onclick = async () => {
+  const u = inUser.value.trim();
+  const p = inPass.value.trim();
+  if (!u || !p) {
+    authError.innerText = "Vui lòng nhập đủ thông tin!";
+    return;
+  }
+
+  authError.innerText = "Đang kết nối...";
+  authError.style.color = "#00ffcc";
+  btnDoAuth.disabled = true;
+
+  try {
+    if (isLoginMode) {
+      const data = await login(u, p);
+      localStorage.setItem(TOKEN_KEY, data.token);
+      startGameAfterAuth();
+    } else {
+      await register(u, p);
+      authError.innerText = "Đăng ký thành công! Đang đăng nhập...";
+      const data = await login(u, p);
+      localStorage.setItem(TOKEN_KEY, data.token);
+      startGameAfterAuth();
+    }
+  } catch (error) {
+    authError.style.color = "#ff4444";
+    authError.innerText = error.message;
+  } finally {
+    btnDoAuth.disabled = false;
+  }
+};
+
+document.getElementById("btn-logout").onclick = () => {
+  if (confirm("Bạn có chắc muốn đăng xuất?")) {
+    localStorage.removeItem(TOKEN_KEY);
+    location.reload();
+  }
+};
+
+async function startGameAfterAuth() {
+  inUser.value = "";
+  inPass.value = "";
+  authError.innerText = "";
+  showMainScreen();
+  await syncRemoteState();
+}
+
 const token = localStorage.getItem(TOKEN_KEY);
 if (!token) {
   showLoginScreen();
@@ -44,7 +117,6 @@ if (!token) {
   setTimeout(() => syncRemoteState(), 0);
 }
 
-// -- INPUT --
 window.addEventListener("keydown", (e) => {
   if (e.code === "Space") e.preventDefault();
   state.keys[e.key.toLowerCase()] = true;
@@ -75,10 +147,9 @@ window.addEventListener("mouseup", (e) => {
   state.mouse.isDown = false;
 });
 
-// Gắn sự kiện nút bấm UI
 UI.btnStart.onclick = startGame;
 document.getElementById("btn-clear").addEventListener("click", () => {
-  if (confirm("Xóa toàn bộ tiến trình?")) {
+  if (confirm("Xóa toàn bộ tiến trình trên máy này?")) {
     localStorage.removeItem(GHOST_DATA_KEY);
     location.reload();
   }
@@ -86,10 +157,8 @@ document.getElementById("btn-clear").addEventListener("click", () => {
 
 setupMenuButtons();
 
-// -- GAME FLOW FUNCTIONS --
 function initGame(isNextLevel = false) {
   let saved = JSON.parse(localStorage.getItem(GHOST_DATA_KEY) || "{}");
-
   ensureCharacterData();
 
   if (!isNextLevel) {
@@ -116,18 +185,13 @@ function initGame(isNextLevel = false) {
     }
   }
 
-  if (
-    state.player.experience === undefined ||
-    state.player.experience === null
-  ) {
+  if (state.player.experience === undefined || state.player.experience === null)
     state.player.experience = 0;
-  }
   if (
     state.player.experienceToLevel === undefined ||
     state.player.experienceToLevel === null
-  ) {
+  )
     state.player.experienceToLevel = 100;
-  }
 
   state.isBossLevel = state.currentLevel % 5 === 0;
 
@@ -180,13 +244,9 @@ function initGame(isNextLevel = false) {
     state.maxFramesToSurvive = 999999;
     let bossStep = Math.floor(state.currentLevel / 5) - 1;
     let bossModes = [];
-    if (bossStep < 5) {
-      bossModes = [bossStep];
-    } else {
-      let firstMode = (bossStep - 5) % 5;
-      let secondMode = (bossStep - 4) % 5;
-      bossModes = [firstMode, secondMode];
-    }
+    if (bossStep < 5) bossModes = [bossStep];
+    else bossModes = [(bossStep - 5) % 5, (bossStep - 4) % 5];
+
     state.boss = {
       x: 400,
       y: 150,
@@ -236,9 +296,17 @@ function changeState(newState) {
         ? "Quá khứ đã bắt kịp bạn. Mất 1 Mạng."
         : "Sẵn sàng sinh tồn.";
 
-    if (state.player.hp <= 0) {
+    if (state.player && state.player.hp <= 0) {
       UI.desc.innerText = "BẠN ĐÃ CHẾT HOÀN TOÀN. BẮT ĐẦU LẠI TỪ MÀN 1.";
+      state.currentLevel = 1;
+      state.pastRuns = [];
+      let savedCoins = state.player.coins;
+      state.player = applyCharacterToPlayer(state.selectedCharacter);
+      state.player.coins = savedCoins;
+
       localStorage.removeItem(GHOST_DATA_KEY);
+      persistState();
+
       UI.btnStart.innerText = "LÀM LẠI TỪ ĐẦU";
       UI.btnStart.onclick = () => location.reload();
     } else {
@@ -267,13 +335,11 @@ function changeState(newState) {
 async function onCardSelected() {
   saveGame(state, GHOST_DATA_KEY);
   persistState();
-
   if (state.upgradeFromXP) {
     state.upgradeFromXP = false;
     changeState("PLAYING");
     return;
   }
-
   initGame(true);
   changeState("PLAYING");
 }
@@ -287,9 +353,8 @@ async function startGame() {
 function nextStage() {
   saveGame(state, GHOST_DATA_KEY);
   persistState();
-  if (state.currentLevel % 5 === 0) {
-    changeState("BOSS_REWARD");
-  } else {
+  if (state.currentLevel % 5 === 0) changeState("BOSS_REWARD");
+  else {
     initGame(true);
     changeState("PLAYING");
   }
@@ -310,7 +375,7 @@ function applyCharacterToPlayer(characterId) {
 
   base.hp = data.baseStats.hp + (upp.hp || 0);
   base.maxHp = base.hp;
-  base.speed = data.baseStats.speed * (1 + (upp.speed || 0) * 0.1);
+  base.speed = data.baseStats.speed * (1 + (upp.speed || 0) * 0.05);
   base.fireRate = Math.max(5, data.baseStats.fireRate - (upp.fireRate || 0));
   base.multiShot = data.baseStats.multiShot;
   base.bounces = data.baseStats.bounces;
@@ -327,11 +392,6 @@ function ensureCharacterData() {
   if (!state.ownedCharacters) state.ownedCharacters = ["speedster"];
   if (!state.selectedCharacter) state.selectedCharacter = "speedster";
   if (!state.characterUpgrades) state.characterUpgrades = {};
-}
-
-function addCharacterCoins(amount) {
-  if (!state.player) return;
-  state.player.coins = (state.player.coins || 0) + amount;
 }
 
 function openShop() {
@@ -358,7 +418,7 @@ function renderShop() {
       if (!owned && state.player.coins >= char.price) {
         state.player.coins -= char.price;
         state.ownedCharacters.push(char.id);
-        saveGame(state, GHOST_DATA_KEY);
+        persistState();
         renderShop();
       }
     };
@@ -372,48 +432,145 @@ function renderCharacterSelect() {
     `Tiền: ${state.player?.coins || 0}`;
   let container = document.getElementById("char-cards");
   container.innerHTML = "";
+
   CHARACTERS.forEach((char) => {
     let owned = state.ownedCharacters.includes(char.id);
     let selected = state.selectedCharacter === char.id;
     let card = document.createElement("div");
     card.className = "card";
-    card.innerHTML = `<h3>${char.name} ${selected ? "(Đã chọn)" : ""}</h3><p>HP: ${char.baseStats.hp}</p><p>Tốc độ: ${char.baseStats.speed}</p>`;
+    card.style.width = "170px"; // Cho card rộng ra tí để chứa text kỹ năng
+
+    // Hiển thị kỹ năng (Skills)
+    let skillsHtml = char.skills
+      .map((s) => `• <b>${s.name}</b>: ${s.desc}`)
+      .join("<br>");
+
+    card.innerHTML = `
+      <h3>${char.name} ${selected ? "(Đã chọn)" : ""}</h3>
+      <p style="margin-bottom: 5px;">HP: ${char.baseStats.hp} | Tốc độ: ${char.baseStats.speed}</p>
+      <div class="char-skills">${skillsHtml}</div>
+    `;
+
     if (owned) {
       let selBtn = document.createElement("button");
       selBtn.innerText = selected ? "Đã chọn" : "Chọn";
       selBtn.disabled = selected;
       selBtn.onclick = () => {
         state.selectedCharacter = char.id;
-        saveGame(state, GHOST_DATA_KEY);
+        persistState();
         renderCharacterSelect();
       };
       card.appendChild(selBtn);
 
+      // NÚT NÂNG CẤP MỞ RA MODAL CHI TIẾT
       let upgBtn = document.createElement("button");
-      upgBtn.innerText = "Nâng cấp HP (100 coins)";
+      upgBtn.innerText = "Nâng cấp";
+      upgBtn.style.background = "#00aaff";
       upgBtn.onclick = () => {
-        if (state.player.coins >= 100) {
-          state.player.coins -= 100;
-          let entry = state.characterUpgrades[char.id] || {
-            hp: 0,
-            speed: 0,
-            fireRate: 0,
-          };
-          entry.hp = (entry.hp || 0) + 1;
-          state.characterUpgrades[char.id] = entry;
-          saveGame(state, GHOST_DATA_KEY);
-          renderCharacterSelect();
-        }
+        document.getElementById("screen-char-select").classList.add("hidden");
+        document
+          .getElementById("screen-upgrade-detail")
+          .classList.remove("hidden");
+        renderUpgradeDetail(char.id);
       };
       card.appendChild(upgBtn);
     } else {
       let lock = document.createElement("div");
       lock.innerText = "Chưa mở khóa";
+      lock.style.marginTop = "10px";
       card.appendChild(lock);
     }
 
     container.appendChild(card);
   });
+}
+
+// HÀM RENDER CHI TIẾT NÂNG CẤP CHO TỪNG NHÂN VẬT (MỚI)
+function renderUpgradeDetail(charId) {
+  let char = CHARACTERS.find((c) => c.id === charId);
+  let upg = state.characterUpgrades[charId] || { hp: 0, speed: 0, fireRate: 0 };
+
+  document.getElementById("upg-detail-title").innerText =
+    `NÂNG CẤP: ${char.name.toUpperCase()}`;
+  document.getElementById("upg-detail-coins").innerText =
+    `Tiền hiện có: ${state.player?.coins || 0}`;
+
+  const MAX_LEVEL = 10;
+  // Công thức giá tiền: 100 base + 50 mỗi level
+  const getCost = (lvl) => 100 + lvl * 50;
+
+  const statsConfigs = [
+    {
+      key: "hp",
+      name: "Máu Tối Đa",
+      current: upg.hp || 0,
+      effect: "+1 HP / Cấp",
+    },
+    {
+      key: "speed",
+      name: "Tốc độ chạy",
+      current: upg.speed || 0,
+      effect: "+5% Tốc độ / Cấp",
+    },
+    {
+      key: "fireRate",
+      name: "Tốc độ bắn",
+      current: upg.fireRate || 0,
+      effect: "Giảm Delay / Cấp",
+    },
+  ];
+
+  let container = document.getElementById("upg-detail-stats");
+  container.innerHTML = "";
+
+  statsConfigs.forEach((stat) => {
+    let row = document.createElement("div");
+    row.className = "stat-row";
+
+    let isMax = stat.current >= MAX_LEVEL;
+    let cost = getCost(stat.current);
+    let canAfford = state.player.coins >= cost && !isMax;
+
+    // Render Progress Bar
+    let barHtml = "";
+    for (let i = 0; i < MAX_LEVEL; i++) {
+      barHtml += `<div class="stat-bar-segment ${i < stat.current ? "filled" : ""}"></div>`;
+    }
+
+    row.innerHTML = `
+      <div class="stat-info">
+        ${stat.name}
+        <span>${stat.effect}</span>
+      </div>
+      <div class="stat-bar-container">${barHtml}</div>
+    `;
+
+    let btn = document.createElement("button");
+    btn.className = "btn-stat-upg";
+    btn.innerText = isMax ? "TỐI ĐA" : `+ CẤP (${cost})`;
+    btn.disabled = !canAfford;
+
+    btn.onclick = () => {
+      if (state.player.coins >= cost && !isMax) {
+        state.player.coins -= cost;
+        if (!state.characterUpgrades[charId])
+          state.characterUpgrades[charId] = { hp: 0, speed: 0, fireRate: 0 };
+        state.characterUpgrades[charId][stat.key] = stat.current + 1;
+        persistState();
+        renderUpgradeDetail(charId); // Render lại để cập nhật thanh tiến trình và tiền
+      }
+    };
+
+    row.appendChild(btn);
+    container.appendChild(row);
+  });
+
+  // Nút Quay lại
+  document.getElementById("btn-upg-detail-back").onclick = () => {
+    document.getElementById("screen-upgrade-detail").classList.add("hidden");
+    document.getElementById("screen-char-select").classList.remove("hidden");
+    renderCharacterSelect();
+  };
 }
 
 function openCharacterSelect() {
@@ -436,23 +593,48 @@ function setupMenuButtons() {
   document.getElementById("btn-char-back").onclick = closeShopOrSelect;
 }
 
+// Đồng bộ với API Backend
 async function syncRemoteState() {
-  let remote = await loadGameFromServer(currentUser);
-  if (!remote || !remote.gameState) return;
+  let remote = await loadGameFromServer(); // Không cần username, API đọc từ Token
+  if (!remote) return;
 
   let saved = {
-    level: remote.gameState.level || 1,
-    runs: remote.gameState.runs || [],
-    player: remote.gameState.player || null,
-    ownedCharacters: remote.gameState.ownedCharacters || ["speedster"],
-    selectedCharacter: remote.gameState.selectedCharacter || "speedster",
-    characterUpgrades: remote.gameState.characterUpgrades || {},
+    level: remote.gameState?.level || 1,
+    runs: remote.gameState?.runs || [],
+    player: remote.gameState?.player || null,
+    ownedCharacters: remote.ownedCharacters ||
+      remote.gameState?.ownedCharacters || ["speedster"],
+    selectedCharacter:
+      remote.selectedCharacter ||
+      remote.gameState?.selectedCharacter ||
+      "speedster",
+    characterUpgrades:
+      remote.characterUpgrades || remote.gameState?.characterUpgrades || {},
   };
+
+  if (remote.coins !== undefined) {
+    if (!saved.player) saved.player = {};
+    saved.player.coins = remote.coins;
+  }
+
   localStorage.setItem(GHOST_DATA_KEY, JSON.stringify(saved));
+
+  state.ownedCharacters = saved.ownedCharacters;
+  state.selectedCharacter = saved.selectedCharacter;
+  state.characterUpgrades = saved.characterUpgrades;
+  if (!state.player) state.player = {};
+  state.player.coins = remote.coins || 0;
+
+  if (!document.getElementById("screen-shop").classList.contains("hidden"))
+    renderShop();
+  if (
+    !document.getElementById("screen-char-select").classList.contains("hidden")
+  )
+    renderCharacterSelect();
 }
 
 function persistState() {
-  saveGameToServer(currentUser, state, GHOST_DATA_KEY);
+  saveGameToServer(state, GHOST_DATA_KEY);
 }
 
 function addExperience(amount) {
@@ -586,7 +768,6 @@ function update() {
 
   if (boss) {
     spawnBossAttack();
-
     if (!boss.ghostsActive) {
       if (boss.summonCooldown > 0) boss.summonCooldown--;
       if (boss.summonCooldown <= 0) {
@@ -601,7 +782,6 @@ function update() {
         boss.summonCooldown = 10 * FPS;
       }
     }
-
     if (
       !isInvulnerable &&
       dist(boss.x, boss.y, player.x, player.y) < boss.radius + player.radius
@@ -626,6 +806,7 @@ function update() {
       b.vx *= -1;
       hitWall = true;
     }
+
     if (b.y < b.radius) {
       b.y = b.radius;
       b.vy *= -1;
@@ -639,7 +820,6 @@ function update() {
     if (hitWall) {
       if (b.bounces > 0) {
         b.bounces--;
-        // Keep bullet alive for the next bounce if additional bounces remain.
         if (b.bounces >= 0) b.life = Math.max(b.life, 30);
       } else b.life = 0;
     }
@@ -653,7 +833,7 @@ function update() {
       if (boss && dist(b.x, b.y, boss.x, boss.y) < boss.radius + b.radius) {
         boss.hp -= 1;
         addExperience(2);
-        state.player.coins = (state.player.coins || 0) + 20;
+        state.player.coins = (state.player.coins || 0) + 2;
         UI.bossHp.style.width = Math.max(0, (boss.hp / boss.maxHp) * 100) + "%";
         bullets.splice(i, 1);
         if (boss.hp <= 0) {
@@ -674,8 +854,7 @@ function update() {
         ) {
           if (state.isBossLevel) {
             ghosts.splice(j, 1);
-            addExperience(15);
-            state.player.coins = (state.player.coins || 0) + 30;
+            state.player.coins = (state.player.coins || 0) + 10;
           } else {
             g.isStunned = 300;
             addExperience(6);
@@ -706,9 +885,8 @@ function update() {
 
     if (idx1 < g.record.length) {
       activeGhosts++;
-      if (g.isStunned > 0) {
-        g.isStunned--;
-      } else {
+      if (g.isStunned > 0) g.isStunned--;
+      else {
         let prevX = g.x,
           prevY = g.y;
         let action1 = g.record[idx1];
@@ -786,7 +964,6 @@ function update() {
 
 function draw() {
   let { player, boss, bullets, ghosts, mouse } = state;
-
   ctx.fillStyle = "#0a0a0c";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -816,7 +993,6 @@ function draw() {
     ctx.shadowColor = ctx.strokeStyle;
     ctx.stroke();
     ctx.shadowBlur = 0;
-
     ctx.fillStyle = ctx.strokeStyle;
     ctx.fillRect(boss.x - 10, boss.y - 10, 20, 20);
   }
@@ -845,7 +1021,6 @@ function draw() {
       ctx.lineCap = "round";
       ctx.stroke();
     }
-
     ctx.beginPath();
     ctx.arc(g.x, g.y, g.radius, 0, Math.PI * 2);
     ctx.fillStyle = g.isStunned > 0 ? "#333" : "#ff4444";
@@ -891,7 +1066,6 @@ function draw() {
     ctx.shadowColor = player.color;
     ctx.fill();
     ctx.shadowBlur = 0;
-
     if (player.shield > 0) {
       ctx.beginPath();
       ctx.arc(player.x, player.y, player.radius + 6, 0, Math.PI * 2);
@@ -915,6 +1089,3 @@ function gameLoop() {
     state.loopId = requestAnimationFrame(gameLoop);
   }
 }
-
-// Khởi chạy game từ menu
-changeState("MENU");
