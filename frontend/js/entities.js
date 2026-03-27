@@ -26,6 +26,7 @@ export function getInitialPlayerState() {
     dashDy: 0,
     experience: 0,
     experienceToLevel: 100,
+    buffs: { multiShot: 0, bounces: 0 },
   };
 }
 
@@ -61,13 +62,21 @@ export function spawnBullet(
       : 3.5 + state.currentLevel * 0.2;
 
   let isGhostShot = source === "ghost";
-  let count = isPlayer || isGhostShot ? state.player.multiShot : 1;
-  let bounceCount =
-    isPlayer || isGhostShot ? Math.max(0, state.player.bounces || 0) : 0;
-  let spread = 0.15;
-  let startAngle = angle - (spread * (count - 1)) / 2;
 
-  for (let i = 0; i < count; i++) {
+  // KẾT HỢP CHỈ SỐ GỐC VÀ BUFF TỪ KỸ NĂNG
+  let baseMulti = isPlayer || isGhostShot ? state.player.multiShot : 1;
+  let baseBounce =
+    isPlayer || isGhostShot ? Math.max(0, state.player.bounces || 0) : 0;
+
+  if (isPlayer && state.player.buffs) {
+    baseMulti += state.player.buffs.multiShot;
+    baseBounce += state.player.buffs.bounces;
+  }
+
+  let spread = 0.15;
+  let startAngle = angle - (spread * (baseMulti - 1)) / 2;
+
+  for (let i = 0; i < baseMulti; i++) {
     let a = startAngle + i * spread;
     state.bullets.push({
       x: sx,
@@ -77,7 +86,7 @@ export function spawnBullet(
       isPlayer: isPlayer,
       radius: state.isBossLevel && !isPlayer ? 6 : 4,
       life: 180,
-      bounces: bounceCount,
+      bounces: baseBounce,
       style: style,
     });
   }

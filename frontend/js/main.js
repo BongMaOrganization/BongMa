@@ -117,6 +117,7 @@ if (!token) {
   setTimeout(() => syncRemoteState(), 0);
 }
 
+// -- INPUT --
 window.addEventListener("keydown", (e) => {
   if (e.code === "Space") e.preventDefault();
   state.keys[e.key.toLowerCase()] = true;
@@ -157,6 +158,67 @@ document.getElementById("btn-clear").addEventListener("click", () => {
 
 setupMenuButtons();
 
+// --- TẠO GIAO DIỆN HUD CHO KỸ NĂNG BẰNG CODE (CỰC KỲ AN TOÀN) ---
+function ensureSkillsUI() {
+  if (document.getElementById("skills-ui")) return;
+
+  const hud = document.querySelector(".hud-layer");
+  if (!hud) return;
+
+  // Tự động chèn CSS cho UI Kỹ năng
+  if (!document.getElementById("skills-css")) {
+    const style = document.createElement("style");
+    style.id = "skills-css";
+    style.innerHTML = `
+      #skills-ui { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 15px; }
+      .skill-slot { position: relative; width: 50px; height: 50px; background: #1a1a24; border: 2px solid #444; border-radius: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.5); }
+      .skill-slot.ready { border-color: #00ffcc; box-shadow: 0 0 10px rgba(0, 255, 204, 0.4); }
+      .skill-slot.active { border-color: #ff00ff; box-shadow: 0 0 15px rgba(255, 0, 255, 0.6); }
+      .skill-key { font-size: 20px; font-weight: bold; color: #fff; z-index: 2; }
+      .skill-cd-overlay { position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; background: rgba(0, 0, 0, 0.75); z-index: 1; transition: height 0.1s linear; }
+      .skill-cd-text { position: absolute; font-size: 16px; font-weight: bold; color: #ff4444; z-index: 3; text-shadow: 1px 1px 2px #000; }
+    `;
+    document.head.appendChild(style);
+  }
+
+  const skillsUI = document.createElement("div");
+  skillsUI.id = "skills-ui";
+  skillsUI.innerHTML = `
+    <div class="skill-slot" id="slot-q"><span class="skill-key">Q</span><div class="skill-cd-overlay" id="cd-q"></div><div class="skill-cd-text" id="cd-text-q"></div></div>
+    <div class="skill-slot" id="slot-e"><span class="skill-key">E</span><div class="skill-cd-overlay" id="cd-e"></div><div class="skill-cd-text" id="cd-text-e"></div></div>
+    <div class="skill-slot" id="slot-r"><span class="skill-key">R</span><div class="skill-cd-overlay" id="cd-r"></div><div class="skill-cd-text" id="cd-text-r"></div></div>
+  `;
+  hud.appendChild(skillsUI);
+}
+
+// Cứu cánh tự động sửa lỗi tính Cooldown bị NaN
+function getCooldown(charId, skillIndex) {
+  const defaultCDs = {
+    speedster: [8, 15, 40],
+    tank: [15, 20, 60],
+    sharpshooter: [12, 18, 50],
+    ghost: [10, 12, 60],
+    mage: [8, 20, 60],
+  };
+  const defaultInit = {
+    speedster: [0, 0, 30],
+    tank: [0, 0, 30],
+    sharpshooter: [0, 0, 30],
+    ghost: [0, 0, 30],
+    mage: [0, 0, 30],
+  };
+  let charConfig = getCharacterConfig(charId);
+  let cd = charConfig.skills[skillIndex]?.cooldown;
+  let initCd = charConfig.skills[skillIndex]?.initialCooldown;
+
+  return {
+    cd: cd !== undefined ? cd : defaultCDs[charId]?.[skillIndex] || 10,
+    initCd:
+      initCd !== undefined ? initCd : defaultInit[charId]?.[skillIndex] || 0,
+  };
+}
+
+// -- GAME FLOW FUNCTIONS --
 function initGame(isNextLevel = false) {
   let saved = JSON.parse(localStorage.getItem(GHOST_DATA_KEY) || "{}");
   ensureCharacterData();
@@ -184,6 +246,18 @@ function initGame(isNextLevel = false) {
       state.pastRuns.push(state.currentRunRecord);
     }
   }
+
+  // --- THIẾT LẬP KỸ NĂNG KHI VÀO MÀN MỚI ---
+  ensureSkillsUI(); // Gọi vẽ UI Kỹ Năng
+
+  let charId = state.player.characterId;
+  state.skillsCD = {
+    q: getCooldown(charId, 0).initCd * FPS,
+    e: getCooldown(charId, 1).initCd * FPS,
+    r: getCooldown(charId, 2).initCd * FPS,
+  };
+  state.activeBuffs = { q: 0, e: 0, r: 0 };
+  state.prevKeys = {}; // Lưu lại phím để tránh spam
 
   if (state.player.experience === undefined || state.player.experience === null)
     state.player.experience = 0;
@@ -303,10 +377,8 @@ function changeState(newState) {
       let savedCoins = state.player.coins;
       state.player = applyCharacterToPlayer(state.selectedCharacter);
       state.player.coins = savedCoins;
-
       localStorage.removeItem(GHOST_DATA_KEY);
       persistState();
-
       UI.btnStart.innerText = "LÀM LẠI TỪ ĐẦU";
       UI.btnStart.onclick = () => location.reload();
     } else {
@@ -410,7 +482,19 @@ function renderShop() {
     let owned = state.ownedCharacters.includes(char.id);
     let card = document.createElement("div");
     card.className = "card";
-    card.innerHTML = `<h3>${char.name}</h3><p>Giá: ${char.price}</p><p>${char.skills[0].desc}</p>`;
+
+    // Mở rộng thẻ và map đầy đủ 3 kỹ năng
+    card.style.width = "190px";
+    let skillsHtml = char.skills
+      .map((s) => `• <b>${s.name}</b>: ${s.desc}`)
+      .join("<br>");
+
+    card.innerHTML = `
+      <h3>${char.name}</h3>
+      <p style="margin-bottom: 5px; color: #ffd700;">Giá: ${char.price}</p>
+      <div class="char-skills" style="margin-bottom: 10px; height: 95px; overflow-y: auto;">${skillsHtml}</div>
+    `;
+
     let btn = document.createElement("button");
     btn.innerText = owned ? "Đã mở khóa" : "Mua";
     btn.disabled = owned || (state.player?.coins || 0) < char.price;
@@ -432,25 +516,20 @@ function renderCharacterSelect() {
     `Tiền: ${state.player?.coins || 0}`;
   let container = document.getElementById("char-cards");
   container.innerHTML = "";
-
   CHARACTERS.forEach((char) => {
     let owned = state.ownedCharacters.includes(char.id);
     let selected = state.selectedCharacter === char.id;
     let card = document.createElement("div");
     card.className = "card";
-    card.style.width = "170px"; // Cho card rộng ra tí để chứa text kỹ năng
-
-    // Hiển thị kỹ năng (Skills)
+    card.style.width = "170px";
     let skillsHtml = char.skills
       .map((s) => `• <b>${s.name}</b>: ${s.desc}`)
       .join("<br>");
-
     card.innerHTML = `
       <h3>${char.name} ${selected ? "(Đã chọn)" : ""}</h3>
       <p style="margin-bottom: 5px;">HP: ${char.baseStats.hp} | Tốc độ: ${char.baseStats.speed}</p>
       <div class="char-skills">${skillsHtml}</div>
     `;
-
     if (owned) {
       let selBtn = document.createElement("button");
       selBtn.innerText = selected ? "Đã chọn" : "Chọn";
@@ -461,8 +540,6 @@ function renderCharacterSelect() {
         renderCharacterSelect();
       };
       card.appendChild(selBtn);
-
-      // NÚT NÂNG CẤP MỞ RA MODAL CHI TIẾT
       let upgBtn = document.createElement("button");
       upgBtn.innerText = "Nâng cấp";
       upgBtn.style.background = "#00aaff";
@@ -480,25 +557,19 @@ function renderCharacterSelect() {
       lock.style.marginTop = "10px";
       card.appendChild(lock);
     }
-
     container.appendChild(card);
   });
 }
 
-// HÀM RENDER CHI TIẾT NÂNG CẤP CHO TỪNG NHÂN VẬT (MỚI)
 function renderUpgradeDetail(charId) {
   let char = CHARACTERS.find((c) => c.id === charId);
   let upg = state.characterUpgrades[charId] || { hp: 0, speed: 0, fireRate: 0 };
-
   document.getElementById("upg-detail-title").innerText =
     `NÂNG CẤP: ${char.name.toUpperCase()}`;
   document.getElementById("upg-detail-coins").innerText =
     `Tiền hiện có: ${state.player?.coins || 0}`;
-
   const MAX_LEVEL = 10;
-  // Công thức giá tiền: 100 base + 50 mỗi level
   const getCost = (lvl) => 100 + lvl * 50;
-
   const statsConfigs = [
     {
       key: "hp",
@@ -519,37 +590,22 @@ function renderUpgradeDetail(charId) {
       effect: "Giảm Delay / Cấp",
     },
   ];
-
   let container = document.getElementById("upg-detail-stats");
   container.innerHTML = "";
-
   statsConfigs.forEach((stat) => {
     let row = document.createElement("div");
     row.className = "stat-row";
-
     let isMax = stat.current >= MAX_LEVEL;
     let cost = getCost(stat.current);
     let canAfford = state.player.coins >= cost && !isMax;
-
-    // Render Progress Bar
     let barHtml = "";
-    for (let i = 0; i < MAX_LEVEL; i++) {
+    for (let i = 0; i < MAX_LEVEL; i++)
       barHtml += `<div class="stat-bar-segment ${i < stat.current ? "filled" : ""}"></div>`;
-    }
-
-    row.innerHTML = `
-      <div class="stat-info">
-        ${stat.name}
-        <span>${stat.effect}</span>
-      </div>
-      <div class="stat-bar-container">${barHtml}</div>
-    `;
-
+    row.innerHTML = `<div class="stat-info">${stat.name}<span>${stat.effect}</span></div><div class="stat-bar-container">${barHtml}</div>`;
     let btn = document.createElement("button");
     btn.className = "btn-stat-upg";
     btn.innerText = isMax ? "TỐI ĐA" : `+ CẤP (${cost})`;
     btn.disabled = !canAfford;
-
     btn.onclick = () => {
       if (state.player.coins >= cost && !isMax) {
         state.player.coins -= cost;
@@ -557,15 +613,12 @@ function renderUpgradeDetail(charId) {
           state.characterUpgrades[charId] = { hp: 0, speed: 0, fireRate: 0 };
         state.characterUpgrades[charId][stat.key] = stat.current + 1;
         persistState();
-        renderUpgradeDetail(charId); // Render lại để cập nhật thanh tiến trình và tiền
+        renderUpgradeDetail(charId);
       }
     };
-
     row.appendChild(btn);
     container.appendChild(row);
   });
-
-  // Nút Quay lại
   document.getElementById("btn-upg-detail-back").onclick = () => {
     document.getElementById("screen-upgrade-detail").classList.add("hidden");
     document.getElementById("screen-char-select").classList.remove("hidden");
@@ -593,11 +646,9 @@ function setupMenuButtons() {
   document.getElementById("btn-char-back").onclick = closeShopOrSelect;
 }
 
-// Đồng bộ với API Backend
 async function syncRemoteState() {
-  let remote = await loadGameFromServer(); // Không cần username, API đọc từ Token
+  let remote = await loadGameFromServer();
   if (!remote) return;
-
   let saved = {
     level: remote.gameState?.level || 1,
     runs: remote.gameState?.runs || [],
@@ -611,14 +662,11 @@ async function syncRemoteState() {
     characterUpgrades:
       remote.characterUpgrades || remote.gameState?.characterUpgrades || {},
   };
-
   if (remote.coins !== undefined) {
     if (!saved.player) saved.player = {};
     saved.player.coins = remote.coins;
   }
-
   localStorage.setItem(GHOST_DATA_KEY, JSON.stringify(saved));
-
   state.ownedCharacters = saved.ownedCharacters;
   state.selectedCharacter = saved.selectedCharacter;
   state.characterUpgrades = saved.characterUpgrades;
@@ -640,7 +688,6 @@ function persistState() {
 function addExperience(amount) {
   if (!state.player) return;
   state.player.experience += amount;
-
   if (state.player.experience >= state.player.experienceToLevel) {
     state.player.experience -= state.player.experienceToLevel;
     state.player.experienceToLevel = Math.max(
@@ -657,6 +704,13 @@ function addExperience(amount) {
 
 function playerTakeDamage() {
   if (state.player.gracePeriod > 0 || state.player.dashTimeLeft > 0) return;
+  // Bất tử từ Kỹ năng Tank E hoặc Ghost Q
+  if (
+    state.activeBuffs.e > 0 &&
+    (state.player.characterId === "tank" ||
+      state.player.characterId === "ghost")
+  )
+    return;
 
   if (state.player.shield > 0) {
     state.player.shield--;
@@ -667,16 +721,173 @@ function playerTakeDamage() {
 
   state.player.gracePeriod = 60;
   updateHealthUI();
-
   ctx.fillStyle = "rgba(255,0,0,0.5)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
   if (state.player.hp <= 0) changeState("GAME_OVER");
+}
+
+// --- THỰC THI KỸ NĂNG ---
+function triggerSkill(key) {
+  let char = state.player.characterId;
+  let skillIndex = key === "q" ? 0 : key === "e" ? 1 : 2;
+
+  // Dùng hàm lấy Cooldown an toàn
+  let cd = getCooldown(char, skillIndex).cd * FPS;
+
+  // Set Cooldown
+  state.skillsCD[key] = cd;
+
+  // -- SPEEDSTER --
+  if (char === "speedster") {
+    if (key === "q") state.activeBuffs.q = 3 * FPS; // Tăng tốc 3s
+    if (key === "e") state.activeBuffs.e = 4 * FPS; // Xả đạn 4s
+    if (key === "r") {
+      // Bắn 20 viên đạn tỏa ra 360 độ
+      for (let i = 0; i < Math.PI * 2; i += Math.PI / 10) {
+        spawnBullet(
+          state.player.x,
+          state.player.y,
+          state.player.x + Math.cos(i),
+          state.player.y + Math.sin(i),
+          true,
+        );
+      }
+    }
+  }
+  // -- TANK --
+  else if (char === "tank") {
+    if (key === "q") {
+      state.player.shield = Math.min((state.player.maxShield || 0) + 1, 5); // Tối đa 5 khiên
+      updateHealthUI();
+    }
+    if (key === "e") state.activeBuffs.e = 3 * FPS; // Bất tử 3s
+    if (key === "r") {
+      // Quét đạn địch xung quanh bán kính 200px
+      state.bullets.forEach((b) => {
+        if (!b.isPlayer && dist(state.player.x, state.player.y, b.x, b.y) < 200)
+          b.life = 0;
+      });
+      state.activeBuffs.r = 15; // 15 frames để vẽ visual
+    }
+  }
+  // -- SHARPSHOOTER --
+  else if (char === "sharpshooter") {
+    if (key === "q") state.activeBuffs.q = 5 * FPS; // +2 nảy
+    if (key === "e") state.activeBuffs.e = 4 * FPS; // +3 đạn
+    if (key === "r") {
+      // Gây sát thương màn hình
+      state.ghosts.forEach((g) => {
+        if (g.x > 0) g.isStunned = 300;
+      });
+      if (state.boss) state.boss.hp -= 30;
+      state.activeBuffs.r = 10; // Chớp màn hình
+    }
+  }
+  // -- GHOST --
+  else if (char === "ghost") {
+    if (key === "q") state.activeBuffs.e = 3 * FPS; // (Dùng chung biến bất tử e của Tank)
+    if (key === "e") {
+      // Blink tới chuột
+      state.player.x = Math.max(
+        state.player.radius,
+        Math.min(canvas.width - state.player.radius, state.mouse.x),
+      );
+      state.player.y = Math.max(
+        state.player.radius,
+        Math.min(canvas.height - state.player.radius, state.mouse.y),
+      );
+    }
+    if (key === "r") {
+      let absorbed = 0;
+      state.bullets.forEach((b) => {
+        if (
+          !b.isPlayer &&
+          dist(state.player.x, state.player.y, b.x, b.y) < 150
+        ) {
+          b.life = 0;
+          absorbed++;
+        }
+      });
+      if (absorbed > 0 && state.player.hp < state.player.maxHp) {
+        state.player.hp++;
+        updateHealthUI();
+      }
+    }
+  }
+  // -- MAGE --
+  else if (char === "mage") {
+    if (key === "q") {
+      for (let i = 0; i < Math.PI * 2; i += Math.PI / 4) {
+        spawnBullet(
+          state.player.x,
+          state.player.y,
+          state.player.x + Math.cos(i),
+          state.player.y + Math.sin(i),
+          true,
+          1,
+        );
+      }
+    }
+    if (key === "e") {
+      if (state.player.hp > 1) {
+        state.player.hp--;
+        updateHealthUI();
+        addExperience(50);
+      }
+    }
+    if (key === "r") state.activeBuffs.r = 4 * FPS; // Đóng băng 4s
+  }
+}
+
+function updateSkillsUI() {
+  ["q", "e", "r"].forEach((key) => {
+    let char = state.player.characterId;
+    let skillIndex = key === "q" ? 0 : key === "e" ? 1 : 2;
+    let maxCd = getCooldown(char, skillIndex).cd * FPS;
+
+    let slot = document.getElementById(`slot-${key}`);
+    // Đề phòng trường hợp UI chưa kịp tải thì bỏ qua, không văng lỗi
+    if (!slot) return;
+
+    let overlay = document.getElementById(`cd-${key}`);
+    let text = document.getElementById(`cd-text-${key}`);
+
+    if (state.skillsCD[key] > 0) {
+      slot.classList.remove("ready", "active");
+      let percent = (state.skillsCD[key] / maxCd) * 100;
+      overlay.style.height = `${Math.min(100, percent)}%`;
+      text.innerText = Math.ceil(state.skillsCD[key] / FPS);
+    } else {
+      overlay.style.height = "0%";
+      text.innerText = "";
+      if (state.activeBuffs[key] > 0) {
+        slot.classList.add("active");
+        slot.classList.remove("ready");
+      } else {
+        slot.classList.add("ready");
+        slot.classList.remove("active");
+      }
+    }
+  });
 }
 
 // -- MAIN LOOP --
 function update() {
-  let { player, boss, bullets, ghosts, keys, mouse } = state;
+  let { player, boss, bullets, ghosts, keys, mouse, skillsCD, activeBuffs } =
+    state;
+
+  // --- KIỂM TRA PHÍM KỸ NĂNG (Bấm 1 lần) ---
+  ["q", "e", "r"].forEach((key) => {
+    // Nếu phím đang bấm, frame trước chưa bấm, và cooldown đã hết
+    if (keys[key] && !state.prevKeys[key] && skillsCD[key] <= 0) {
+      triggerSkill(key);
+    }
+    // Giảm thời gian hồi chiêu
+    if (skillsCD[key] > 0) skillsCD[key]--;
+    // Giảm thời gian buff
+    if (activeBuffs[key] > 0) activeBuffs[key]--;
+  });
+  updateSkillsUI();
 
   if (player.gracePeriod > 0) player.gracePeriod--;
   if (player.dashCooldownTimer > 0) player.dashCooldownTimer--;
@@ -689,8 +900,26 @@ function update() {
     }
   }
 
+  // --- ÁP DỤNG BUFF VÀO CHỈ SỐ ---
+  let isSpeedsterQ = player.characterId === "speedster" && activeBuffs.q > 0;
+  let currentSpeed = player.speed * (isSpeedsterQ ? 1.5 : 1);
+
+  let isSpeedsterE = player.characterId === "speedster" && activeBuffs.e > 0;
+  let currentFireRate = isSpeedsterE ? 4 : player.fireRate; // Xả đạn siêu nhanh
+
+  let isSharpshootE =
+    player.characterId === "sharpshooter" && activeBuffs.e > 0;
+  let currentMultiShot = player.multiShot + (isSharpshootE ? 3 : 0);
+
+  let isSharpshootQ =
+    player.characterId === "sharpshooter" && activeBuffs.q > 0;
+  let currentBounces = (player.bounces || 0) + (isSharpshootQ ? 2 : 0);
+
+  // Kiểm tra Mage R (Đóng băng)
+  let isTimeFrozen = player.characterId === "mage" && activeBuffs.r > 0;
+
   if (player.dashCooldownTimer <= 0) {
-    UI.dash.innerText = "Lướt: SẴN SÀNG";
+    UI.dash.innerText = "Lướt [SPACE]: SẴN SÀNG";
     UI.dash.style.color = "#00ffcc";
   } else {
     UI.dash.innerText = `Lướt: ${(player.dashCooldownTimer / 60).toFixed(1)}s`;
@@ -723,12 +952,12 @@ function update() {
   }
 
   if (player.dashTimeLeft > 0) {
-    player.x += player.dashDx * (player.speed * 3);
-    player.y += player.dashDy * (player.speed * 3);
+    player.x += player.dashDx * (currentSpeed * 3);
+    player.y += player.dashDy * (currentSpeed * 3);
     player.dashTimeLeft--;
   } else {
-    player.x += dx * player.speed;
-    player.y += dy * player.speed;
+    player.x += dx * currentSpeed;
+    player.y += dy * currentSpeed;
   }
 
   player.x = Math.max(
@@ -750,8 +979,18 @@ function update() {
     player.cooldown <= 0 &&
     player.dashTimeLeft <= 0
   ) {
+    // Override hàm spawnBullet tạm thời bằng cách truyền tham số buff vào entities qua state
+    let originalMulti = state.player.multiShot;
+    let originalBounce = state.player.bounces;
+    state.player.multiShot = currentMultiShot;
+    state.player.bounces = currentBounces;
+
     spawnBullet(player.x, player.y, mouse.x, mouse.y, true);
-    player.cooldown = player.fireRate;
+
+    state.player.multiShot = originalMulti;
+    state.player.bounces = originalBounce;
+
+    player.cooldown = currentFireRate;
     shotThisFrame = true;
     targetX = mouse.x;
     targetY = mouse.y;
@@ -764,37 +1003,49 @@ function update() {
     state.currentRunRecord.push(frameData);
   }
 
-  let isInvulnerable = player.gracePeriod > 0 || player.dashTimeLeft > 0;
+  let isInvulnerable =
+    player.gracePeriod > 0 ||
+    player.dashTimeLeft > 0 ||
+    (activeBuffs.e > 0 &&
+      (player.characterId === "tank" || player.characterId === "ghost"));
 
-  if (boss) {
-    spawnBossAttack();
-    if (!boss.ghostsActive) {
-      if (boss.summonCooldown > 0) boss.summonCooldown--;
-      if (boss.summonCooldown <= 0) {
-        bossSummonGhosts();
-        boss.ghostsActive = true;
-        ghosts = state.ghosts;
+  // Nếu bị Mage đóng băng, Boss và Bóng ma không hoạt động
+  if (!isTimeFrozen) {
+    if (boss) {
+      spawnBossAttack();
+      if (!boss.ghostsActive) {
+        if (boss.summonCooldown > 0) boss.summonCooldown--;
+        if (boss.summonCooldown <= 0) {
+          bossSummonGhosts();
+          boss.ghostsActive = true;
+          ghosts = state.ghosts;
+        }
+      } else {
+        let activeG = ghosts.length;
+        if (activeG === 0) {
+          boss.ghostsActive = false;
+          boss.summonCooldown = 10 * FPS;
+        }
       }
-    } else {
-      let activeG = ghosts.length;
-      if (activeG === 0) {
-        boss.ghostsActive = false;
-        boss.summonCooldown = 10 * FPS;
+      if (
+        !isInvulnerable &&
+        dist(boss.x, boss.y, player.x, player.y) < boss.radius + player.radius
+      ) {
+        playerTakeDamage();
       }
-    }
-    if (
-      !isInvulnerable &&
-      dist(boss.x, boss.y, player.x, player.y) < boss.radius + player.radius
-    ) {
-      playerTakeDamage();
     }
   }
 
   for (let i = bullets.length - 1; i >= 0; i--) {
     let b = bullets[i];
-    b.x += b.vx;
-    b.y += b.vy;
-    b.life--;
+    // Đạn địch bị đóng băng
+    if (!b.isPlayer && isTimeFrozen) {
+      // Đứng im
+    } else {
+      b.x += b.vx;
+      b.y += b.vy;
+      b.life--;
+    }
 
     let hitWall = false;
     if (b.x < b.radius) {
@@ -833,7 +1084,6 @@ function update() {
       if (boss && dist(b.x, b.y, boss.x, boss.y) < boss.radius + b.radius) {
         boss.hp -= 1;
         addExperience(2);
-        state.player.coins = (state.player.coins || 0) + 2;
         UI.bossHp.style.width = Math.max(0, (boss.hp / boss.maxHp) * 100) + "%";
         bullets.splice(i, 1);
         if (boss.hp <= 0) {
@@ -880,64 +1130,67 @@ function update() {
 
   let activeGhosts = 0;
   for (let g of ghosts) {
-    let exactIndex = g.timer * g.speedRate;
-    let idx1 = Math.floor(exactIndex);
+    if (!isTimeFrozen) {
+      let exactIndex = g.timer * g.speedRate;
+      let idx1 = Math.floor(exactIndex);
 
-    if (idx1 < g.record.length) {
-      activeGhosts++;
-      if (g.isStunned > 0) g.isStunned--;
-      else {
-        let prevX = g.x,
-          prevY = g.y;
-        let action1 = g.record[idx1];
+      if (idx1 < g.record.length) {
+        activeGhosts++;
+        if (g.isStunned > 0) g.isStunned--;
+        else {
+          let prevX = g.x,
+            prevY = g.y;
+          let action1 = g.record[idx1];
 
-        if (idx1 + 1 < g.record.length) {
-          let action2 = g.record[idx1 + 1];
-          let t = exactIndex - idx1;
-          g.x = action1[0] + (action2[0] - action1[0]) * t;
-          g.y = action1[1] + (action2[1] - action1[1]) * t;
-        } else {
-          g.x = action1[0];
-          g.y = action1[1];
+          if (idx1 + 1 < g.record.length) {
+            let action2 = g.record[idx1 + 1];
+            let t = exactIndex - idx1;
+            g.x = action1[0] + (action2[0] - action1[0]) * t;
+            g.y = action1[1] + (action2[1] - action1[1]) * t;
+          } else {
+            g.x = action1[0];
+            g.y = action1[1];
+          }
+
+          g.historyPath.push({ x: g.x, y: g.y });
+          if (g.historyPath.length > 8) g.historyPath.shift();
+
+          if (g.lastIdx !== idx1 && action1.length === 4) {
+            spawnBullet(g.x, g.y, action1[2], action1[3], false, 0, "ghost");
+          }
+          g.lastIdx = idx1;
+
+          let ghostIsDashing = dist(g.x, g.y, prevX, prevY) > 8 * g.speedRate;
+          if (
+            !isInvulnerable &&
+            !ghostIsDashing &&
+            dist(g.x, g.y, player.x, player.y) < player.radius + g.radius - 2
+          ) {
+            playerTakeDamage();
+          }
         }
-
-        g.historyPath.push({ x: g.x, y: g.y });
-        if (g.historyPath.length > 8) g.historyPath.shift();
-
-        if (g.lastIdx !== idx1 && action1.length === 4) {
-          spawnBullet(g.x, g.y, action1[2], action1[3], false, 0, "ghost");
-        }
-        g.lastIdx = idx1;
-
-        let ghostIsDashing = dist(g.x, g.y, prevX, prevY) > 8 * g.speedRate;
-        if (
-          !isInvulnerable &&
-          !ghostIsDashing &&
-          dist(g.x, g.y, player.x, player.y) < player.radius + g.radius - 2
-        ) {
-          playerTakeDamage();
-        }
+      } else {
+        g.historyPath.shift();
+        g.x = -100;
+        g.y = -100;
       }
+      g.timer++;
     } else {
-      g.historyPath.shift();
-      g.x = -100;
-      g.y = -100;
+      if (g.x > 0) activeGhosts++;
     }
-    g.timer++;
   }
 
-  if (state.isBossLevel) {
-    if (boss.ghostsActive)
-      UI.ghosts.innerText = `Bóng ma/Dummy đợt này: ${activeGhosts}`;
-    else
-      UI.ghosts.innerText = `Boss đang triệu hồi (${Math.ceil(boss.summonCooldown / FPS)}s)...`;
-  } else {
-    UI.ghosts.innerText = `Bóng ma/Dummy: ${activeGhosts}`;
-  }
+  // if (state.isBossLevel) {
+  //   if (boss.ghostsActive)
+  //     UI.ghosts.innerText = `Bóng ma/Dummy đợt này: ${activeGhosts}`;
+  //   else
+  //     UI.ghosts.innerText = `Boss đang triệu hồi (${Math.ceil(boss.summonCooldown / FPS)}s)...`;
+  // } else {
+  //   UI.ghosts.innerText = `Bóng ma/Dummy: ${activeGhosts}`;
+  // }
 
   let coinCount = state.player?.coins || 0;
   document.getElementById("coins-count").innerText = `Tiền: ${coinCount}`;
-
   updateXPUI();
 
   if (!state.isBossLevel && state.frameCount >= state.maxFramesToSurvive) {
@@ -960,10 +1213,13 @@ function update() {
     let secs = (state.scoreTime % 60).toString().padStart(2, "0");
     UI.timer.innerText = `${mins}:${secs} / ${maxMins}:${maxSecs}`;
   }
+
+  // Lưu phím frame hiện tại thành prev cho frame sau (Chống việc đè liệt phím gọi chiêu liên tục)
+  state.prevKeys = { ...keys };
 }
 
 function draw() {
-  let { player, boss, bullets, ghosts, mouse } = state;
+  let { player, boss, bullets, ghosts, mouse, activeBuffs } = state;
   ctx.fillStyle = "#0a0a0c";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -980,6 +1236,27 @@ function draw() {
     ctx.moveTo(0, i);
     ctx.lineTo(canvas.width, i);
     ctx.stroke();
+  }
+
+  // Hiệu ứng Tank R (Càn Quét)
+  if (player.characterId === "tank" && activeBuffs.r > 0) {
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, 200 + (15 - activeBuffs.r) * 5, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(0, 255, 204, ${activeBuffs.r / 15})`;
+    ctx.lineWidth = 10;
+    ctx.stroke();
+  }
+
+  // Hiệu ứng Sharpshooter R (Sát thương toàn màn hình)
+  if (player.characterId === "sharpshooter" && activeBuffs.r > 0) {
+    ctx.fillStyle = `rgba(255, 0, 0, ${activeBuffs.r / 20})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  // Hiệu ứng Mage R (Đóng băng)
+  if (player.characterId === "mage" && activeBuffs.r > 0) {
+    ctx.fillStyle = `rgba(0, 150, 255, 0.15)`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
   if (boss) {
@@ -1023,7 +1300,12 @@ function draw() {
     }
     ctx.beginPath();
     ctx.arc(g.x, g.y, g.radius, 0, Math.PI * 2);
-    ctx.fillStyle = g.isStunned > 0 ? "#333" : "#ff4444";
+
+    // Đổi màu quái nếu bị Mage đóng băng
+    if (player.characterId === "mage" && activeBuffs.r > 0)
+      ctx.fillStyle = "#00aaff";
+    else ctx.fillStyle = g.isStunned > 0 ? "#333" : "#ff4444";
+
     ctx.fill();
     if (g.isStunned <= 0) {
       ctx.strokeStyle = isDashing ? "#00ffcc" : "#ff0000";
@@ -1040,10 +1322,21 @@ function draw() {
     ctx.fill();
   }
 
-  if (player.dashTimeLeft > 0) {
+  let isInvulnSkill =
+    activeBuffs.e > 0 &&
+    (player.characterId === "tank" || player.characterId === "ghost");
+
+  if (player.dashTimeLeft > 0 || isInvulnSkill) {
     ctx.beginPath();
-    ctx.arc(player.x, player.y, player.radius + 2, 0, Math.PI * 2);
-    ctx.fillStyle = "white";
+    ctx.arc(
+      player.x,
+      player.y,
+      player.radius + (isInvulnSkill ? 5 : 2),
+      0,
+      Math.PI * 2,
+    );
+    ctx.fillStyle =
+      player.characterId === "ghost" ? "rgba(100,100,255,0.5)" : "white";
     ctx.shadowBlur = 20;
     ctx.shadowColor = "white";
     ctx.fill();

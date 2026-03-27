@@ -17,6 +17,10 @@ export const state = {
   characterUpgrades: {},
 
   keys: {},
+  prevKeys: {},
   mouse: { x: 0, y: 0, clicked: false },
   loopId: null,
+
+  skillsCD: { q: 0, e: 0, r: 0 },
+  activeBuffs: { q: 0, e: 0, r: 0 },
 };
