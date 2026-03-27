@@ -131,6 +131,15 @@ function initGame(isNextLevel = false) {
 
   if (state.isBossLevel) {
     state.maxFramesToSurvive = 999999;
+    let bossStep = Math.floor(state.currentLevel / 5) - 1;
+    let bossModes = [];
+    if (bossStep < 5) {
+      bossModes = [bossStep];
+    } else {
+      let firstMode = (bossStep - 5) % 5;
+      let secondMode = (bossStep - 4) % 5;
+      bossModes = [firstMode, secondMode];
+    }
     state.boss = {
       x: 400,
       y: 150,
@@ -138,7 +147,7 @@ function initGame(isNextLevel = false) {
       hp: 150 + state.currentLevel * 25,
       maxHp: 150 + state.currentLevel * 25,
       attackTimer: 0,
-      state: 0,
+      attackModes: bossModes,
       summonCooldown: 5 * FPS,
       ghostsActive: false,
     };
@@ -257,8 +266,12 @@ function addExperience(amount) {
 function playerTakeDamage() {
   if (state.player.gracePeriod > 0 || state.player.dashTimeLeft > 0) return;
 
-  if (state.player.shield > 0) state.player.shield--;
-  else state.player.hp--;
+  if (state.player.shield > 0) {
+    state.player.shield--;
+    state.player.shieldRegenTimer = 5 * FPS;
+  } else {
+    state.player.hp--;
+  }
 
   state.player.gracePeriod = 60;
   updateHealthUI();
@@ -275,6 +288,14 @@ function update() {
 
   if (player.gracePeriod > 0) player.gracePeriod--;
   if (player.dashCooldownTimer > 0) player.dashCooldownTimer--;
+
+  if (player.shield < player.maxShield) {
+    if (player.shieldRegenTimer > 0) player.shieldRegenTimer--;
+    else {
+      player.shield = player.maxShield;
+      updateHealthUI();
+    }
+  }
 
   if (player.dashCooldownTimer <= 0) {
     UI.dash.innerText = "Lướt: SẴN SÀNG";
@@ -406,8 +427,11 @@ function update() {
     }
 
     if (hitWall) {
-      if (b.bounces > 0) b.bounces--;
-      else b.life = 0;
+      if (b.bounces > 0) {
+        b.bounces--;
+        // Keep bullet alive for the next bounce if additional bounces remain.
+        if (b.bounces >= 0) b.life = Math.max(b.life, 30);
+      } else b.life = 0;
     }
 
     if (b.life <= 0) {
@@ -440,7 +464,7 @@ function update() {
             ghosts.splice(j, 1);
           } else {
             g.isStunned = 300;
-            addExperience(6);
+            addExperience(10);
           }
           bullets.splice(i, 1);
           hitGhost = true;
@@ -488,7 +512,7 @@ function update() {
         if (g.historyPath.length > 8) g.historyPath.shift();
 
         if (g.lastIdx !== idx1 && action1.length === 4) {
-          spawnBullet(g.x, g.y, action1[2], action1[3], false);
+          spawnBullet(g.x, g.y, action1[2], action1[3], false, 0, "ghost");
         }
         g.lastIdx = idx1;
 

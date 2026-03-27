@@ -47,8 +47,12 @@ export const BOSS_REWARDS = [
   {
     id: "shield",
     name: "Khiên Năng Lượng",
-    desc: "Chặn 1 đòn tấn công bất kỳ",
-    action: (p) => p.shield++,
+    desc: "Chặn 1 đòn tấn công bất kỳ và tự hồi sau 5s",
+    action: (p) => {
+      p.maxShield = (p.maxShield || 0) + 1;
+      p.shield = p.maxShield;
+      p.shieldRegenTimer = 0;
+    },
   },
   {
     id: "coin",

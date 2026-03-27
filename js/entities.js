@@ -11,6 +11,8 @@ export function getInitialPlayerState() {
     hp: 3,
     maxHp: 3,
     shield: 0,
+    maxShield: 0,
+    shieldRegenTimer: 0,
     coins: 0,
     gracePeriod: 120,
     fireRate: 20,
@@ -42,7 +44,15 @@ export function generateDummy(targetFrames) {
   return dummy;
 }
 
-export function spawnBullet(sx, sy, tx, ty, isPlayer, style = 0) {
+export function spawnBullet(
+  sx,
+  sy,
+  tx,
+  ty,
+  isPlayer,
+  style = 0,
+  source = "enemy",
+) {
   let angle = Math.atan2(ty - sy, tx - sx);
   let speed = isPlayer
     ? 10
@@ -50,7 +60,10 @@ export function spawnBullet(sx, sy, tx, ty, isPlayer, style = 0) {
       ? 4.5
       : 3.5 + state.currentLevel * 0.2;
 
-  let count = isPlayer ? state.player.multiShot : 1;
+  let isGhostShot = source === "ghost";
+  let count = isPlayer || isGhostShot ? state.player.multiShot : 1;
+  let bounceCount =
+    isPlayer || isGhostShot ? Math.max(0, state.player.bounces || 0) : 0;
   let spread = 0.15;
   let startAngle = angle - (spread * (count - 1)) / 2;
 
@@ -64,7 +77,7 @@ export function spawnBullet(sx, sy, tx, ty, isPlayer, style = 0) {
       isPlayer: isPlayer,
       radius: state.isBossLevel && !isPlayer ? 6 : 4,
       life: 180,
-      bounces: isPlayer ? state.player.bounces : 0,
+      bounces: bounceCount,
       style: style,
     });
   }
@@ -74,12 +87,13 @@ export function spawnBossAttack() {
   state.boss.attackTimer++;
   if (state.boss.attackTimer > 120) {
     state.boss.attackTimer = 0;
-    state.boss.state = Math.floor(Math.random() * 3);
   }
 
-  if (state.boss.attackTimer === 10) {
-    if (state.boss.state === 0) {
-      for (let i = 0; i < Math.PI * 2; i += 0.4)
+  let bossModes = state.boss.attackModes || [0];
+
+  function spawnMode(mode) {
+    if (mode === 0) {
+      for (let i = 0; i < Math.PI * 2; i += 0.35)
         spawnBullet(
           state.boss.x,
           state.boss.y,
@@ -87,23 +101,87 @@ export function spawnBossAttack() {
           state.boss.y + Math.sin(i),
           false,
           1,
+          "boss",
         );
-    } else if (state.boss.state === 1) {
-      spawnBullet(
-        state.boss.x,
-        state.boss.y,
-        state.player.x,
-        state.player.y,
-        false,
-        2,
-      );
+    } else if (mode === 1) {
+      for (let i = -1; i <= 1; i++) {
+        let offsetAngle =
+          Math.atan2(
+            state.player.y - state.boss.y,
+            state.player.x - state.boss.x,
+          ) +
+          i * 0.15;
+        spawnBullet(
+          state.boss.x,
+          state.boss.y,
+          state.boss.x + Math.cos(offsetAngle),
+          state.boss.y + Math.sin(offsetAngle),
+          false,
+          2,
+          "boss",
+        );
+      }
+    } else if (mode === 2) {
+      for (let i = -2; i <= 2; i++) {
+        let aimAngle = Math.atan2(
+          state.player.y - state.boss.y,
+          state.player.x - state.boss.x,
+        );
+        let spreadAngle = aimAngle + i * 0.08;
+        spawnBullet(
+          state.boss.x,
+          state.boss.y,
+          state.boss.x + Math.cos(spreadAngle),
+          state.boss.y + Math.sin(spreadAngle),
+          false,
+          1,
+          "boss",
+        );
+      }
+    } else if (mode === 3) {
+      for (let i = 0; i < 8; i++) {
+        let angle =
+          Math.atan2(
+            state.player.y - state.boss.y,
+            state.player.x - state.boss.x,
+          ) +
+          i * (Math.PI / 4);
+        spawnBullet(
+          state.boss.x,
+          state.boss.y,
+          state.boss.x + Math.cos(angle),
+          state.boss.y + Math.sin(angle),
+          false,
+          1,
+          "boss",
+        );
+      }
+    } else if (mode === 4) {
+      for (let i = 0; i < 10; i++) {
+        let angle = ((state.boss.attackTimer + i * 14) * 0.15) % (Math.PI * 2);
+        spawnBullet(
+          state.boss.x,
+          state.boss.y,
+          state.boss.x + Math.cos(angle),
+          state.boss.y + Math.sin(angle),
+          false,
+          1,
+          "boss",
+        );
+      }
     }
-  } else if (
-    state.boss.state === 2 &&
-    state.boss.attackTimer % 5 === 0 &&
-    state.boss.attackTimer < 60
+  }
+
+  if (state.boss.attackTimer === 10) {
+    bossModes.forEach(spawnMode);
+  }
+
+  if (
+    bossModes.includes(2) &&
+    state.boss.attackTimer % 8 === 0 &&
+    state.boss.attackTimer < 70
   ) {
-    let angle = (state.boss.attackTimer * 0.2) % (Math.PI * 2);
+    let angle = (state.boss.attackTimer * 0.35) % (Math.PI * 2);
     spawnBullet(
       state.boss.x,
       state.boss.y,
@@ -111,6 +189,7 @@ export function spawnBossAttack() {
       state.boss.y + Math.sin(angle),
       false,
       1,
+      "boss",
     );
   }
 }

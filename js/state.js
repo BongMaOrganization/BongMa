@@ -14,7 +14,6 @@ export const state = {
   currentRunRecord: [],
 
   keys: {},
-  mouse: { x: 0, y: 0, clicked: false, isDown: false },
-  upgradeFromXP: false,
+  mouse: { x: 0, y: 0, clicked: false },
   loopId: null,
 };
