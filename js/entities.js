@@ -22,6 +22,8 @@ export function getInitialPlayerState() {
     dashMaxCooldown: 90,
     dashDx: 0,
     dashDy: 0,
+    experience: 0,
+    experienceToLevel: 100,
   };
 }
 

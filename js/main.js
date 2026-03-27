@@ -1,7 +1,7 @@
 import { state } from "./state.js";
 import { FPS, GHOST_DATA_KEY, UPGRADES, BOSS_REWARDS } from "./config.js";
 import { dist, saveGame } from "./utils.js";
-import { UI, updateHealthUI, generateCards } from "./ui.js";
+import { UI, updateHealthUI, generateCards, updateXPUI } from "./ui.js";
 import {
   getInitialPlayerState,
   generateDummy,
@@ -28,8 +28,20 @@ canvas.addEventListener("mousemove", (e) => {
   state.mouse.x = e.clientX - rect.left;
   state.mouse.y = e.clientY - rect.top;
 });
-canvas.addEventListener("mousedown", () => {
-  if (state.gameState === "PLAYING") state.mouse.clicked = true;
+canvas.addEventListener("mousedown", (e) => {
+  if (e.button !== 0) return;
+  if (state.gameState === "PLAYING") {
+    state.mouse.isDown = true;
+    state.mouse.clicked = true;
+  }
+});
+canvas.addEventListener("mouseup", (e) => {
+  if (e.button !== 0) return;
+  state.mouse.isDown = false;
+});
+window.addEventListener("mouseup", (e) => {
+  if (e.button !== 0) return;
+  state.mouse.isDown = false;
 });
 
 // Gắn sự kiện nút bấm UI
@@ -57,6 +69,19 @@ function initGame(isNextLevel = false) {
     }
   }
 
+  if (
+    state.player.experience === undefined ||
+    state.player.experience === null
+  ) {
+    state.player.experience = 0;
+  }
+  if (
+    state.player.experienceToLevel === undefined ||
+    state.player.experienceToLevel === null
+  ) {
+    state.player.experienceToLevel = 100;
+  }
+
   state.isBossLevel = state.currentLevel % 5 === 0;
 
   state.player.x = 400;
@@ -71,7 +96,7 @@ function initGame(isNextLevel = false) {
   state.boss = null;
   UI.bossUi.style.display = "none";
 
-  let targetSurviveSeconds = Math.min(120, 15 + (state.currentLevel - 1) * 15);
+  let targetSurviveSeconds = Math.min(60, 15 + (state.currentLevel - 1) * 5);
   state.maxFramesToSurvive = state.isBossLevel
     ? 999999
     : targetSurviveSeconds * FPS;
@@ -110,8 +135,8 @@ function initGame(isNextLevel = false) {
       x: 400,
       y: 150,
       radius: 40,
-      hp: 150 + state.currentLevel * 50,
-      maxHp: 150 + state.currentLevel * 50,
+      hp: 150 + state.currentLevel * 25,
+      maxHp: 150 + state.currentLevel * 25,
       attackTimer: 0,
       state: 0,
       summonCooldown: 5 * FPS,
@@ -124,6 +149,7 @@ function initGame(isNextLevel = false) {
   }
 
   updateHealthUI();
+  updateXPUI();
   UI.timer.innerText = state.isBossLevel ? "BOSS" : "00:00";
   UI.level.innerText = `Màn: ${state.currentLevel}`;
   UI.ghosts.innerText = `Bóng ma: ${state.ghosts.length}`;
@@ -184,6 +210,13 @@ function changeState(newState) {
 
 function onCardSelected() {
   saveGame(state, GHOST_DATA_KEY);
+
+  if (state.upgradeFromXP) {
+    state.upgradeFromXP = false;
+    changeState("PLAYING");
+    return;
+  }
+
   initGame(true);
   changeState("PLAYING");
 }
@@ -195,12 +228,30 @@ function startGame() {
 
 function nextStage() {
   saveGame(state, GHOST_DATA_KEY);
-  if (state.currentLevel % 5 === 0) changeState("BOSS_REWARD");
-  else if (state.currentLevel % 3 === 0) changeState("UPGRADE");
-  else {
+  if (state.currentLevel % 5 === 0) {
+    changeState("BOSS_REWARD");
+  } else {
     initGame(true);
     changeState("PLAYING");
   }
+}
+
+function addExperience(amount) {
+  if (!state.player) return;
+  state.player.experience += amount;
+
+  if (state.player.experience >= state.player.experienceToLevel) {
+    state.player.experience -= state.player.experienceToLevel;
+    state.player.experienceToLevel = Math.max(
+      50,
+      Math.floor(state.player.experienceToLevel * 1.15),
+    );
+    state.upgradeFromXP = true;
+    updateXPUI();
+    changeState("UPGRADE");
+    return;
+  }
+  updateXPUI();
 }
 
 function playerTakeDamage() {
@@ -260,6 +311,7 @@ function update() {
 
   if (player.dashTimeLeft > 0) {
     player.x += player.dashDx * (player.speed * 3);
+    player.y += player.dashDy * (player.speed * 3);
     player.dashTimeLeft--;
   } else {
     player.x += dx * player.speed;
@@ -280,7 +332,11 @@ function update() {
     targetY = 0;
   if (player.cooldown > 0) player.cooldown--;
 
-  if (mouse.clicked && player.cooldown <= 0 && player.dashTimeLeft <= 0) {
+  if (
+    (mouse.clicked || mouse.isDown) &&
+    player.cooldown <= 0 &&
+    player.dashTimeLeft <= 0
+  ) {
     spawnBullet(player.x, player.y, mouse.x, mouse.y, true);
     player.cooldown = player.fireRate;
     shotThisFrame = true;
@@ -362,6 +418,7 @@ function update() {
     if (b.isPlayer) {
       if (boss && dist(b.x, b.y, boss.x, boss.y) < boss.radius + b.radius) {
         boss.hp -= 1;
+        addExperience(2);
         UI.bossHp.style.width = Math.max(0, (boss.hp / boss.maxHp) * 100) + "%";
         bullets.splice(i, 1);
         if (boss.hp <= 0) {
@@ -383,6 +440,7 @@ function update() {
             ghosts.splice(j, 1);
           } else {
             g.isStunned = 300;
+            addExperience(6);
           }
           bullets.splice(i, 1);
           hitGhost = true;
@@ -459,6 +517,8 @@ function update() {
   } else {
     UI.ghosts.innerText = `Bóng ma/Dummy: ${activeGhosts}`;
   }
+
+  updateXPUI();
 
   if (!state.isBossLevel && state.frameCount >= state.maxFramesToSurvive) {
     nextStage();

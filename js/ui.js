@@ -16,7 +16,16 @@ export const UI = {
   bossUi: document.getElementById("boss-ui"),
   bossHp: document.getElementById("boss-hp-fill"),
   bossName: document.getElementById("boss-name"),
+  xpBar: document.getElementById("xp-bar-fill"),
+  xpText: document.getElementById("xp-text"),
 };
+
+export function updateXPUI() {
+  if (!state.player) return;
+  let ratio = Math.min(1, state.player.experience / state.player.experienceToLevel);
+  UI.xpBar.style.width = `${ratio * 100}%`;
+  UI.xpText.innerText = `XP: ${state.player.experience}/${state.player.experienceToLevel}`;
+}
 
 export function updateHealthUI() {
   UI.healthBar.innerHTML = "";
