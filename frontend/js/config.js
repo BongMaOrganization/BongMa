@@ -32,6 +32,22 @@ export const UPGRADES = [
     desc: "Giảm 30% hồi chiêu Lướt",
     action: (p) => (p.dashMaxCooldown *= 0.7),
   },
+  {
+    id: "regen",
+    name: "Regeneration",
+    desc: "Regenerate 1 HP every 10 seconds",
+    action: (p) => {
+      if (!p.regenActive) {
+        p.regenActive = true;
+        setInterval(() => {
+          if (p.hp < p.maxHp) {
+            p.hp++;
+            console.log("Regenerated 1 HP.");
+          }
+        }, 10000); // Regenerate every 10 seconds
+      }
+    },
+  },
 ];
 
 export const CHARACTERS = [

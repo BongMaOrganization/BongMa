@@ -1,5 +1,5 @@
 import { state } from "./state.js";
-
+import { evolve } from "./main.js";
 export const UI = {
   main: document.getElementById("screen-main"),
   upgrade: document.getElementById("screen-upgrade"),
@@ -20,20 +20,56 @@ export const UI = {
   xpText: document.getElementById("xp-text"),
 };
 
+// ======================
+// UPGRADE TRACKER UI
+// ======================
+export function updateUpgradeUI() {
+  const upgradeContainer = document.getElementById("upgrade-tracker");
+  if (!upgradeContainer) return;
+
+  upgradeContainer.innerHTML = "";
+
+  Object.keys(state.upgrades).forEach((upgrade) => {
+    const upgradeDiv = document.createElement("div");
+    upgradeDiv.className = "upgrade-item";
+
+    const isEvolved = state.evolutions[upgrade];
+
+    upgradeDiv.innerText = `${upgrade}: ${
+      state.upgrades[upgrade]
+    } / 5 ${isEvolved ? "(Evolved)" : ""}`;
+
+    upgradeContainer.appendChild(upgradeDiv);
+  });
+}
+
+// ======================
+// XP UI
+// ======================
 export function updateXPUI() {
   if (!state.player) return;
-  let ratio = Math.min(1, state.player.experience / state.player.experienceToLevel);
+
+  let ratio = Math.min(
+    1,
+    state.player.experience / state.player.experienceToLevel
+  );
+
   UI.xpBar.style.width = `${ratio * 100}%`;
   UI.xpText.innerText = `XP: ${state.player.experience}/${state.player.experienceToLevel}`;
 }
 
+// ======================
+// HEALTH UI
+// ======================
 export function updateHealthUI() {
   UI.healthBar.innerHTML = "";
+
   for (let i = 0; i < state.player.maxHp; i++) {
     let div = document.createElement("div");
     div.className = `heart ${i >= state.player.hp ? "empty" : ""}`;
     UI.healthBar.appendChild(div);
   }
+
   if (state.player.shield > 0) {
     UI.shieldIcon.style.display = "flex";
     UI.shieldIcon.innerText = state.player.shield;
@@ -43,19 +79,137 @@ export function updateHealthUI() {
   }
 }
 
+// ======================
+// REROLL UI (FIXED)
+// ======================
+export function updateRerollUI() {
+  let div = document.getElementById("reroll-count");
+
+  if (!div) {
+    div = document.createElement("div");
+    div.id = "reroll-count";
+    div.className = "reroll-count";
+    document.getElementById("screen-upgrade").appendChild(div);
+  }
+
+  div.innerText = `Rerolls left: ${3 - state.rerollCount}`;
+}
+
+// ======================
+// CARD GENERATION
+// ======================
 export function generateCards(pool, container, isGold, onSelectCallback) {
   container.innerHTML = "";
-  let shuffled = [...pool].sort(() => 0.5 - Math.random());
+
+  // 🔥 remove evolved khỏi pool
+  let poolToUse = pool.filter((u) => !state.evolutions[u.id]);
+
+  // 🔥 thêm evolution card nếu có
+  if (state.evolutionReady) {
+    poolToUse.unshift({
+      id: state.evolutionReady,
+      name: "✨ EVOLVE: " + state.evolutionReady.toUpperCase(),
+      desc: "Unlock ultimate form",
+      isEvolution: true,
+    });
+  }
+
+  let shuffled = [...poolToUse].sort(() => 0.5 - Math.random());
   let selected = shuffled.slice(0, 3);
 
   selected.forEach((upg) => {
     let div = document.createElement("div");
-    div.className = `card ${isGold ? "gold" : ""}`;
+
+    const isEvolutionCard = upg.isEvolution;
+    const isEvolved = state.evolutions[upg.id];
+
+    div.className = `card ${
+      isEvolutionCard ? "gold evolution-card" : ""
+    } ${isEvolved ? "evolved-card" : ""}`;
+
     div.innerHTML = `<h3>${upg.name}</h3><p>${upg.desc}</p>`;
+
+    // ===== HIỂN THỊ COUNT =====
+    if (!isEvolutionCard) {
+      const count = state.upgrades[upg.id] || 0;
+
+      const text = document.createElement("div");
+      text.className = "upgrade-count-text";
+      text.innerText = `${count}/5`;
+
+      div.appendChild(text);
+
+      const bar = document.createElement("div");
+      bar.className = "upgrade-progress-bar";
+
+      const fill = document.createElement("div");
+      fill.className = "upgrade-progress-fill";
+      fill.style.width = `${(count / 5) * 100}%`;
+
+      bar.appendChild(fill);
+      div.appendChild(bar);
+    }
+
+    // ===== DISABLE nếu đã evolve =====
+    if (isEvolved) {
+      div.innerHTML += `<p class="evolved-text">ULTIMATE</p>`;
+      div.style.pointerEvents = "none";
+      div.style.opacity = "0.5";
+    }
+
+    // ===== CLICK =====
     div.onclick = () => {
-      upg.action(state.player);
-      onSelectCallback();
+      if (isEvolved) return;
+
+      console.log("PICK:", upg.id);
+
+      // 🔥 EVOLUTION
+      if (isEvolutionCard) {
+        evolve(upg.id);
+        state.evolutionReady = null;
+        state.evolutions[upg.id] = true;
+
+        updateUpgradeUI();
+        onSelectCallback(); // ✅ chỉ gọi 1 lần
+        return;
+      }
+
+      // 🔥 NORMAL
+      state.upgrades[upg.id] = (state.upgrades[upg.id] || 0) + 1;
+
+      if (upg.action) {
+        upg.action(state.player);
+      }
+
+      if (state.upgrades[upg.id] === 5) {
+        state.evolutionReady = upg.id;
+      }
+
+      updateUpgradeUI();
+      updateRerollUI();
+
+      onSelectCallback(); // ✅ không generateCards lại
     };
+
     container.appendChild(div);
   });
+
+  // ===== REROLL =====
+  const rerollButton = document.createElement("button");
+  rerollButton.innerText = "Reroll";
+
+  rerollButton.onclick = () => {
+    if (state.rerollCount < 3) {
+      state.rerollCount++;
+      updateRerollUI();
+      generateCards(pool, container, isGold, onSelectCallback);
+    } else {
+      alert("No rerolls left!");
+    }
+  };
+
+  container.appendChild(rerollButton);
+
+  updateUpgradeUI();
+  updateRerollUI();
 }
