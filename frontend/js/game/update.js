@@ -5,10 +5,6 @@ import { UI, updateHealthUI } from "../ui.js";
 import { spawnBullet, spawnBossAttack, bossSummonGhosts } from "../entities.js";
 import { updateBullets, playerTakeDamage } from "./combat.js";
 
-/**
- * Toàn bộ logic update mỗi frame khi đang PLAYING.
- * Trả về true nếu stage kết thúc (để flow.js gọi nextStage).
- */
 export function update(ctx, canvas, changeStateFn) {
   let { player, boss, bullets, ghosts, keys, mouse, activeBuffs } = state;
 
@@ -111,6 +107,7 @@ export function update(ctx, canvas, changeStateFn) {
     player.cooldown <= 0 &&
     player.dashTimeLeft <= 0
   ) {
+    // Tạm thời override stat để áp dụng buff bắn nhiều đạn / nảy tường cho function spawnBullet
     let originalMulti = state.player.multiShot;
     let originalBounce = state.player.bounces;
     state.player.multiShot = currentMultiShot;
@@ -231,10 +228,10 @@ export function update(ctx, canvas, changeStateFn) {
 
   if (state.isBossLevel) {
     UI.ghosts.innerText = boss?.ghostsActive
-      ? `Bóng ma/Dummy đợt này: ${activeGhosts}`
-      : `Boss đang triệu hồi (${Math.ceil((boss?.summonCooldown || 0) / FPS)}s)...`;
+      ? `Quái đợt này: ${activeGhosts}`
+      : `Boss triệu hồi (${Math.ceil(boss.summonCooldown / FPS)}s)...`;
   } else {
-    UI.ghosts.innerText = `Bóng ma/Dummy: ${activeGhosts}`;
+    UI.ghosts.innerText = `Quái: ${activeGhosts}`;
   }
 
   document.getElementById("coins-count").innerText =

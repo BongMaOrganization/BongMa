@@ -8,7 +8,7 @@ import {
   ensureCharacterData,
 } from "../characters/manager.js";
 import { syncRemoteState, persistState } from "../auth.js";
-import { initSkills } from "./skills.js"; // IMPORT LOGIC SKILL
+import { initSkills } from "./skills.js";
 
 export function initGame(isNextLevel = false) {
   let saved = JSON.parse(localStorage.getItem(GHOST_DATA_KEY) || "{}");
@@ -39,7 +39,6 @@ export function initGame(isNextLevel = false) {
     }
   }
 
-  // KHỞI TẠO LẠI KỸ NĂNG ĐỂ CHỐNG LỖI ĐƠ GAME Ở MÀN MỚI
   initSkills();
 
   if (state.player.experience == null) state.player.experience = 0;
@@ -48,13 +47,11 @@ export function initGame(isNextLevel = false) {
 
   state.isBossLevel = state.currentLevel % 5 === 0;
 
-  // CHỈNH SỬA Ở ĐÂY: Chỉ reset vị trí về mặc định nếu là bắt đầu game mới (không phải qua màn)
   if (!isNextLevel) {
     state.player.x = 400;
     state.player.y = 500;
   }
 
-  // Vẫn reset thời gian bất tử và lướt để tránh lỗi kẹt hiệu ứng
   state.player.gracePeriod = 120;
   state.player.dashTimeLeft = 0;
 
@@ -126,7 +123,7 @@ export function initGame(isNextLevel = false) {
   updateXPUI();
   UI.timer.innerText = state.isBossLevel ? "BOSS" : "00:00";
   UI.level.innerText = `Màn: ${state.currentLevel}`;
-  UI.ghosts.innerText = `Bóng ma: ${state.ghosts.length}`;
+  UI.ghosts.innerText = `Quái: ${state.ghosts.length}`;
 }
 
 export function changeState(newGameState, gameLoopFn) {
@@ -138,8 +135,6 @@ export function changeState(newGameState, gameLoopFn) {
   UI.bossReward.classList.add("hidden");
 
   if (newGameState === "PLAYING") {
-    // FIX: Bỏ điều kiện oldState !== "PLAYING"
-    // Khi restart màn (PLAYING -> PLAYING), ta vẫn hủy frame cũ và gọi lại game loop mới để game không bị đơ
     if (state.loopId) cancelAnimationFrame(state.loopId);
     if (gameLoopFn) gameLoopFn();
   } else if (newGameState === "MENU" || newGameState === "GAME_OVER") {
@@ -159,22 +154,17 @@ export function changeState(newGameState, gameLoopFn) {
       UI.desc.innerText = "BẠN ĐÃ CHẾT HOÀN TOÀN. BẮT ĐẦU LẠI TỪ MÀN 1.";
       UI.btnStart.innerText = "LÀM LẠI TỪ ĐẦU";
 
-      // FIX: Reset State thẳng tay thay vì tải lại trang
+      state.currentLevel = 1;
+      state.pastRuns = [];
+
+      let savedCoins = state.player.coins || 0;
+      state.player = applyCharacterToPlayer(state.selectedCharacter);
+      state.player.coins = savedCoins;
+
+      saveGame(state, GHOST_DATA_KEY);
+      persistState();
+
       UI.btnStart.onclick = () => {
-        // Reset về Level 1 và xóa sạch bóng ma cũ
-        state.currentLevel = 1;
-        state.pastRuns = [];
-
-        // Giữ lại tiền nhưng khôi phục máu/chỉ số nguyên bản
-        let savedCoins = state.player.coins || 0;
-        state.player = applyCharacterToPlayer(state.selectedCharacter);
-        state.player.coins = savedCoins;
-
-        // Lưu bản save "Trắng" này vào bộ nhớ và Server
-        saveGame(state, GHOST_DATA_KEY);
-        persistState();
-
-        // Chạy thẳng vào game
         initGame(false);
         changeState("PLAYING", gameLoopFn);
       };

@@ -43,13 +43,6 @@ function gameLoop() {
 setupInput(canvas);
 initAuth(() => syncRemoteState());
 
-document.getElementById("btn-clear").addEventListener("click", () => {
-  if (confirm("Xóa toàn bộ tiến trình trên máy này?")) {
-    localStorage.removeItem(GHOST_DATA_KEY);
-    location.reload();
-  }
-});
-
 UI.btnStart.onclick = () => startGame(gameLoop);
 setupMenuButtons(openShop, changeStateBound);
 
