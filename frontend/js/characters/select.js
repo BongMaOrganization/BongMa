@@ -1,7 +1,6 @@
 import { state } from "../state.js";
 import { CHARACTERS, GHOST_DATA_KEY } from "../config.js";
-import { saveGame } from "../utils.js";
-import { persistState } from "../auth.js";
+import { saveGame, saveGameToServer } from "../utils.js";
 
 export function openCharacterSelect(changeStateFn) {
   changeStateFn("MENU");
@@ -30,10 +29,11 @@ export function renderCharacterSelect() {
     let skillsHtml = char.skills
       .map((s) => {
         let keyPrefix = s.key ? `[${s.key.toUpperCase()}] ` : "";
-        return `• <b style="color: #00ffcc">${s.name}</b>: ${s.desc}`;
+        return `• <b style="color: #00ffcc">${s.name}</b>: ${keyPrefix}${s.desc}`;
       })
       .join("<br><br>");
 
+    // TÍNH TOÁN CHỈ SỐ THỰC TẾ (Bao gồm các nâng cấp)
     let upg = state.characterUpgrades[char.id] || {
       hp: 0,
       speed: 0,
@@ -47,7 +47,7 @@ export function renderCharacterSelect() {
 
     card.innerHTML = `
       <h3>${char.name} ${selected ? "(Đã chọn)" : ""}</h3>
-      <p style="margin-bottom: 5px; color: #ffaa00; font-weight: bold;">HP: ${actualHp} | Tốc độ: ${actualSpeed}</p>
+      <p style="margin-bottom: 5px; color: #ffaa00; font-weight: bold;">HP: ${actualHp} | Tốc độ: ${actualSpeed} | Tia đạn: ${char.baseStats.multiShot} | Đạn nẩy: ${char.baseStats.bounces}</p>
       <div class="char-skills" style="font-size: 0.9em; margin-bottom: 10px; height: 110px; overflow-y: auto; text-align: left; padding: 5px; background: rgba(0,0,0,0.3); border-radius: 5px;">
         ${skillsHtml}
       </div>
@@ -59,8 +59,9 @@ export function renderCharacterSelect() {
       selBtn.disabled = selected;
       selBtn.onclick = () => {
         state.selectedCharacter = char.id;
+        // LƯU LẠI LÊN SERVER NGAY KHI CHỌN
         saveGame(state, GHOST_DATA_KEY);
-        persistState();
+        saveGameToServer(state, GHOST_DATA_KEY);
         renderCharacterSelect();
       };
       card.appendChild(selBtn);
@@ -158,7 +159,7 @@ export function renderUpgradeDetail(charId) {
         }
         state.characterUpgrades[charId][stat.key] = stat.current + 1;
         saveGame(state, GHOST_DATA_KEY);
-        persistState();
+        saveGameToServer(state, GHOST_DATA_KEY);
         renderUpgradeDetail(charId);
       }
     };

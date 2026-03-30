@@ -8,11 +8,11 @@ export const sounds = {
   bossBgm10: new Audio("assets/boss_bgm_10.mp3"), // Nhạc Boss màn 10
   bossBgm15: new Audio("assets/boss_bgm_15.mp3"), // Nhạc Boss màn 15
   bossBgm20: new Audio("assets/boss_bgm_20.mp3"), // Nhạc Boss màn 20
-  bossBgmDefault: new Audio("assets/boss_bgm.mp3"), // Nhạc dự phòng nếu các Boss sau chưa có nhạc riêng
+  bossBgmDefault: new Audio("assets/boss_bgm_5.mp3"), // Nhạc dự phòng nếu các Boss sau chưa có nhạc riêng
 
   // Nhạc cho khoảnh khắc nhận thưởng
   upgradeBgm: new Audio("assets/upgrade_bgm.mp3"), // Nhạc khi thẻ bài nâng cấp hiện ra
-  rewardBgm: new Audio("assets/reward_bgm.mp3"), // Nhạc chiến thắng khi diệt Boss xong và nhận rương
+  rewardBgm: new Audio("assets/boss_reward_bgm.mp3"), // Nhạc chiến thắng khi diệt Boss xong và nhận rương
 
   damage: new Audio("assets/damage.wav"), // Tiếng nhân vật bị thương
   gameOver: new Audio("assets/gameover.wav"), // Tiếng thua game

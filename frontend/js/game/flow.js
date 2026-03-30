@@ -33,6 +33,32 @@ export function initGame(isNextLevel = false) {
     } else {
       state.player = applyCharacterToPlayer(state.selectedCharacter);
     }
+
+    // ĐỒNG BỘ CHỈ SỐ GỐC CỦA NHÂN VẬT VÀO THANH NÂNG CẤP KHI BẮT ĐẦU MÀN 1
+    // Đã sửa: Gán thẳng số tia đạn và số lần nảy gốc của nhân vật vào mức nâng cấp ban đầu
+    state.upgrades = {
+      spd: 0,
+      fire: 0,
+      multi: state.player.multiShot || 1, // 1 tia đạn = 1/5, Phù thủy 3 tia = 3/5
+      bounce: state.player.bounces || 0, // Pháo đài 1 nảy = 1/5
+      dash: 0,
+      regen: 0,
+      hp_up: 0,
+      shield_up: 0,
+    };
+
+    state.evolutions = {
+      spd: false,
+      fire: false,
+      multi: false,
+      bounce: false,
+      dash: false,
+      regen: false,
+      hp_up: false,
+      shield_up: false,
+    };
+    state.evolutionReady = null;
+    state.rerollCount = 0;
   } else {
     state.currentLevel++;
     if (!state.isBossLevel && state.currentRunRecord.length > 120) {
@@ -135,7 +161,6 @@ export function changeState(newGameState, gameLoopFn) {
   UI.upgrade.classList.add("hidden");
   UI.bossReward.classList.add("hidden");
 
-  // Xử lý bật tắt nhạc nền tùy theo State
   if (newGameState === "PLAYING") {
     if (state.isBossLevel) {
       playBGM(`BOSS_${state.currentLevel}`);
@@ -179,7 +204,6 @@ export function changeState(newGameState, gameLoopFn) {
       persistState();
 
       UI.btnStart.onclick = () => {
-        playSound("button");
         initGame(false);
         changeState("PLAYING", gameLoopFn);
       };
@@ -211,7 +235,6 @@ export function changeState(newGameState, gameLoopFn) {
 }
 
 export async function onCardSelected(gameLoopFn) {
-  playSound("button");
   saveGame(state, GHOST_DATA_KEY);
   persistState();
   if (state.upgradeFromXP) {
@@ -224,8 +247,6 @@ export async function onCardSelected(gameLoopFn) {
 }
 
 export async function startGame(gameLoopFn) {
-  playSound("button");
-  await syncRemoteState();
   initGame(false);
   changeState("PLAYING", gameLoopFn);
 }

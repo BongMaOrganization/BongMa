@@ -30,27 +30,29 @@ export const state = {
   skillsCD: { q: 0, e: 0, r: 0 },
   activeBuffs: { q: 0, e: 0, r: 0 },
 
-  // Added rerollCount to track reroll attempts
   rerollCount: 0,
 
-  // Added upgrade tracking for evolution
   upgrades: {
-    speed: 0,
-    fireRate: 0,
-    multiShot: 0,
+    spd: 0,
+    fire: 0,
+    multi: 0,
     bounce: 0,
     dash: 0,
+    regen: 0,
+    hp_up: 0,
+    shield_up: 0,
   },
 
-  // Added evolution tracking for upgrades
   evolutions: {
-    speed: false,
-    fireRate: false,
-    multiShot: false,
+    spd: false,
+    fire: false,
+    multi: false,
     bounce: false,
     dash: false,
+    regen: false,
+    hp_up: false,
+    shield_up: false,
   },
 
-  // Added evolutionReady to track the next evolution
   evolutionReady: null,
 };

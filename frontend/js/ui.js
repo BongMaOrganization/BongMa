@@ -51,7 +51,7 @@ export function updateXPUI() {
 
   let ratio = Math.min(
     1,
-    state.player.experience / state.player.experienceToLevel
+    state.player.experience / state.player.experienceToLevel,
   );
 
   UI.xpBar.style.width = `${ratio * 100}%`;
@@ -92,7 +92,7 @@ export function updateRerollUI() {
     document.getElementById("screen-upgrade").appendChild(div);
   }
 
-  div.innerText = `Rerolls left: ${3 - state.rerollCount}`;
+  div.innerText = `Lượt đổi thẻ: ${3 - state.rerollCount}`;
 }
 
 // ======================
@@ -101,15 +101,18 @@ export function updateRerollUI() {
 export function generateCards(pool, container, isGold, onSelectCallback) {
   container.innerHTML = "";
 
-  // 🔥 remove evolved khỏi pool
-  let poolToUse = pool.filter((u) => !state.evolutions[u.id]);
+  // 🔥 LỌC ẨN: Không cho ra thẻ đã Evolution VÀ Không cho ra thẻ đã MAX (đạt cấp 5)
+  let poolToUse = pool.filter((u) => {
+    let count = state.upgrades[u.id] || 0;
+    return !state.evolutions[u.id] && count < 5;
+  });
 
   // 🔥 thêm evolution card nếu có
   if (state.evolutionReady) {
     poolToUse.unshift({
       id: state.evolutionReady,
       name: "✨ EVOLVE: " + state.evolutionReady.toUpperCase(),
-      desc: "Unlock ultimate form",
+      desc: "Mở khóa sức mạnh tối thượng",
       isEvolution: true,
     });
   }
@@ -179,6 +182,8 @@ export function generateCards(pool, container, isGold, onSelectCallback) {
 
       if (upg.action) {
         upg.action(state.player);
+        // KHẮC PHỤC LỖI UPDATE MÁU: Phải gọi lệnh vẽ lại trái tim sau khi lấy thẻ!
+        updateHealthUI();
       }
 
       if (state.upgrades[upg.id] === 5) {
@@ -188,7 +193,7 @@ export function generateCards(pool, container, isGold, onSelectCallback) {
       updateUpgradeUI();
       updateRerollUI();
 
-      onSelectCallback(); // ✅ không generateCards lại
+      onSelectCallback();
     };
 
     container.appendChild(div);
@@ -204,7 +209,7 @@ export function generateCards(pool, container, isGold, onSelectCallback) {
       updateRerollUI();
       generateCards(pool, container, isGold, onSelectCallback);
     } else {
-      alert("No rerolls left!");
+      alert("Không còn lượt đổi!");
     }
   };
 
