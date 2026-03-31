@@ -1,5 +1,6 @@
 import { state } from "./state.js";
 import { evolve } from "./main.js";
+import { rollGacha, tradeCharacters, renderShop } from "./characters/shop.js";
 export const UI = {
   main: document.getElementById("screen-main"),
   upgrade: document.getElementById("screen-upgrade"),
@@ -247,3 +248,54 @@ export function updateBossUI() {
   root.style.setProperty("--boss-hp-start", current.start);
   root.style.setProperty("--boss-hp-end", current.end);
 }
+
+export function updateCharacterUI(character) {
+  const characterName = document.getElementById("character-name");
+  const characterRarity = document.getElementById("character-rarity");
+
+  if (characterName) {
+    characterName.innerText = character.name;
+  }
+
+  if (characterRarity) {
+    characterRarity.innerText = `Rarity: ${character.rarity}`;
+    characterRarity.className = `rarity-${character.rarity.toLowerCase()}`; // Add CSS class for styling
+  }
+}
+
+export function updateGachaUI() {
+  const gachaContainer = document.getElementById("gacha-container");
+  if (!gachaContainer) return;
+
+  gachaContainer.innerHTML = `
+    <h3>🎰 Gacha</h3>
+  `;
+
+  const btn = document.createElement("button");
+  btn.innerText = "Roll (1000 coins)";
+  btn.onclick = () => rollGacha();
+
+  gachaContainer.appendChild(btn);
+}
+
+export function updateTradingUI() {
+  const tradingContainer = document.getElementById("trading-container");
+  if (!tradingContainer) return;
+
+  tradingContainer.innerHTML = `<h3>🔁 Trade</h3>`;
+
+  ["common", "rare"].forEach((rarity) => {
+    const btn = document.createElement("button");
+    btn.innerText = `Trade 5 ${rarity} → ${
+      rarity === "common" ? "rare" : "legendary"
+    }`;
+
+    btn.onclick = () => {
+      tradeCharacters(rarity);
+      renderShop();
+    };
+
+    tradingContainer.appendChild(btn);
+  });
+}
+

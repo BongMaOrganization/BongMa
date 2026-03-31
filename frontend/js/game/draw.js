@@ -40,20 +40,141 @@ export function draw(ctx, canvas) {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
+  if (player.characterId === "berserker" && buffs.r > 0) {
+    ctx.fillStyle = `rgba(255, 0, 0, ${buffs.r / (5 * 60)})`;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  if (player.characterId === "assassin" && buffs.e > 0) {
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.radius + 10, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  if (player.characterId === "summoner" && buffs.r > 0) {
+    ctx.fillStyle = "rgba(180, 0, 255, 0.12)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  if (player.characterId === "frost" && buffs.r > 0) {
+    ctx.fillStyle = "rgba(120, 200, 255, 0.15)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  if (player.characterId === "void" && buffs.r > 0) {
+    ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  if (player.characterId === "storm" && buffs.r > 0) {
+    ctx.fillStyle = "rgba(255, 255, 0, 0.12)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  if (player.characterId === "reaper" && buffs.r > 0) {
+    ctx.fillStyle = "rgba(255, 0, 0, 0.18)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
   // --- Boss ---
   if (boss) {
+    const phase = boss.hp <= boss.maxHp / 2 ? 1 : 0;
+    const phaseColor = boss.phaseColors?.[phase] || {
+      start: boss.color,
+      end: boss.color,
+    };
+
+    // ===== lerp color =====
+    function lerpColor(a, b, t) {
+      const ah = parseInt(a.replace("#", ""), 16);
+      const bh = parseInt(b.replace("#", ""), 16);
+
+      const ar = (ah >> 16) & 255,
+        ag = (ah >> 8) & 255,
+        ab = ah & 255;
+
+      const br = (bh >> 16) & 255,
+        bg = (bh >> 8) & 255,
+        bb = bh & 255;
+
+      return `rgb(${(ar + t * (br - ar)) | 0},${(ag + t * (bg - ag)) | 0},${(ab + t * (bb - ab)) | 0})`;
+    }
+
+    const t = (Math.sin(state.frameCount * 0.05) + 1) / 2;
+    const color = lerpColor(phaseColor.start, phaseColor.end, t);
+
+    ctx.save();
+    ctx.translate(boss.x, boss.y);
+
+    // ===== Rotate (always on) =====
+    ctx.rotate(state.frameCount * 0.01);
+
     ctx.beginPath();
-    ctx.arc(boss.x, boss.y, boss.radius, 0, Math.PI * 2);
+
+    // ===== Shape =====
+    switch (boss.shape) {
+      case "triangle":
+        for (let i = 0; i < 3; i++) {
+          let a = i * ((Math.PI * 2) / 3) - Math.PI / 2;
+          let x = Math.cos(a) * boss.radius;
+          let y = Math.sin(a) * boss.radius;
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        break;
+
+      case "square":
+        ctx.rect(-boss.radius, -boss.radius, boss.radius * 2, boss.radius * 2);
+        break;
+
+      case "hexagon":
+        for (let i = 0; i < 6; i++) {
+          let a = i * ((Math.PI * 2) / 6);
+          let x = Math.cos(a) * boss.radius;
+          let y = Math.sin(a) * boss.radius;
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        break;
+
+      case "star":
+        for (let i = 0; i < 10; i++) {
+          let r = i % 2 === 0 ? boss.radius : boss.radius / 2;
+          let a = i * (Math.PI / 5);
+          let x = Math.cos(a) * r;
+          let y = Math.sin(a) * r;
+          i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+        break;
+
+      default:
+        ctx.arc(0, 0, boss.radius, 0, Math.PI * 2);
+    }
+
+    // ===== Fill =====
     ctx.fillStyle = "#111";
     ctx.fill();
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = boss.summonCooldown > 0 ? "#ff0055" : "#ff00ff";
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = ctx.strokeStyle;
+
+    // ===== Rage mode (LOW HP) =====
+    const isRage = boss.hp < boss.maxHp * 0.5;
+
+    ctx.lineWidth = isRage ? 8 : 4;
+    ctx.strokeStyle = color;
+
+    ctx.shadowBlur = isRage ? 40 : 25;
+    ctx.shadowColor = color;
+
     ctx.stroke();
     ctx.shadowBlur = 0;
-    ctx.fillStyle = ctx.strokeStyle;
-    ctx.fillRect(boss.x - 10, boss.y - 10, 20, 20);
+
+    // ===== Core =====
+    ctx.fillStyle = color;
+    ctx.fillRect(-8, -8, 16, 16);
+
+    ctx.restore();
   }
 
   // --- Ghosts ---

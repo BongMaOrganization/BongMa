@@ -128,7 +128,7 @@ export function initGame(isNextLevel = false) {
     state.maxFramesToSurvive = 999999;
 
     // Debug: Force a specific boss for testing
-    const debugBossType = "iceBoss"; // Change this to the boss you want to test
+    const debugBossType = "fireBoss"; // Change this to the boss you want to test
 
     // Select boss type based on level or debug option
     const bossTypes = Object.keys(BOSS_TYPES);

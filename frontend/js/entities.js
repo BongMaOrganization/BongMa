@@ -4,233 +4,263 @@ import { FPS } from "./config.js";
 // =======================
 // ATTACK MODES (0 → 24)
 // =======================
+const TAU = Math.PI * 2;
+
+function fireAngle(sx, sy, angle, style = 0, source = "boss") {
+  spawnBullet(
+    sx,
+    sy,
+    sx + Math.cos(angle),
+    sy + Math.sin(angle),
+    false,
+    style,
+    source,
+  );
+}
+
+function ring(sx, sy, count, offset = 0, style = 0, source = "boss") {
+  for (let i = 0; i < count; i++) {
+    fireAngle(sx, sy, offset + (i * TAU) / count, style, source);
+  }
+}
+
+function fan(sx, sy, baseAngle, count, spread, style = 0, source = "boss") {
+  const start = baseAngle - (spread * (count - 1)) / 2;
+  for (let i = 0; i < count; i++) {
+    fireAngle(sx, sy, start + i * spread, style, source);
+  }
+}
+
+function aim(boss, extraAngle = 0) {
+  return (
+    Math.atan2(state.player.y - boss.y, state.player.x - boss.x) + extraAngle
+  );
+}
+
+function rainCurtain(xStart, xEnd, step, yStart, txBias, style = 0, source = "boss") {
+  for (let x = xStart; x <= xEnd; x += step) {
+    spawnBullet(
+      x,
+      yStart,
+      x + txBias,
+      600,
+      false,
+      style,
+      source,
+    );
+  }
+}
+
 export const ATTACK_MODES = {
   0: (boss) => {
-    for (let i = 0; i < Math.PI * 2; i += 0.35) {
-      spawnBullet(boss.x, boss.y, boss.x + Math.cos(i), boss.y + Math.sin(i), false, 1, "boss");
-    }
+    // Dense radial burst + inner ring
+    const phase = boss.hp < boss.maxHp * 0.5 ? 1 : 0;
+    ring(boss.x, boss.y, phase ? 28 : 22, boss.attackTimer * 0.04, 1);
+    ring(boss.x, boss.y, phase ? 14 : 10, -boss.attackTimer * 0.06, 2);
   },
 
   1: (boss) => {
-    for (let i = -1; i <= 1; i++) {
-      let angle = Math.atan2(state.player.y - boss.y, state.player.x - boss.x) + i * 0.15;
-      spawnBullet(boss.x, boss.y, boss.x + Math.cos(angle), boss.y + Math.sin(angle), false, 2, "boss");
-    }
+    // Multi-layer aimed fan
+    const base = aim(boss);
+    fan(boss.x, boss.y, base, 11, 0.06, 2);
+    fan(boss.x, boss.y, base + 0.14, 7, 0.035, 1);
   },
 
   2: (boss) => {
-    for (let i = 0; i < 10; i++) {
-      let angle = Math.random() * Math.PI * 2;
-      spawnBullet(boss.x, boss.y, boss.x + Math.cos(angle), boss.y + Math.sin(angle), false, 1, "boss");
+    // Chaos burst with targeted follow-up
+    for (let i = 0; i < 18; i++) {
+      fireAngle(boss.x, boss.y, Math.random() * TAU, i % 2 ? 1 : 0);
     }
+    const base = aim(boss);
+    fan(boss.x, boss.y, base, 8, 0.05, 3);
   },
 
   3: (boss) => {
-    for (let i = 0; i < 8; i++) {
-      let angle = (boss.attackTimer * 0.1) + i * (Math.PI / 4);
-      spawnBullet(boss.x, boss.y, boss.x + Math.cos(angle), boss.y + Math.sin(angle), false, 1, "boss");
+    // Double spiral
+    const t = boss.attackTimer * 0.14;
+    for (let i = 0; i < 18; i++) {
+      fireAngle(boss.x, boss.y, t + i * 0.33, 1);
+      fireAngle(boss.x, boss.y, -t - i * 0.33, 1);
     }
   },
 
   4: (boss) => {
-    for (let i = -2; i <= 2; i++) {
-      let angle = Math.atan2(state.player.y - boss.y, state.player.x - boss.x) + i * 0.08;
-      spawnBullet(boss.x, boss.y, boss.x + Math.cos(angle), boss.y + Math.sin(angle), false, 1, "boss");
+    // Aimed crossfire with spread
+    const base = aim(boss);
+    for (let i = -4; i <= 4; i++) {
+      fireAngle(boss.x, boss.y, base + i * 0.08, 2);
+      if (i % 2 === 0) fireAngle(boss.x, boss.y, base + Math.PI / 2 + i * 0.04, 1);
     }
   },
 
-  // ===== NEW PATTERNS =====
   5: (boss) => {
-    for (let i = 0; i < 16; i++) {
-      let angle = i * (Math.PI * 2 / 16);
-      spawnBullet(boss.x, boss.y, boss.x + Math.cos(angle), boss.y + Math.sin(angle), false, 1, "boss");
-    }
+    // Rotating hex ring + inner spin
+    ring(boss.x, boss.y, 30, boss.attackTimer * 0.05, 1);
+    ring(boss.x, boss.y, 12, -boss.attackTimer * 0.08, 2);
   },
 
   6: (boss) => {
-    let base = Math.atan2(state.player.y - boss.y, state.player.x - boss.x);
-    for (let i = -3; i <= 3; i++) {
-      spawnBullet(boss.x, boss.y, boss.x + Math.cos(base + i * 0.1), boss.y + Math.sin(base + i * 0.1), false);
-    }
+    // Four-way cross plus player fan
+    const base = aim(boss);
+    fireAngle(boss.x, boss.y, 0, 1);
+    fireAngle(boss.x, boss.y, Math.PI / 2, 1);
+    fireAngle(boss.x, boss.y, Math.PI, 1);
+    fireAngle(boss.x, boss.y, (Math.PI * 3) / 2, 1);
+    fan(boss.x, boss.y, base, 9, 0.07, 2);
   },
 
   7: (boss) => {
-    let t = boss.attackTimer * 0.05;
-    spawnBullet(boss.x, boss.y, boss.x + Math.cos(t), boss.y + Math.sin(t), false);
+    // Moving sniper + orbiting bullets
+    const base = aim(boss, Math.sin(boss.attackTimer * 0.05) * 0.25);
+    fireAngle(boss.x, boss.y, base, 3);
+    fireAngle(boss.x, boss.y, base + 0.03, 2);
+    fireAngle(boss.x, boss.y, base - 0.03, 2);
+    ring(boss.x, boss.y, 8, boss.attackTimer * 0.1, 1);
   },
 
   8: (boss) => {
-    for (let i = 0; i < 20; i++) {
-      let angle = i * 0.3 + boss.attackTimer * 0.05;
-      spawnBullet(boss.x, boss.y, boss.x + Math.cos(angle), boss.y + Math.sin(angle), false);
-    }
+    // Expanding dual rings
+    const phase = boss.attackTimer % 60;
+    const offset = phase * 0.12;
+    ring(boss.x, boss.y, 24, offset, 1);
+    ring(boss.x, boss.y, 12, -offset * 1.35, 2);
   },
 
   9: (boss) => {
-    for (let i = 0; i < 12; i++) {
-      let angle = i * (Math.PI / 6);
-      spawnBullet(boss.x, boss.y, boss.x + Math.cos(angle), boss.y + Math.sin(angle), false, 2);
-    }
+    // Dense aimed ring
+    const base = aim(boss);
+    ring(boss.x, boss.y, 18, base, 2);
+    fan(boss.x, boss.y, base, 7, 0.045, 3);
   },
 
   10: (boss) => {
-    let angle = Math.atan2(state.player.y - boss.y, state.player.x - boss.x);
-    spawnBullet(boss.x, boss.y, boss.x + Math.cos(angle), boss.y + Math.sin(angle), false, 3);
+    // Heavy sniper burst
+    const base = aim(boss);
+    fan(boss.x, boss.y, base, 7, 0.025, 3);
   },
 
   11: (boss) => {
-    for (let i = 0; i < 6; i++) {
-      let angle = Math.random() * Math.PI * 2;
-      spawnBullet(boss.x, boss.y, boss.x + Math.cos(angle), boss.y + Math.sin(angle), false);
+    // Random rain + diagonal pressure
+    for (let i = 0; i < 20; i++) {
+      fireAngle(boss.x, boss.y, Math.random() * TAU, 0);
+    }
+    for (let x = 40; x <= 760; x += 120) {
+      spawnBullet(x, 0, x + (Math.random() > 0.5 ? 60 : -60), 600, false, 1, "boss");
     }
   },
 
   12: (boss) => {
-    for (let i = 0; i < 30; i++) {
-      let angle = i * 0.2;
-      spawnBullet(boss.x, boss.y, boss.x + Math.cos(angle), boss.y + Math.sin(angle), false);
-    }
+    // Rotating bullet cage
+    const t = boss.attackTimer * 0.08;
+    ring(boss.x, boss.y, 36, t, 1);
+    ring(boss.x, boss.y, 18, -t * 1.5, 2);
   },
 
   13: (boss) => {
-    for (let i = -4; i <= 4; i++) {
-      let angle = i * 0.1;
-      spawnBullet(boss.x, boss.y, boss.x + Math.cos(angle), boss.y + Math.sin(angle), false);
+    // Sweeping curtain
+    const sweep = Math.sin(boss.attackTimer * 0.05) * 180;
+    for (let x = 0; x <= 800; x += 40) {
+      spawnBullet(
+        x,
+        -10,
+        x + sweep,
+        620,
+        false,
+        1,
+        "boss",
+      );
     }
   },
 
   14: (boss) => {
-    let t = boss.attackTimer * 0.2;
-    spawnBullet(boss.x, boss.y, boss.x + Math.cos(t), boss.y + Math.sin(t), false);
-    spawnBullet(boss.x, boss.y, boss.x - Math.cos(t), boss.y - Math.sin(t), false);
+    // Twin spiral shots
+    const t = boss.attackTimer * 0.12;
+    for (let i = 0; i < 14; i++) {
+      fireAngle(boss.x, boss.y, t + i * 0.48, 1);
+      fireAngle(boss.x, boss.y, t + Math.PI + i * 0.48, 1);
+    }
+    fan(boss.x, boss.y, aim(boss), 5, 0.04, 3);
   },
 
- // =======================
-// ADVANCED PATTERNS (15–24)
-// =======================
+  15: (boss) => {
+    // Reverse spiral, denser
+    const t = -boss.attackTimer * 0.11;
+    for (let i = 0; i < 24; i++) {
+      fireAngle(boss.x, boss.y, t + i * 0.28, 1);
+    }
+  },
 
-15: (boss) => {
-  // 🔄 Reverse spiral (ngược chiều mode 3)
-  for (let i = 0; i < 10; i++) {
-    let angle = -(boss.attackTimer * 0.08) + i * 0.5;
-    spawnBullet(boss.x, boss.y,
-      boss.x + Math.cos(angle),
-      boss.y + Math.sin(angle),
-      false);
-  }
-},
+  16: (boss) => {
+    // Triple shotgun burst
+    const base = aim(boss);
+    fan(boss.x, boss.y, base, 15, 0.035, 2);
+    fan(boss.x, boss.y, base + 0.12, 9, 0.025, 1);
+  },
 
-16: (boss) => {
-  // 💥 Shotgun mạnh vào player
-  let base = Math.atan2(state.player.y - boss.y, state.player.x - boss.x);
-  for (let i = -6; i <= 6; i++) {
-    spawnBullet(boss.x, boss.y,
-      boss.x + Math.cos(base + i * 0.05),
-      boss.y + Math.sin(base + i * 0.05),
-      false, 2);
-  }
-},
+  17: (boss) => {
+    // Cross walls from top/side
+    for (let x = 20; x <= 780; x += 35) {
+      spawnBullet(x, 0, x + 20 * Math.sin(boss.attackTimer * 0.08), 600, false, 1, "boss");
+    }
+    for (let y = 40; y <= 560; y += 60) {
+      spawnBullet(0, y, 800, y + 30 * Math.cos(boss.attackTimer * 0.06), false, 2, "boss");
+    }
+  },
 
-17: (boss) => {
-  // 🧱 Bullet wall ngang
-  for (let i = -300; i <= 300; i += 40) {
-    spawnBullet(boss.x + i, boss.y,
-      boss.x + i,
-      boss.y + 200,
-      false);
-  }
-},
+  18: (boss) => {
+    // Flower burst with inner petals
+    ring(boss.x, boss.y, 32, boss.attackTimer * 0.04, 1);
+    ring(boss.x, boss.y, 16, boss.attackTimer * 0.04 + Math.PI / 32, 2);
+  },
 
-18: (boss) => {
-  // 🌸 Flower burst (hoa nở)
-  for (let i = 0; i < 24; i++) {
-    let angle = i * (Math.PI * 2 / 24);
-    spawnBullet(boss.x, boss.y,
-      boss.x + Math.cos(angle),
-      boss.y + Math.sin(angle),
-      false, 1);
-  }
-},
+  19: (boss) => {
+    // Double spiral with offset layers
+    const t = boss.attackTimer * 0.1;
+    for (let i = 0; i < 12; i++) {
+      fireAngle(boss.x, boss.y, t + i * 0.55, 1);
+      fireAngle(boss.x, boss.y, -t + i * 0.55 + Math.PI / 6, 1);
+    }
+  },
 
-19: (boss) => {
-  // 🌀 Double spiral (2 lớp)
-  for (let i = 0; i < 8; i++) {
-    let angle1 = boss.attackTimer * 0.1 + i * 0.8;
-    let angle2 = -boss.attackTimer * 0.1 + i * 0.8;
+  20: (boss) => {
+    // Fake aim then perpendicular burst
+    const base = aim(boss);
+    fan(boss.x, boss.y, base, 7, 0.055, 2);
+    fan(boss.x, boss.y, base + Math.PI / 2, 7, 0.055, 1);
+  },
 
-    spawnBullet(boss.x, boss.y,
-      boss.x + Math.cos(angle1),
-      boss.y + Math.sin(angle1),
-      false);
+  21: (boss) => {
+    // Sine wave pattern
+    for (let i = 0; i < 18; i++) {
+      const angle = Math.sin(boss.attackTimer * 0.09 + i * 0.55) * 1.1;
+      fireAngle(boss.x, boss.y, angle, i % 2 ? 1 : 0);
+    }
+  },
 
-    spawnBullet(boss.x, boss.y,
-      boss.x + Math.cos(angle2),
-      boss.y + Math.sin(angle2),
-      false);
-  }
-},
+  22: (boss) => {
+    // Multi-ring expansion
+    const t = (boss.attackTimer % 45) * 0.16;
+    ring(boss.x, boss.y, 16, t, 1);
+    ring(boss.x, boss.y, 24, -t * 1.2, 2);
+    ring(boss.x, boss.y, 32, t * 0.6, 0);
+  },
 
-20: (boss) => {
-  // 🎯 Delayed aim (giả aim rồi lệch)
-  let base = Math.atan2(state.player.y - boss.y, state.player.x - boss.x);
+  23: (boss) => {
+    // Targeted rain from above
+    const px = state.player.x;
+    for (let i = -4; i <= 4; i++) {
+      const x = px + i * 55 + Math.sin(boss.attackTimer * 0.04 + i) * 25;
+      spawnBullet(x, -20, x + i * 10, 620, false, 1, "boss");
+    }
+    rainCurtain(60, 740, 80, -30, 0, 0);
+  },
 
-  for (let i = -2; i <= 2; i++) {
-    let offset = (Math.random() - 0.5) * 0.3;
-    spawnBullet(boss.x, boss.y,
-      boss.x + Math.cos(base + i * 0.1 + offset),
-      boss.y + Math.sin(base + i * 0.1 + offset),
-      false);
-  }
-},
-
-21: (boss) => {
-  // 🌊 Wave pattern
-  for (let i = 0; i < 10; i++) {
-    let angle = Math.sin(boss.attackTimer * 0.1 + i) * Math.PI;
-    spawnBullet(boss.x, boss.y,
-      boss.x + Math.cos(angle),
-      boss.y + Math.sin(angle),
-      false);
-  }
-},
-
-22: (boss) => {
-  // 💣 Expanding rings (vòng lan rộng)
-  let radius = (boss.attackTimer % 60) * 0.1;
-
-  for (let i = 0; i < 16; i++) {
-    let angle = i * (Math.PI * 2 / 16);
-    spawnBullet(
-      boss.x + Math.cos(angle) * radius * 10,
-      boss.y + Math.sin(angle) * radius * 10,
-      boss.x + Math.cos(angle),
-      boss.y + Math.sin(angle),
-      false
-    );
-  }
-},
-
-23: (boss) => {
-  // ⚡ Random rain (mưa đạn từ trên)
-  for (let i = 0; i < 8; i++) {
-    let x = Math.random() * 800;
-    spawnBullet(x, 0, x, 600, false);
-  }
-},
-
-24: (boss) => {
-  // 🧠 Smart tracking burst (semi-homing)
-  let base = Math.atan2(state.player.y - boss.y, state.player.x - boss.x);
-
-  for (let i = 0; i < 5; i++) {
-    let angle = base + (Math.random() - 0.5) * 0.4;
-
-    spawnBullet(boss.x, boss.y,
-      boss.x + Math.cos(angle),
-      boss.y + Math.sin(angle),
-      false, 3);
-  }
-},
+  24: (boss) => {
+    // Smart tracking burst + outer ring
+    const base = aim(boss);
+    fan(boss.x, boss.y, base, 11, 0.03, 3);
+    ring(boss.x, boss.y, 12, boss.attackTimer * 0.12, 2);
+  },
 };
 
 // =======================
@@ -243,6 +273,7 @@ export const BOSS_TYPES = {
     speed: 2,
     attackModes: [0, 1, 2, 3, 4],
     color: "#ff4500",
+    shape: "circle", // Added shape property
     phaseColors: [
       { start: "#ff4500", end: "#ff0000" }, // phase 1
       { start: "#ff9900", end: "#ff2200" }, // phase 2
@@ -254,6 +285,7 @@ export const BOSS_TYPES = {
     speed: 1.5,
     attackModes: [5, 6, 7, 8, 9],
     color: "#00ffff",
+    shape: "hexagon", // Added shape property
     phaseColors: [
       { start: "#00ffff", end: "#0099ff" },
       { start: "#99ffff", end: "#33ccff" },
@@ -265,6 +297,7 @@ export const BOSS_TYPES = {
     speed: 2.5,
     attackModes: [10, 11, 12, 13, 14],
     color: "#ffff00",
+    shape: "triangle", // Added shape property
     phaseColors: [
       { start: "#ffff00", end: "#ffcc00" },
       { start: "#ffcc33", end: "#ffaa00" },
@@ -276,6 +309,7 @@ export const BOSS_TYPES = {
     speed: 1,
     attackModes: [15, 16, 17, 18, 19],
     color: "#8b4513",
+    shape: "square", // Added shape property
     phaseColors: [
       { start: "#8b4513", end: "#5a3310" },
       { start: "#a0522d", end: "#6b4226" },
@@ -287,6 +321,7 @@ export const BOSS_TYPES = {
     speed: 3,
     attackModes: [20, 21, 22, 23, 24],
     color: "#00ffcc",
+    shape: "star", // Added shape property
     phaseColors: [
       { start: "#00ffcc", end: "#00cc99" },
       { start: "#33ffcc", end: "#00ffaa" },
@@ -437,6 +472,7 @@ export function createBoss(type) {
     summonCooldown: 5 * FPS,
     ghostsActive: false,
     color: cfg.color,
+    shape: cfg.shape, // Assign shape property to boss instance
     name: cfg.name,
     phaseColors: cfg.phaseColors, // Pass phaseColors to boss instance
 
@@ -501,31 +537,3 @@ export function bossSummonGhosts() {
   });
 }
 
-export function updateBossUI() {
-  const boss = state.boss;
-  const root = document.documentElement;
-
-  if (!boss || !boss.phaseColors) return;
-
-  const phase = boss.hp <= boss.maxHp / 2 ? 1 : 0;
-
-  // Check if the phase has changed
-  if (boss.currentPhase !== phase) {
-    boss.currentPhase = phase; // Update the current phase
-
-    // Trigger phase transition animation
-    const bossUI = document.getElementById("boss-ui");
-    if (bossUI) {
-      bossUI.classList.add("phase-transition");
-      setTimeout(() => bossUI.classList.remove("phase-transition"), 300); // Remove class after animation
-    }
-  }
-
-  const current = boss.phaseColors[phase];
-
-  // Update CSS variables for boss UI
-  root.style.setProperty("--boss-name-color", current.end);
-  root.style.setProperty("--boss-name-shadow", current.start);
-  root.style.setProperty("--boss-hp-start", current.start);
-  root.style.setProperty("--boss-hp-end", current.end);
-}

@@ -3,7 +3,11 @@ import { CHARACTERS } from "../config.js";
 import { getInitialPlayerState } from "../entities.js";
 
 export function getCharacterConfig(id) {
-  return CHARACTERS.find((c) => c.id === id) || CHARACTERS[0];
+  const character = CHARACTERS.find((c) => c.id === id) || CHARACTERS[0];
+  return {
+    ...character,
+    rarity: character.rarity || "common", // Ensure rarity is always present
+  };
 }
 
 export function applyCharacterToPlayer(characterId) {
@@ -37,4 +41,32 @@ export function ensureCharacterData() {
   if (!state.ownedCharacters) state.ownedCharacters = ["speedster"];
   if (!state.selectedCharacter) state.selectedCharacter = "speedster";
   if (!state.characterUpgrades) state.characterUpgrades = {};
+}
+
+export function rollGacha() {
+  const roll = Math.random();
+  const { probabilities } = gachaConfig;
+
+  if (roll < probabilities.legendary) return "legendary";
+  if (roll < probabilities.legendary + probabilities.rare) return "rare";
+  return "common";
+}
+
+export function gachaRoll() {
+  if (state.player.coins < gachaConfig.cost) {
+    alert("Not enough coins!");
+    return;
+  }
+
+  state.player.coins -= gachaConfig.cost;
+  const rarity = rollGacha();
+  const availableCharacters = CHARACTERS.filter((c) => c.rarity === rarity);
+  const character = availableCharacters[Math.floor(Math.random() * availableCharacters.length)];
+
+  if (!state.ownedCharacters.includes(character.id)) {
+    state.ownedCharacters.push(character.id);
+    alert(`You unlocked a ${rarity} character: ${character.name}!`);
+  } else {
+    alert(`You rolled a ${rarity} character: ${character.name}, but you already own it.`);
+  }
 }

@@ -148,11 +148,27 @@
         </div>
       </div>
 
+      <div id="screen-trading" class="overlay hidden">
+        <div class="panel" style="max-width: 400px">
+          <h2 class="title-main text-cyan">🔁 TRADE</h2>
+
+          <div id="trading-info" style="margin-bottom: 15px"></div>
+
+          <div id="trading-options"></div>
+
+          <br />
+          <button id="btn-trading-back">Đóng</button>
+        </div>
+      </div>
+
       <div id="screen-shop" class="overlay hidden">
         <div class="panel">
           <h2 class="title-main text-cyan">CỬA HÀNG NHÂN VẬT</h2>
           <p class="desc">Dùng bạc để mở khóa nhân vật và nâng cấp.</p>
           <div id="shop-coins" class="shop-info"></div>
+          <!-- Gacha and Trading Containers -->
+          <div id="gacha-container"></div>
+          <div id="trading-container"></div>
           <div class="card-container" id="shop-cards"></div>
           <button id="btn-shop-back">Quay Lại</button>
         </div>
@@ -191,7 +207,18 @@
         <button id="btn-upg-detail-back" style="width: 100%">XONG</button>
       </div>
     </div>
+    <div id="gacha-overlay" class="overlay hidden">
+      <div class="panel" style="text-align: center">
+        <h2 id="gacha-title">🎰 Rolling...</h2>
 
+        <div
+          id="gacha-result"
+          style="font-size: 24px; margin: 20px 0; height: 40px"
+        ></div>
+
+        <button id="gacha-close" style="display: none">OK</button>
+      </div>
+    </div>
     <script type="module" src="js/main.js"></script>
   </body>
 </html>

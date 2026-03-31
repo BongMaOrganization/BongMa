@@ -529,3 +529,75 @@ button:disabled {
   50% { filter: brightness(2); }
   100% { filter: brightness(1); }
 }
+
+#gacha-container, #trading-container {
+  margin: 20px;
+  padding: 10px;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+#gacha-container {
+  color: #007bff;
+}
+
+#trading-container {
+  color: #28a745;
+}
+
+#gacha-container button, #trading-container button {
+  margin: 10px;
+  padding: 10px 20px;
+  font-size: 16px;
+  background-color: #333;
+  color: #fff;
+  border: 1px solid #555;
+  cursor: pointer;
+}
+
+#gacha-container button:hover, #trading-container button:hover {
+  background-color: #444;
+}
+
+/* Style for Gacha and Trading buttons */
+#gacha-button, #trade-button {
+  display: inline-block;
+  margin: 10px;
+  padding: 10px 20px;
+  font-size: 16px;
+  color: #fff;
+  background-color: #007bff;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+#gacha-button:hover, #trade-button:hover {
+  background-color: #0056b3;
+}
+#gacha-result {
+  transition: all 0.3s ease;
+}
+
+.gacha-common {
+  color: white;
+  text-shadow: 0 0 5px #fff;
+}
+
+.gacha-rare {
+  color: #0070ff;
+  text-shadow: 0 0 10px #0070ff;
+}
+
+.gacha-legendary {
+  color: #a335ee;
+  text-shadow: 0 0 20px #a335ee, 0 0 40px #a335ee;
+  animation: glowPulse 1s infinite alternate;
+}
+
+@keyframes glowPulse {
+  from { text-shadow: 0 0 10px #a335ee; }
+  to { text-shadow: 0 0 30px #ff00ff; }
+}

@@ -14,6 +14,11 @@ export const state = {
   currentRunRecord: [],
   ownedCharacters: ["speedster"],
   selectedCharacter: "speedster",
+    resources: {
+    common: 0,
+    rare: 0,
+    legendary: 0,
+  },
   characterUpgrades: {
     spd: { count: 0, specialEffect: false },
     fire: { count: 0, specialEffect: false },
@@ -56,3 +61,5 @@ export const state = {
 
   evolutionReady: null,
 };
+
+

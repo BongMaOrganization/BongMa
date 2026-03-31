@@ -10,14 +10,22 @@ export function update(ctx, canvas, changeStateFn) {
 
   // Khởi tạo dự phòng nếu buff chưa load kịp
   let buffs = activeBuffs || { q: 0, e: 0, r: 0 };
+  // ===== NEW CHARACTER BUFF FLAGS =====
+  let isBerserkerQ = player.characterId === "berserker" && buffs.q > 0;
+  let isBerserkerR = player.characterId === "berserker" && buffs.r > 0;
 
+  let isHunterE = player.characterId === "hunter" && buffs.e > 0;
+  let isFrostR = player.characterId === "frost" && buffs.r > 0;
+  let isVoidR = player.characterId === "void" && buffs.r > 0;
+  let isStormE = player.characterId === "storm" && buffs.e > 0;
+  let isReaperR = player.characterId === "reaper" && buffs.r > 0;
   // --- ÁP DỤNG BUFF VÀO CHỈ SỐ KỸ NĂNG ---
   let isSpeedsterQ = player.characterId === "speedster" && buffs.q > 0;
   let currentSpeed = player.speed * (isSpeedsterQ ? 1.5 : 1);
-
+  if (isBerserkerQ) currentSpeed *= 1.2;
   let isSpeedsterE = player.characterId === "speedster" && buffs.e > 0;
   let currentFireRate = isSpeedsterE ? 4 : player.fireRate;
-
+  if (isStormE) currentFireRate = Math.max(3, player.fireRate * 0.75);
   let isSharpshootE = player.characterId === "sharpshooter" && buffs.e > 0;
   let currentMultiShot = player.multiShot + (isSharpshootE ? 3 : 0);
 
@@ -25,7 +33,6 @@ export function update(ctx, canvas, changeStateFn) {
   let currentBounces = (player.bounces || 0) + (isSharpshootQ ? 2 : 0);
 
   let isTimeFrozen = player.characterId === "mage" && buffs.r > 0;
-
   // --- Grace period & dash cooldown ---
   if (player.gracePeriod > 0) player.gracePeriod--;
   if (player.dashCooldownTimer > 0) player.dashCooldownTimer--;
@@ -161,6 +168,65 @@ export function update(ctx, canvas, changeStateFn) {
       ) {
         playerTakeDamage(ctx, canvas, changeStateFn);
       }
+    }
+  }
+  // ===== SPECIAL EFFECTS =====
+
+  // Frost: freeze aura
+  if (isFrostR) {
+    state.ghosts.forEach((g) => {
+      if (g.x > 0 && dist(player.x, player.y, g.x, g.y) < 220) {
+        g.isStunned = Math.max(g.isStunned, 30);
+      }
+    });
+  }
+
+  // Void: delete all enemy bullets
+  if (isVoidR) {
+    state.bullets.forEach((b) => {
+      if (!b.isPlayer) b.life = 0;
+    });
+  }
+
+  // Reaper: damage aura
+  if (isReaperR) {
+    state.ghosts.forEach((g) => {
+      if (g.x > 0 && dist(player.x, player.y, g.x, g.y) < 180) {
+        g.isStunned = Math.max(g.isStunned, 60);
+      }
+    });
+  }
+
+  // Berserker rage bonus damage
+  if (isBerserkerR) {
+    state.ghosts.forEach((g) => {
+      if (g.x > 0 && dist(player.x, player.y, g.x, g.y) < 100) {
+        g.isStunned = Math.max(g.isStunned, 60);
+      }
+    });
+  }
+  //Hunter
+  if (isHunterE) {
+    state.ghosts.forEach((g) => {
+      if (g.x > 0) g.isStunned = Math.max(g.isStunned, 60);
+    });
+  }
+  //Storm
+  if (buffs.r > 0 && player.characterId === "storm") {
+    if (state.frameCount % 10 === 0) {
+      state.ghosts.forEach((g) => (g.isStunned = Math.max(g.isStunned, 60)));
+    }
+  }
+  //Summoner
+  if (player.characterId === "summoner" && buffs.q > 0) {
+    if (state.frameCount % 20 === 0) {
+      spawnBullet(
+        player.x,
+        player.y,
+        player.x + Math.random() * 100,
+        player.y + Math.random() * 100,
+        true,
+      );
     }
   }
 

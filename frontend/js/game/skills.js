@@ -195,6 +195,301 @@ function triggerSkill(key, canvas, changeStateFn) {
       }
     }
     if (key === "r") state.activeBuffs.r = 4 * FPS;
+  } else if (char === "brawler") {
+    if (key === "q") {
+      state.ghosts.forEach((g) => {
+        if (dist(state.player.x, state.player.y, g.x, g.y) < 80) {
+          g.x += (g.x - state.player.x) * 0.5;
+          g.y += (g.y - state.player.y) * 0.5;
+        }
+      });
+    }
+    if (key === "e") state.activeBuffs.e = 3 * FPS;
+    if (key === "r") {
+      for (let i = 0; i < Math.PI * 2; i += Math.PI / 6) {
+        spawnBullet(
+          state.player.x,
+          state.player.y,
+          state.player.x + Math.cos(i),
+          state.player.y + Math.sin(i),
+          true,
+        );
+      }
+    }
+  } else if (char === "scout") {
+    if (key === "q") state.activeBuffs.q = 5 * FPS;
+    if (key === "e") state.player.dashTimeLeft = 10;
+    if (key === "r") {
+      state.ghosts.forEach((g) => (g.isStunned = 120));
+    }
+  } else if (char === "medic") {
+    if (key === "q" && state.player.hp < state.player.maxHp) {
+      state.player.hp++;
+      updateHealthUI();
+    }
+    if (key === "e") state.activeBuffs.e = 4 * FPS;
+    if (key === "r") {
+      state.player.hp = state.player.maxHp;
+      updateHealthUI();
+    }
+  } else if (char === "hunter") {
+    if (key === "q") {
+      state.ghosts.forEach((g) => {
+        if (dist(state.player.x, state.player.y, g.x, g.y) < 100) {
+          g.isStunned = 60;
+        }
+      });
+    }
+    if (key === "e") state.activeBuffs.e = 4 * FPS;
+    if (key === "r") state.activeBuffs.r = 6 * FPS;
+  } else if (char === "frost") {
+    if (key === "q") {
+      state.ghosts.forEach((g) => (g.isStunned = 90));
+    }
+    if (key === "e") state.player.shield = 2;
+    if (key === "r") state.activeBuffs.r = 5 * FPS;
+  } else if (char === "gunner") {
+    if (key === "q") state.activeBuffs.q = 3 * FPS;
+    if (key === "e") state.activeBuffs.e = 5 * FPS;
+    if (key === "r") {
+      for (let i = 0; i < Math.PI * 2; i += Math.PI / 20) {
+        spawnBullet(
+          state.player.x,
+          state.player.y,
+          state.player.x + Math.cos(i),
+          state.player.y + Math.sin(i),
+          true,
+        );
+      }
+    }
+  } else if (char === "timekeeper") {
+    if (key === "q") state.activeBuffs.q = 4 * FPS;
+    if (key === "e") {
+      state.player.x -= 50;
+      state.player.y -= 50;
+    }
+    if (key === "r") {
+      state.ghosts.forEach((g) => (g.isStunned = 180));
+    }
+  } else if (char === "void") {
+    if (key === "q") {
+      state.bullets.forEach((b) => {
+        if (!b.isPlayer) {
+          b.x += (state.player.x - b.x) * 0.2;
+          b.y += (state.player.y - b.y) * 0.2;
+        }
+      });
+    }
+    if (key === "e") {
+      state.ghosts.forEach((g) => {
+        if (dist(state.player.x, state.player.y, g.x, g.y) < 120) {
+          g.hp -= 2;
+        }
+      });
+    }
+    if (key === "r") {
+      state.bullets.forEach((b) => {
+        if (!b.isPlayer) b.life = 0;
+      });
+    }
+  } else if (char === "storm") {
+    if (key === "q") {
+      state.ghosts.forEach((g) => (g.hp -= 1));
+    }
+    if (key === "e") state.activeBuffs.e = 4 * FPS;
+    if (key === "r") {
+      state.ghosts.forEach((g) => (g.hp -= 3));
+    }
+  } else if (char === "reaper") {
+    if (key === "q") {
+      state.ghosts.forEach((g) => {
+        if (dist(state.player.x, state.player.y, g.x, g.y) < 100) {
+          g.hp -= 1;
+        }
+      });
+    }
+    if (key === "e") {
+      if (state.player.hp < state.player.maxHp) {
+        state.player.hp++;
+        updateHealthUI();
+      }
+    }
+    if (key === "r") {
+      state.ghosts.forEach((g) => (g.hp = 0));
+    }
+  }
+  // ===== BERSERKER =====
+  else if (char === "berserker") {
+    if (key === "q") state.activeBuffs.q = 4 * FPS;
+
+    if (key === "e") {
+      for (let i = 0; i < Math.PI * 2; i += Math.PI / 6) {
+        spawnBullet(
+          state.player.x,
+          state.player.y,
+          state.player.x + Math.cos(i),
+          state.player.y + Math.sin(i),
+          true,
+        );
+      }
+    }
+
+    if (key === "r") {
+      state.player.hp = 1;
+      updateHealthUI();
+      state.activeBuffs.r = 5 * FPS;
+    }
+  }
+
+  // ===== ASSASSIN =====
+  else if (char === "assassin") {
+    if (key === "q") state.player.dashTimeLeft = 15;
+
+    if (key === "e") state.activeBuffs.e = 1 * FPS;
+
+    if (key === "r") {
+      for (let i = -0.5; i <= 0.5; i += 0.1) {
+        spawnBullet(
+          state.player.x,
+          state.player.y,
+          state.mouse.x + i * 50,
+          state.mouse.y,
+          true,
+        );
+      }
+    }
+  }
+
+  // ===== SUMMONER =====
+  else if (char === "summoner") {
+    if (key === "q") state.activeBuffs.q = 6 * FPS;
+
+    if (key === "e") {
+      if (state.player.hp > 1) {
+        state.player.hp--;
+        state.activeBuffs.e = 8 * FPS;
+        updateHealthUI();
+      }
+    }
+
+    if (key === "r") {
+      state.activeBuffs.r = 5 * FPS;
+    }
+  }
+
+  // ===== WARDEN =====
+  else if (char === "warden") {
+    if (key === "q") state.activeBuffs.q = 3 * FPS;
+
+    if (key === "e") state.activeBuffs.e = 4 * FPS;
+
+    if (key === "r") state.activeBuffs.r = 4 * FPS;
+  }
+
+  // ===== ALCHEMIST =====
+  else if (char === "alchemist") {
+    if (key === "q") {
+      for (let i = 0; i < Math.PI * 2; i += Math.PI / 5) {
+        spawnBullet(
+          state.player.x,
+          state.player.y,
+          state.player.x + Math.cos(i),
+          state.player.y + Math.sin(i),
+          true,
+          1,
+        );
+      }
+    }
+
+    if (key === "e") {
+      if (state.player.hp < state.player.maxHp) {
+        state.player.hp++;
+        updateHealthUI();
+      } else {
+        addExperience(50, changeStateFn);
+      }
+    }
+
+    if (key === "r") {
+      state.bullets.forEach((b) => {
+        if (!b.isPlayer) {
+          b.isPlayer = true;
+        }
+      });
+    }
+  }
+
+  // ===== ORACLE =====
+  else if (char === "oracle") {
+    if (key === "q") state.activeBuffs.q = 5 * FPS;
+
+    if (key === "e") state.player.dashTimeLeft = 10;
+
+    if (key === "r") state.activeBuffs.r = 4 * FPS;
+  }
+
+  // ===== SNIPER =====
+  else if (char === "sniper") {
+    if (key === "q") state.activeBuffs.q = 5 * FPS;
+
+    if (key === "e") {
+      spawnBullet(
+        state.player.x,
+        state.player.y,
+        state.mouse.x,
+        state.mouse.y,
+        true,
+        2,
+      );
+    }
+
+    if (key === "r") {
+      for (let i = 0; i < 5; i++) {
+        setTimeout(() => {
+          spawnBullet(
+            state.player.x,
+            state.player.y,
+            state.mouse.x,
+            state.mouse.y,
+            true,
+            2,
+          );
+        }, i * 100);
+      }
+    }
+  }
+
+  // ===== ENGINEER =====
+  else if (char === "engineer") {
+    if (key === "q") state.activeBuffs.q = 6 * FPS;
+
+    if (key === "e") state.activeBuffs.e = 4 * FPS;
+
+    if (key === "r") state.activeBuffs.r = 5 * FPS;
+  }
+
+  // ===== SPIRIT =====
+  else if (char === "spirit") {
+    if (key === "q") state.activeBuffs.q = 3 * FPS;
+
+    if (key === "e") state.activeBuffs.e = 4 * FPS;
+
+    if (key === "r") {
+      state.ghosts.forEach((g) => (g.hp -= 2));
+    }
+  }
+
+  // ===== DRUID =====
+  else if (char === "druid") {
+    if (key === "q") state.activeBuffs.q = 5 * FPS;
+
+    if (key === "e") {
+      state.player.hp++;
+      updateHealthUI();
+      state.activeBuffs.e = 3 * FPS;
+    }
+
+    if (key === "r") state.activeBuffs.r = 4 * FPS;
   }
 }
 
