@@ -4,6 +4,7 @@
   padding: 0;
   user-select: none;
 }
+
 body {
   background-color: #0d0d11;
   color: #e0e0e0;
@@ -15,6 +16,7 @@ body {
   height: 100vh;
   overflow: hidden;
 }
+
 h1 {
   position: absolute;
   top: 10px;
@@ -29,6 +31,7 @@ h1 {
   width: 800px;
   height: 600px;
 }
+
 canvas {
   background-color: #111;
   border: 2px solid #333;
@@ -46,6 +49,7 @@ canvas {
   left: 0;
   z-index: 5;
 }
+
 #level-display {
   position: absolute;
   top: 15px;
@@ -55,6 +59,7 @@ canvas {
   color: #ff00ff;
   text-shadow: 1px 1px 3px #000;
 }
+
 #timer {
   position: absolute;
   top: 15px;
@@ -64,6 +69,7 @@ canvas {
   color: #fff;
   text-shadow: 1px 1px 3px #000;
 }
+
 #ghost-count,
 #coins-count {
   position: absolute;
@@ -75,10 +81,12 @@ canvas {
   padding: 5px 10px;
   border-radius: 4px;
 }
+
 #coins-count {
   left: 160px;
   color: #00ffcc;
 }
+
 #dash-cooldown {
   position: absolute;
   bottom: 15px;
@@ -131,26 +139,27 @@ canvas {
   display: flex;
   gap: 5px;
 }
+
 .heart {
   width: 20px;
   height: 20px;
   background: #ff2222;
-  clip-path: polygon(
-    50% 100%,
-    100% 70%,
-    100% 30%,
-    75% 0%,
-    50% 20%,
-    25% 0%,
-    0% 30%,
-    0% 70%
-  );
+  clip-path: polygon(50% 100%,
+      100% 70%,
+      100% 30%,
+      75% 0%,
+      50% 20%,
+      25% 0%,
+      0% 30%,
+      0% 70%);
   box-shadow: 0 0 5px red;
 }
+
 .heart.empty {
   background: #333;
   box-shadow: none;
 }
+
 .shield-icon {
   width: 20px;
   height: 20px;
@@ -174,16 +183,19 @@ canvas {
   display: none;
   text-align: center;
 }
+
 #boss-name {
   color: var(--boss-name-color, #ff0055);
   text-shadow: 0 0 5px var(--boss-name-shadow, red);
 }
+
 #boss-hp-bg {
   width: 100%;
   height: 12px;
   background: #333;
   border: 1px solid #000;
 }
+
 #boss-hp-fill {
   width: 100%;
   height: 100%;
@@ -213,18 +225,23 @@ canvas {
   z-index: 10;
   backdrop-filter: blur(4px);
 }
+
 .hidden {
   display: none !important;
 }
+
 .panel {
   background: rgba(20, 20, 25, 0.95);
   padding: 30px;
   border-radius: 8px;
   border: 1px solid #444;
   text-align: center;
-  max-width: 700px; /* Tăng từ 600px lên 700px */
-  max-height: 90vh; /* Giới hạn chiều cao tránh lố màn hình */
-  overflow-y: auto; /* Thêm thanh cuộn dọc nếu có quá nhiều item */
+  max-width: 700px;
+  /* Tăng từ 600px lên 700px */
+  max-height: 90vh;
+  /* Giới hạn chiều cao tránh lố màn hình */
+  overflow-y: auto;
+  /* Thêm thanh cuộn dọc nếu có quá nhiều item */
 }
 
 h2.title-main {
@@ -232,15 +249,19 @@ h2.title-main {
   margin-bottom: 10px;
   text-transform: uppercase;
 }
+
 h2.text-red {
   color: #ff4444;
 }
+
 h2.text-cyan {
   color: #00ffcc;
 }
+
 h2.text-gold {
   color: #ffd700;
 }
+
 p.desc {
   margin-bottom: 25px;
   color: #ccc;
@@ -251,39 +272,47 @@ p.desc {
 /* Cards */
 .card-container {
   display: flex;
-  flex-wrap: wrap; /* Rất quan trọng: cho phép rớt dòng khi không đủ chỗ */
+  flex-wrap: wrap;
+  /* Rất quan trọng: cho phép rớt dòng khi không đủ chỗ */
   gap: 15px;
   justify-content: center;
   margin-bottom: 20px;
 }
+
 .card {
   background: #222;
   border: 2px solid #555;
   border-radius: 8px;
   padding: 15px 10px;
-  width: 140px; /* Giảm từ 160px để hiển thị đẹp hơn */
+  width: 140px;
+  /* Giảm từ 160px để hiển thị đẹp hơn */
   cursor: pointer;
   transition: 0.2s;
   pointer-events: auto;
   display: flex;
   flex-direction: column;
-  justify-content: space-between; /* Đẩy các nút MUA xuống đều nhau */
+  justify-content: space-between;
+  /* Đẩy các nút MUA xuống đều nhau */
 }
+
 .card:hover {
   border-color: #00ffcc;
   transform: translateY(-5px);
   background: #2a2a30;
 }
+
 .card h3 {
   color: #fff;
   font-size: 16px;
   margin-bottom: 10px;
 }
+
 .card p {
   color: #aaa;
   font-size: 13px;
   margin-bottom: 10px;
 }
+
 .card.gold:hover {
   border-color: #ffd700;
 }
@@ -302,13 +331,16 @@ button {
   margin: 5px;
   pointer-events: auto;
 }
+
 button:hover:not(:disabled) {
   background: #00e6b8;
   transform: scale(1.05);
 }
+
 button:active:not(:disabled) {
   transform: scale(0.95);
 }
+
 button:disabled {
   background: #555;
   color: #aaa;
@@ -351,6 +383,7 @@ button:disabled {
   height: 80px;
   overflow-y: auto;
 }
+
 .char-skills b {
   color: #00ffcc;
 }
@@ -365,12 +398,14 @@ button:disabled {
   border-radius: 8px;
   border: 1px solid #333;
 }
+
 .stat-info {
   width: 90px;
   font-weight: bold;
   color: #fff;
   font-size: 14px;
 }
+
 .stat-info span {
   display: block;
   font-size: 11px;
@@ -378,6 +413,7 @@ button:disabled {
   font-weight: normal;
   margin-top: 3px;
 }
+
 .stat-bar-container {
   flex-grow: 1;
   height: 16px;
@@ -388,18 +424,22 @@ button:disabled {
   display: flex;
   overflow: hidden;
 }
+
 .stat-bar-segment {
   flex: 1;
   border-right: 1px solid #222;
   transition: 0.3s;
 }
+
 .stat-bar-segment:last-child {
   border-right: none;
 }
+
 .stat-bar-segment.filled {
   background: linear-gradient(90deg, #00ffcc, #00aaff);
   box-shadow: 0 0 5px rgba(0, 255, 204, 0.5);
 }
+
 .btn-stat-upg {
   width: 110px;
   padding: 8px 10px;
@@ -417,6 +457,7 @@ button:disabled {
   z-index: 5;
   pointer-events: none;
 }
+
 #skills-ui {
   position: absolute;
   bottom: 20px;
@@ -462,7 +503,8 @@ button:disabled {
   bottom: 0;
   left: 0;
   width: 100%;
-  height: 0%; /* Sẽ được JS điều khiển từ 0 đến 100% */
+  height: 0%;
+  /* Sẽ được JS điều khiển từ 0 đến 100% */
   background: rgba(0, 0, 0, 0.75);
   z-index: 1;
 }
@@ -503,9 +545,19 @@ button:disabled {
 }
 
 @keyframes flash {
-  0% { transform: scale(1); background: white; }
-  50% { transform: scale(1.1); background: #00ffcc; }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+    background: white;
+  }
+
+  50% {
+    transform: scale(1.1);
+    background: #00ffcc;
+  }
+
+  100% {
+    transform: scale(1);
+  }
 }
 
 /* 🔥 EVOLVED CARD */
@@ -520,90 +572,152 @@ button:disabled {
   font-weight: bold;
   margin-top: 5px;
 }
+
 .phase-transition {
   animation: bossFlash 0.3s ease;
 }
 
 @keyframes bossFlash {
-  0% { filter: brightness(1); }
-  50% { filter: brightness(2); }
-  100% { filter: brightness(1); }
+  0% {
+    filter: brightness(1);
+  }
+
+  50% {
+    filter: brightness(2);
+  }
+
+  100% {
+    filter: brightness(1);
+  }
 }
 
 /* ========================================
-   SPINNING WHEEL (Wheel of Fortune)
+   SPINNER / ROULETTE
    ======================================== */
 
-.wheel-container {
+#spinner-viewport {
   position: relative;
-  width: 360px;
-  height: 380px;
-  margin: 10px auto 15px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 600px;
+  height: 100px;
+  margin: 20px auto;
+  overflow: hidden;
+  border: 2px solid #444;
+  border-radius: 10px;
+  background: #0d0d11;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8);
 }
 
-#wheel-canvas {
-  border-radius: 50%;
-  box-shadow:
-    0 0 20px rgba(0, 255, 204, 0.2),
-    0 0 60px rgba(0, 0, 0, 0.6),
-    inset 0 0 30px rgba(0, 0, 0, 0.3);
-}
-
-#wheel-pointer {
+#spinner-pointer {
   position: absolute;
   top: -2px;
   left: 50%;
   transform: translateX(-50%);
-  width: 0;
-  height: 0;
-  border-left: 16px solid transparent;
-  border-right: 16px solid transparent;
-  border-top: 35px solid #ff0055;
+  width: 4px;
+  height: 104px;
+  background: linear-gradient(180deg, #ff0055, #ff4444);
   z-index: 10;
-  filter: drop-shadow(0 0 8px #ff0055) drop-shadow(0 4px 6px rgba(0,0,0,0.5));
+  box-shadow: 0 0 10px #ff0055, 0 0 20px rgba(255, 0, 85, 0.5);
 }
 
-#wheel-pointer::after {
-  content: "";
+#spinner-pointer::before {
+  content: "▼";
   position: absolute;
-  top: -38px;
+  top: -18px;
   left: 50%;
   transform: translateX(-50%);
-  width: 8px;
-  height: 8px;
-  background: #fff;
-  border-radius: 50%;
-  box-shadow: 0 0 6px #ff0055;
+  color: #ff0055;
+  font-size: 16px;
+  text-shadow: 0 0 8px #ff0055;
 }
 
-.spinner-result {
-  min-height: 50px;
+#spinner-pointer::after {
+  content: "▲";
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ff0055;
+  font-size: 16px;
+  text-shadow: 0 0 8px #ff0055;
+}
+
+#spinner-strip {
+  display: flex;
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  will-change: transform;
+}
+
+.spinner-item {
+  width: 120px;
+  min-width: 120px;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin-top: 10px;
+  border-right: 1px solid #333;
+  padding: 5px;
+  transition: background 0.3s;
 }
 
-.wheel-result-char {
-  font-size: 24px;
+.spinner-item-common {
+  background: rgba(74, 222, 128, 0.08);
+  border-bottom: 3px solid #22c55e;
+}
+
+.spinner-item-rare {
+  background: rgba(96, 165, 250, 0.08);
+  border-bottom: 3px solid #3b82f6;
+}
+
+.spinner-item-legendary {
+  background: rgba(192, 132, 252, 0.08);
+  border-bottom: 3px solid #a855f7;
+}
+
+.spinner-item-name {
+  font-size: 14px;
   font-weight: bold;
-  text-shadow: 0 0 15px currentColor;
-  animation: resultPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  color: #fff;
+  text-align: center;
+  margin-bottom: 4px;
 }
 
-.wheel-result-sub {
-  font-size: 15px;
-  margin-top: 5px;
-  opacity: 0.9;
+.spinner-item-rarity {
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
 }
 
-@keyframes resultPop {
-  0% { transform: scale(0); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
+.spinner-winner {
+  animation: winnerFlash 0.5s ease 3;
+  box-shadow: inset 0 0 30px rgba(255, 215, 0, 0.4);
+}
+
+@keyframes winnerFlash {
+  0% {
+    background: rgba(255, 215, 0, 0.1);
+  }
+
+  50% {
+    background: rgba(255, 215, 0, 0.4);
+  }
+
+  100% {
+    background: rgba(255, 215, 0, 0.1);
+  }
+}
+
+.spinner-result {
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 15px;
 }
 
 /* ========================================
@@ -627,9 +741,11 @@ button:disabled {
 .scroll-common::before {
   background: linear-gradient(90deg, transparent, #4ade80, transparent);
 }
+
 .scroll-rare::before {
   background: linear-gradient(90deg, transparent, #60a5fa, transparent);
 }
+
 .scroll-legendary::before {
   background: linear-gradient(90deg, transparent, #c084fc, transparent);
 }
@@ -637,6 +753,7 @@ button:disabled {
 .scroll-common {
   border-color: #22c55e44;
 }
+
 .scroll-common:hover {
   border-color: #22c55e;
   box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
@@ -645,6 +762,7 @@ button:disabled {
 .scroll-rare {
   border-color: #3b82f644;
 }
+
 .scroll-rare:hover {
   border-color: #3b82f6;
   box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
@@ -654,14 +772,22 @@ button:disabled {
   border-color: #a855f744;
   animation: legendaryPulse 2s ease-in-out infinite;
 }
+
 .scroll-legendary:hover {
   border-color: #a855f7;
   box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
 }
 
 @keyframes legendaryPulse {
-  0%, 100% { box-shadow: 0 0 5px rgba(168, 85, 247, 0.2); }
-  50% { box-shadow: 0 0 15px rgba(168, 85, 247, 0.4); }
+
+  0%,
+  100% {
+    box-shadow: 0 0 5px rgba(168, 85, 247, 0.2);
+  }
+
+  50% {
+    box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+  }
 }
 
 .scroll-icon {
@@ -687,8 +813,13 @@ button:disabled {
 }
 
 @keyframes glowPulse {
-  from { text-shadow: 0 0 10px #a855f7; }
-  to { text-shadow: 0 0 30px #ff00ff; }
+  from {
+    text-shadow: 0 0 10px #a855f7;
+  }
+
+  to {
+    text-shadow: 0 0 30px #ff00ff;
+  }
 }
 
 /* ========================================

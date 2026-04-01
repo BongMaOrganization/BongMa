@@ -1,233 +1,212 @@
 <!doctype html>
 <html lang="vi">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bóng Ma - Huyết Chiến Thời Gian</title>
-    <link rel="stylesheet" href="css/style.css" />
-  </head>
-  <body>
-    <h1>BÓNG MA - HUYẾT CHIẾN THỜI GIAN</h1>
 
-    <div id="game-container">
-      <canvas id="gameCanvas" width="800" height="600"></canvas>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bóng Ma - Huyết Chiến Thời Gian</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
 
-      <div class="hud-layer">
-        <div id="level-display">Màn: 1</div>
-        <div id="timer">00:00</div>
-        <div id="ghost-count">Bóng ma: 0</div>
-        <div id="coins-count">Tiền: 0</div>
-        <div id="dash-cooldown">Lướt: Sẵn sàng</div>
+<body>
+  <h1>BÓNG MA - HUYẾT CHIẾN THỜI GIAN</h1>
 
-        <div id="skills-ui">
-          <div class="skill-slot" id="slot-q">
-            <span class="skill-key">Q</span>
-            <div class="skill-cd-overlay" id="cd-q"></div>
-            <div class="skill-cd-text" id="cd-text-q"></div>
-          </div>
-          <div class="skill-slot" id="slot-e">
-            <span class="skill-key">E</span>
-            <div class="skill-cd-overlay" id="cd-e"></div>
-            <div class="skill-cd-text" id="cd-text-e"></div>
-          </div>
-          <div class="skill-slot" id="slot-r">
-            <span class="skill-key">R</span>
-            <div class="skill-cd-overlay" id="cd-r"></div>
-            <div class="skill-cd-text" id="cd-text-r"></div>
-          </div>
+  <div id="game-container">
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+    <div class="hud-layer">
+      <div id="level-display">Màn: 1</div>
+      <div id="timer">00:00</div>
+      <div id="ghost-count">Bóng ma: 0</div>
+      <div id="coins-count">Tiền: 0</div>
+      <div id="dash-cooldown">Lướt: Sẵn sàng</div>
+
+      <div id="skills-ui">
+        <div class="skill-slot" id="slot-q">
+          <span class="skill-key">Q</span>
+          <div class="skill-cd-overlay" id="cd-q"></div>
+          <div class="skill-cd-text" id="cd-text-q"></div>
         </div>
-
-        <div id="xp-wrapper">
-          <div id="xp-text">XP: 0/100</div>
-          <div id="xp-bar-bg"><div id="xp-bar-fill"></div></div>
+        <div class="skill-slot" id="slot-e">
+          <span class="skill-key">E</span>
+          <div class="skill-cd-overlay" id="cd-e"></div>
+          <div class="skill-cd-text" id="cd-text-e"></div>
         </div>
-
-        <div id="boss-ui">
-          <div id="boss-name">CHÚA TỂ VÒNG LẶP</div>
-          <div id="boss-hp-bg"><div id="boss-hp-fill"></div></div>
+        <div class="skill-slot" id="slot-r">
+          <span class="skill-key">R</span>
+          <div class="skill-cd-overlay" id="cd-r"></div>
+          <div class="skill-cd-text" id="cd-text-r"></div>
         </div>
-
-        <div id="health-bar"></div>
-        <div class="shield-icon" id="shield-icon">1</div>
       </div>
 
-      <div id="screen-login" class="overlay hidden">
-        <div class="panel" style="max-width: 350px">
-          <h2 id="auth-title" class="title-main text-cyan">ĐĂNG NHẬP</h2>
-          <p class="desc" style="margin-bottom: 15px">
-            Kết nối với Database để lưu tiến trình
-          </p>
+      <div id="xp-wrapper">
+        <div id="xp-text">XP: 0/100</div>
+        <div id="xp-bar-bg">
+          <div id="xp-bar-fill"></div>
+        </div>
+      </div>
 
-          <input
-            type="text"
-            id="auth-username"
-            class="auth-input"
-            placeholder="Tên đăng nhập"
-            autocomplete="off"
-          />
-          <input
-            type="password"
-            id="auth-password"
-            class="auth-input"
-            placeholder="Mật khẩu"
-          />
+      <div id="boss-ui">
+        <div id="boss-name">CHÚA TỂ VÒNG LẶP</div>
+        <div id="boss-hp-bg">
+          <div id="boss-hp-fill"></div>
+        </div>
+      </div>
 
-          <p
-            id="auth-error"
-            style="
+      <div id="health-bar"></div>
+      <div class="shield-icon" id="shield-icon">1</div>
+    </div>
+
+    <div id="screen-login" class="overlay hidden">
+      <div class="panel" style="max-width: 350px">
+        <h2 id="auth-title" class="title-main text-cyan">ĐĂNG NHẬP</h2>
+        <p class="desc" style="margin-bottom: 15px">
+          Kết nối với Database để lưu tiến trình
+        </p>
+
+        <input type="text" id="auth-username" class="auth-input" placeholder="Tên đăng nhập" autocomplete="off" />
+        <input type="password" id="auth-password" class="auth-input" placeholder="Mật khẩu" />
+
+        <p id="auth-error" style="
               color: #ff4444;
               font-size: 13px;
               margin-bottom: 10px;
               height: 15px;
-            "
-          ></p>
+            "></p>
 
-          <button id="btn-do-auth" style="width: 100%; margin: 0">
-            ĐĂNG NHẬP
-          </button>
+        <button id="btn-do-auth" style="width: 100%; margin: 0">
+          ĐĂNG NHẬP
+        </button>
 
-          <p style="margin-top: 20px; font-size: 14px; color: #aaa">
-            Chưa có tài khoản?
-            <span
-              id="btn-toggle-auth"
-              style="
+        <p style="margin-top: 20px; font-size: 14px; color: #aaa">
+          Chưa có tài khoản?
+          <span id="btn-toggle-auth" style="
                 color: #00ffcc;
                 cursor: pointer;
                 text-decoration: underline;
-              "
-              >Đăng ký ngay</span
-            >
-          </p>
-        </div>
+              ">Đăng ký ngay</span>
+        </p>
       </div>
+    </div>
 
-      <!-- UI Screens -->
-      <div id="screen-main" class="overlay">
-        <div class="panel">
-          <h2 id="main-title" class="title-main text-cyan">BẮT ĐẦU VÒNG LẶP</h2>
-          <p id="main-desc" class="desc">
-            Sinh tồn qua những ảo ảnh của chính mình. Cứ 5 màn sẽ có Boss. Nâng
-            cấp khi thanh XP đầy.
-          </p>
-          <button id="btn-start">VÀO TRẬN</button>
-          <br /><br />
-          <button id="btn-select-character">CHỌN NHÂN VẬT</button>
-          <button id="btn-shop">CỬA HÀNG</button>
-          <br /><br />
-          <button
-            id="btn-logout"
-            style="
+    <!-- UI Screens -->
+    <div id="screen-main" class="overlay">
+      <div class="panel">
+        <h2 id="main-title" class="title-main text-cyan">BẮT ĐẦU VÒNG LẶP</h2>
+        <p id="main-desc" class="desc">
+          Sinh tồn qua những ảo ảnh của chính mình. Cứ 5 màn sẽ có Boss. Nâng
+          cấp khi thanh XP đầy.
+        </p>
+        <button id="btn-start">VÀO TRẬN</button>
+        <br /><br />
+        <button id="btn-select-character">CHỌN NHÂN VẬT</button>
+        <button id="btn-shop">CỬA HÀNG</button>
+        <br /><br />
+        <button id="btn-logout" style="
               background: #ff4444;
               color: #fff;
               font-size: 12px;
               padding: 8px;
-            "
-          >
-            Đăng Xuất
-          </button>
-        </div>
-      </div>
-
-      <div id="screen-upgrade" class="overlay hidden">
-        <div class="panel">
-          <h2 class="title-main text-cyan">ĐỘT PHÁ SỨC MẠNH</h2>
-          <p class="desc">
-            Bạn đã lên cấp. Hãy chọn một nâng cấp cho bản thân.
-          </p>
-          <div class="card-container" id="upgrade-cards"></div>
-        </div>
-      </div>
-
-      <div id="screen-boss-reward" class="overlay hidden">
-        <div class="panel">
-          <h2 class="title-main text-gold">CHIẾN LỢI PHẨM BOSS</h2>
-          <p class="desc">
-            Bạn đã thành công tiêu diệt boss. Hãy thu thập phần thưởng của bạn.
-          </p>
-          <div class="card-container" id="boss-cards"></div>
-        </div>
-      </div>
-
-      <div id="screen-trading" class="overlay hidden">
-        <div class="panel" style="max-width: 400px">
-          <h2 class="title-main text-cyan">🔁 TRADE</h2>
-
-          <div id="trading-info" style="margin-bottom: 15px"></div>
-
-          <div id="trading-options"></div>
-
-          <br />
-          <button id="btn-trading-back">Đóng</button>
-        </div>
-      </div>
-
-      <div id="screen-shop" class="overlay hidden">
-        <div class="panel">
-          <h2 class="title-main text-cyan">CỬA HÀNG VÒNG QUAY</h2>
-          <p class="desc">Mua vòng quay để nhận nhân vật mới. Trùng nhân vật sẽ quy đổi thành nguyên liệu.</p>
-          <div id="shop-coins" class="shop-info"></div>
-          <div class="card-container" id="shop-cards"></div>
-          <button id="btn-shop-back">Quay Lại</button>
-        </div>
-      </div>
-
-      <div id="screen-char-select" class="overlay hidden">
-        <div class="panel">
-          <h2 class="title-main text-cyan">CHỌN NHÂN VẬT</h2>
-          <p class="desc">Chọn nhân vật và nâng cấp chỉ số khởi đầu.</p>
-          <div id="char-coins" class="shop-info"></div>
-          <div class="card-container" id="char-cards"></div>
-          <button id="btn-char-back">Quay Lại</button>
-        </div>
+            ">
+          Đăng Xuất
+        </button>
       </div>
     </div>
 
-    <div id="screen-upgrade-detail" class="overlay hidden">
-      <div class="panel" style="width: 500px">
-        <h2 id="upg-detail-title" class="title-main text-cyan">NÂNG CẤP</h2>
-        <p class="desc" style="margin-bottom: 10px">
-          Chỉ số cộng thêm sẽ áp dụng vĩnh viễn cho nhân vật này.
+    <div id="screen-upgrade" class="overlay hidden">
+      <div class="panel">
+        <h2 class="title-main text-cyan">ĐỘT PHÁ SỨC MẠNH</h2>
+        <p class="desc">
+          Bạn đã lên cấp. Hãy chọn một nâng cấp cho bản thân.
         </p>
-        <div
-          id="upg-detail-coins"
-          class="shop-info"
-          style="font-size: 16px; margin-bottom: 20px"
-        >
-          Tiền: 0
-        </div>
-
-        <div
-          id="upg-detail-stats"
-          style="text-align: left; margin-bottom: 25px"
-        ></div>
-
-        <button id="btn-upg-detail-back" style="width: 100%">XONG</button>
+        <div class="card-container" id="upgrade-cards"></div>
       </div>
     </div>
-    <div id="spinner-overlay" class="overlay hidden">
-      <div class="panel" style="text-align:center; max-width:500px; padding:25px;">
-        <h2 id="spinner-title" class="title-main text-cyan" style="font-size:24px;">🎡 Đang quay...</h2>
 
-        <div class="wheel-container">
-          <div id="wheel-pointer"></div>
-          <canvas id="wheel-canvas" width="360" height="360"></canvas>
-        </div>
-
-        <div id="spinner-result" class="spinner-result"></div>
-
-        <button id="spinner-close" style="display:none; margin-top:15px;">OK</button>
+    <div id="screen-boss-reward" class="overlay hidden">
+      <div class="panel">
+        <h2 class="title-main text-gold">CHIẾN LỢI PHẨM BOSS</h2>
+        <p class="desc">
+          Bạn đã thành công tiêu diệt boss. Hãy thu thập phần thưởng của bạn.
+        </p>
+        <div class="card-container" id="boss-cards"></div>
       </div>
     </div>
-    <div id="fragment-drop-overlay" class="overlay hidden">
-      <div class="panel" style="text-align:center; max-width:400px;">
-        <h2 class="title-main" style="color:#ffd700;">⭐ NGUYÊN LIỆU ĐẶC BIỆT!</h2>
-        <div id="fragment-drop-icon" style="font-size:64px; margin:15px 0;"></div>
-        <div id="fragment-drop-name" style="font-size:22px; color:#ffd700; font-weight:bold;"></div>
-        <div id="fragment-drop-count" style="font-size:16px; color:#aaa; margin-top:10px;"></div>
-        <p style="font-size:13px; color:#888; margin-top:10px;">Thu thập 5 mảnh khác nhau để đổi 1 nhân vật Legendary!</p>
-        <button id="fragment-drop-close" style="margin-top:15px;">OK</button>
+
+    <div id="screen-trading" class="overlay hidden">
+      <div class="panel" style="max-width: 400px">
+        <h2 class="title-main text-cyan">🔁 TRADE</h2>
+
+        <div id="trading-info" style="margin-bottom: 15px"></div>
+
+        <div id="trading-options"></div>
+
+        <br />
+        <button id="btn-trading-back">Đóng</button>
       </div>
     </div>
-    <script type="module" src="js/main.js"></script>
-  </body>
+
+    <div id="screen-shop" class="overlay hidden">
+      <div class="panel">
+        <h2 class="title-main text-cyan">CỬA HÀNG VÒNG QUAY</h2>
+        <p class="desc">Mua vòng quay để nhận nhân vật mới. Trùng nhân vật sẽ quy đổi thành nguyên liệu.</p>
+        <div id="shop-coins" class="shop-info"></div>
+        <div class="card-container" id="shop-cards"></div>
+        <button id="btn-shop-back">Quay Lại</button>
+      </div>
+    </div>
+
+    <div id="screen-char-select" class="overlay hidden">
+      <div class="panel">
+        <h2 class="title-main text-cyan">CHỌN NHÂN VẬT</h2>
+        <p class="desc">Chọn nhân vật và nâng cấp chỉ số khởi đầu.</p>
+        <div id="char-coins" class="shop-info"></div>
+        <div class="card-container" id="char-cards"></div>
+        <button id="btn-char-back">Quay Lại</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="screen-upgrade-detail" class="overlay hidden">
+    <div class="panel" style="width: 500px">
+      <h2 id="upg-detail-title" class="title-main text-cyan">NÂNG CẤP</h2>
+      <p class="desc" style="margin-bottom: 10px">
+        Chỉ số cộng thêm sẽ áp dụng vĩnh viễn cho nhân vật này.
+      </p>
+      <div id="upg-detail-coins" class="shop-info" style="font-size: 16px; margin-bottom: 20px">
+        Tiền: 0
+      </div>
+
+      <div id="upg-detail-stats" style="text-align: left; margin-bottom: 25px"></div>
+
+      <button id="btn-upg-detail-back" style="width: 100%">XONG</button>
+    </div>
+  </div>
+  <div id="spinner-overlay" class="overlay hidden">
+    <div class="panel" style="text-align:center; max-width:700px; padding:30px;">
+      <h2 id="spinner-title" class="title-main text-cyan">🎰 Đang quay...</h2>
+
+      <div id="spinner-viewport">
+        <div id="spinner-pointer"></div>
+        <div id="spinner-strip"></div>
+      </div>
+
+      <div id="spinner-result" class="spinner-result"></div>
+
+      <button id="spinner-close" style="display:none; margin-top:15px;">OK</button>
+    </div>
+  </div>
+  <div id="fragment-drop-overlay" class="overlay hidden">
+    <div class="panel" style="text-align:center; max-width:400px;">
+      <h2 class="title-main" style="color:#ffd700;">⭐ NGUYÊN LIỆU ĐẶC BIỆT!</h2>
+      <div id="fragment-drop-icon" style="font-size:64px; margin:15px 0;"></div>
+      <div id="fragment-drop-name" style="font-size:22px; color:#ffd700; font-weight:bold;"></div>
+      <div id="fragment-drop-count" style="font-size:16px; color:#aaa; margin-top:10px;"></div>
+      <p style="font-size:13px; color:#888; margin-top:10px;">Thu thập 5 mảnh khác nhau để đổi 1 nhân vật Legendary!</p>
+      <button id="fragment-drop-close" style="margin-top:15px;">OK</button>
+    </div>
+  </div>
+  <script type="module" src="js/main.js"></script>
+</body>
+
 </html>

@@ -19,7 +19,13 @@ export function renderCharacterSelect() {
   let container = document.getElementById("char-cards");
   container.innerHTML = "";
 
-  CHARACTERS.forEach((char) => {
+  const rarityOrder = { common: 1, rare: 2, legendary: 3 };
+  const rarityColors = { common: "#4ade80", rare: "#60a5fa", legendary: "#c084fc" };
+  const sortedCharacters = [...CHARACTERS].sort((a, b) => {
+    return (rarityOrder[a.rarity] || 99) - (rarityOrder[b.rarity] || 99);
+  });
+
+  sortedCharacters.forEach((char) => {
     let owned = state.ownedCharacters.includes(char.id);
     let selected = state.selectedCharacter === char.id;
     let card = document.createElement("div");
@@ -45,9 +51,12 @@ export function renderCharacterSelect() {
       (1 + (upg.speed || 0) * 0.05)
     ).toFixed(1);
 
+    let rColor = rarityColors[char.rarity] || "#fff";
+    let rLabel = (char.rarity || "common").toUpperCase();
+
     card.innerHTML = `
-      <h3>${char.name} ${selected ? "(Đã chọn)" : ""}</h3>
-      <p style="margin-bottom: 5px; color: #ffaa00; font-weight: bold;">HP: ${actualHp} | Tốc độ: ${actualSpeed} | Tia đạn: ${char.baseStats.multiShot} | Đạn nẩy: ${char.baseStats.bounces}</p>
+      <h3 style="color: ${rColor}">${char.name} <span style="font-size: 11px;">(${rLabel})</span> ${selected ? "<br><span style='color:#ffd700;font-size:12px;'>(Đã chọn)</span>" : ""}</h3>
+      <p style="margin-bottom: 5px; color: #ffaa00; font-weight: bold; font-size: 13px;">HP: ${actualHp} | Tốc độ: ${actualSpeed} | Tia: ${char.baseStats.multiShot} | Nẩy: ${char.baseStats.bounces || 0}</p>
       <div class="char-skills" style="font-size: 0.9em; margin-bottom: 10px; height: 110px; overflow-y: auto; text-align: left; padding: 5px; background: rgba(0,0,0,0.3); border-radius: 5px;">
         ${skillsHtml}
       </div>

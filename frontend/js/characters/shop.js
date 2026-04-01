@@ -37,6 +37,7 @@ export function renderShop() {
           ? "🔵"
           : "🟣";
 
+    // Check if this is a trade scroll
     const isTrade = scroll.tradeFrom !== undefined;
     let canAfford = false;
     let costLabel = "";
@@ -50,6 +51,7 @@ export function renderShop() {
       costLabel = `${scroll.price} Bạc`;
     }
 
+    // Build probability text
     let probText = "";
     if (scroll.probabilities) {
       const entries = Object.entries(scroll.probabilities);
@@ -84,7 +86,7 @@ export function renderShop() {
           saveGame(state, GHOST_DATA_KEY);
           persistState();
           renderShop();
-          startWheel(scroll.rarity, scroll.probabilities);
+          startSpinner(scroll.rarity, scroll.probabilities);
         }
       } else {
         if (state.player.coins >= scroll.price) {
@@ -92,7 +94,7 @@ export function renderShop() {
           saveGame(state, GHOST_DATA_KEY);
           persistState();
           renderShop();
-          startWheel(scroll.rarity, scroll.probabilities);
+          startSpinner(scroll.rarity, scroll.probabilities);
         }
       }
     };
@@ -101,6 +103,7 @@ export function renderShop() {
     container.appendChild(card);
   });
 
+  // Render boss fragment exchange section
   renderFragmentSection(container);
 }
 
@@ -119,15 +122,15 @@ function renderFragmentSection(container) {
     <p style="font-size:12px; color:#aaa; margin-bottom:10px;">Thu thập 5 mảnh khác nhau từ boss (10% mỗi lần hạ boss) → đổi 1 nhân vật Legendary!</p>
     <div class="fragment-grid">
       ${BOSS_FRAGMENTS.map(f => {
-        const owned = fragments.includes(f.id);
-        return `
+    const owned = fragments.includes(f.id);
+    return `
           <div class="fragment-item ${owned ? 'fragment-owned' : 'fragment-locked'}">
             <span class="fragment-icon">${f.icon}</span>
             <span class="fragment-name">${f.name}</span>
             ${owned ? '<span class="fragment-check">✅</span>' : '<span class="fragment-check">❌</span>'}
           </div>
         `;
-      }).join('')}
+  }).join('')}
     </div>
   `;
 
@@ -150,8 +153,10 @@ function renderFragmentSection(container) {
 }
 
 function exchangeFragmentsForLegendary() {
+  // Clear all fragments
   state.bossFragments = [];
 
+  // Pick a random unowned legendary, or any legendary if all owned
   const legendaries = CHARACTERS.filter(c => c.rarity === "legendary");
   const unowned = legendaries.filter(c => !state.ownedCharacters.includes(c.id));
   const pool = unowned.length > 0 ? unowned : legendaries;
@@ -167,80 +172,108 @@ function exchangeFragmentsForLegendary() {
   saveGame(state, GHOST_DATA_KEY);
   persistState();
 
-  // Show result using the wheel overlay (no wheel, just result)
+  // Show result
   const overlay = document.getElementById("spinner-overlay");
-  const titleDiv = document.getElementById("spinner-title");
-  const resultDiv = document.getElementById("spinner-result");
+  const title = document.getElementById("spinner-title");
+  const result = document.getElementById("spinner-result");
+  const strip = document.getElementById("spinner-strip");
   const closeBtn = document.getElementById("spinner-close");
-  const wheelCanvas = document.getElementById("wheel-canvas");
+  const viewport = document.getElementById("spinner-viewport");
 
   overlay.classList.remove("hidden");
-  wheelCanvas.style.display = "none";
-  document.getElementById("wheel-pointer").style.display = "none";
+  viewport.style.display = "none";
+  strip.innerHTML = "";
 
   if (alreadyOwned) {
-    titleDiv.innerText = "💰 Trùng lặp!";
-    resultDiv.innerHTML = `
+    title.innerText = "💰 Trùng lặp!";
+    result.innerHTML = `
       <div style="font-size:20px;color:#c084fc">${reward.name}</div>
       <div style="font-size:16px;color:#ffd700;margin-top:8px;">+1 NL Legendary</div>
     `;
   } else {
-    titleDiv.innerText = "🎉 NHÂN VẬT HUYỀN THOẠI!";
-    resultDiv.innerHTML = `
+    title.innerText = "🎉 NHÂN VẬT HUYỀN THOẠI!";
+    result.innerHTML = `
       <div style="font-size:28px;color:#c084fc;font-weight:bold;">${reward.name}</div>
       <div style="font-size:14px;color:#c084fc;margin-top:5px;">⭐ LEGENDARY</div>
     `;
   }
-  resultDiv.className = "spinner-result gacha-legendary";
+  result.className = "spinner-result gacha-legendary";
 
   closeBtn.style.display = "block";
   closeBtn.onclick = () => {
     overlay.classList.add("hidden");
-    wheelCanvas.style.display = "";
-    document.getElementById("wheel-pointer").style.display = "";
+    viewport.style.display = "";
     renderShop();
   };
 }
 
 // ========================================
-// 🎡 SPINNING WHEEL (Wheel of Fortune)
+// SPINNER / ROULETTE SYSTEM
 // ========================================
-
-const WHEEL_COLORS = {
-  common: [
-    "#16a34a", "#15803d", "#22c55e", "#059669",
-    "#10b981", "#047857", "#34d399", "#0d9488",
-  ],
-  rare: [
-    "#2563eb", "#1d4ed8", "#3b82f6", "#1e40af",
-    "#60a5fa", "#1e3a8a", "#93c5fd", "#0369a1",
-  ],
-  legendary: [
-    "#9333ea", "#7c3aed", "#a855f7", "#6d28d9",
-    "#c084fc", "#581c87", "#d8b4fe", "#7e22ce",
-  ],
-};
 
 function getRarityColor(rarity) {
   switch (rarity) {
-    case "common": return "#4ade80";
-    case "rare": return "#60a5fa";
-    case "legendary": return "#c084fc";
-    default: return "#ffffff";
+    case "common":
+      return "#4ade80";
+    case "rare":
+      return "#60a5fa";
+    case "legendary":
+      return "#c084fc";
+    default:
+      return "#ffffff";
   }
 }
 
-function buildWheelSegments(probabilities) {
-  // Build a pool of 12 segments for the wheel
-  const segments = [];
-  const totalSegments = 12;
-  const entries = Object.entries(probabilities);
+function getRarityBg(rarity) {
+  switch (rarity) {
+    case "common":
+      return "rgba(74,222,128,0.15)";
+    case "rare":
+      return "rgba(96,165,250,0.15)";
+    case "legendary":
+      return "rgba(192,132,252,0.15)";
+    default:
+      return "rgba(255,255,255,0.1)";
+  }
+}
 
-  for (let i = 0; i < totalSegments; i++) {
+function getRarityBorder(rarity) {
+  switch (rarity) {
+    case "common":
+      return "#22c55e";
+    case "rare":
+      return "#3b82f6";
+    case "legendary":
+      return "#a855f7";
+    default:
+      return "#555";
+  }
+}
+
+/**
+ * Build a pool of characters for the spinner strip
+ * We create a long strip with ~30 items, seeded so the winning item
+ * lands near the end (at a fixed position).
+ */
+function buildSpinnerPool(winnerChar, scrollRarity, probabilities) {
+  const pool = [];
+  const totalSlots = 32;
+  const winIndex = 26; // The winner will be at this index
+
+  // Build a weighted distribution for the strip
+  const rarities = Object.entries(probabilities);
+
+  for (let i = 0; i < totalSlots; i++) {
+    if (i === winIndex) {
+      pool.push(winnerChar);
+      continue;
+    }
+
+    // Pick a random rarity based on probabilities
     const rand = Math.random();
     let cumulative = 0;
     let chosenRarity = "common";
-    for (const [r, p] of entries) {
+    for (const [r, p] of rarities) {
       cumulative += p;
       if (rand < cumulative) {
         chosenRarity = r;
@@ -248,20 +281,21 @@ function buildWheelSegments(probabilities) {
       }
     }
 
-    const candidates = CHARACTERS.filter(c => c.rarity === chosenRarity);
+    const candidates = CHARACTERS.filter((c) => c.rarity === chosenRarity);
     if (candidates.length > 0) {
-      segments.push(candidates[Math.floor(Math.random() * candidates.length)]);
+      pool.push(candidates[Math.floor(Math.random() * candidates.length)]);
     } else {
-      const fallback = CHARACTERS.filter(c => c.rarity === "common");
-      segments.push(fallback[Math.floor(Math.random() * fallback.length)]);
+      // Fallback
+      const fallback = CHARACTERS.filter((c) => c.rarity === "common");
+      pool.push(fallback[Math.floor(Math.random() * fallback.length)]);
     }
   }
 
-  return segments;
+  return { pool, winIndex };
 }
 
-function startWheel(scrollRarity, probabilities) {
-  // 1. Determine winner
+function startSpinner(scrollRarity, probabilities) {
+  // 1. Determine winner based on probabilities
   const rand = Math.random();
   let cumulative = 0;
   let winRarity = "common";
@@ -274,213 +308,102 @@ function startWheel(scrollRarity, probabilities) {
     }
   }
 
-  const winPool = CHARACTERS.filter(c => c.rarity === winRarity);
+  const winPool = CHARACTERS.filter((c) => c.rarity === winRarity);
   const winnerChar = winPool[Math.floor(Math.random() * winPool.length)];
 
-  // 2. Build wheel segments
-  const segments = buildWheelSegments(probabilities);
-  // Place winner at a random segment
-  const winIndex = Math.floor(Math.random() * segments.length);
-  segments[winIndex] = winnerChar;
+  // 2. Build spinner strip
+  const { pool, winIndex } = buildSpinnerPool(
+    winnerChar,
+    scrollRarity,
+    probabilities,
+  );
 
   // 3. Show overlay
   const overlay = document.getElementById("spinner-overlay");
-  const titleDiv = document.getElementById("spinner-title");
-  const resultDiv = document.getElementById("spinner-result");
-  const closeBtn = document.getElementById("spinner-close");
-  const canvas = document.getElementById("wheel-canvas");
-  const pointer = document.getElementById("wheel-pointer");
-
   overlay.classList.remove("hidden");
-  canvas.style.display = "";
-  pointer.style.display = "";
+
+  const strip = document.getElementById("spinner-strip");
+  const closeBtn = document.getElementById("spinner-close");
+  const resultDiv = document.getElementById("spinner-result");
+  const titleDiv = document.getElementById("spinner-title");
+
   closeBtn.style.display = "none";
   resultDiv.innerHTML = "";
   resultDiv.className = "spinner-result";
-  titleDiv.innerText = "🎡 Đang quay...";
+  titleDiv.innerText = "🎰 Đang quay...";
 
-  const ctx = canvas.getContext("2d");
-  const W = canvas.width;
-  const H = canvas.height;
-  const cx = W / 2;
-  const cy = H / 2;
-  const radius = Math.min(cx, cy) - 10;
-  const segAngle = (2 * Math.PI) / segments.length;
+  // Render strip items
+  strip.innerHTML = "";
+  const itemWidth = 120;
 
-  // 4. Calculate target rotation
-  // The pointer is at the TOP (12 o'clock = -π/2)
-  // We want the winIndex segment center to align with the pointer
-  // Segment i center is at: i * segAngle + segAngle/2
-  const winSegCenter = winIndex * segAngle + segAngle / 2;
-  // Pointer is at angle -π/2 (top). We need to rotate so winSegCenter aligns with -π/2
-  // targetAngle = (-π/2 - winSegCenter) + fullSpins
-  const fullSpins = (5 + Math.floor(Math.random() * 3)) * Math.PI * 2; // 5-7 full rotations
-  const randomJitter = (Math.random() - 0.5) * segAngle * 0.6; // jitter within segment
-  const targetAngle = -Math.PI / 2 - winSegCenter + fullSpins + randomJitter;
+  pool.forEach((char, i) => {
+    const item = document.createElement("div");
+    item.className = `spinner-item spinner-item-${char.rarity}`;
+    item.innerHTML = `
+      <div class="spinner-item-name">${char.name}</div>
+      <div class="spinner-item-rarity" style="color:${getRarityColor(char.rarity)}">${char.rarity}</div>
+    `;
+    strip.appendChild(item);
+  });
 
-  // 5. Animate
-  let currentAngle = 0;
-  const duration = 5000; // 5 seconds
-  const startTime = performance.now();
-  let animId = null;
+  // 4. Animate the strip
+  const container = document.getElementById("spinner-viewport");
+  const containerWidth = container.offsetWidth;
+  // We want the winIndex item to land at the center of the viewport
+  const centerOffset = containerWidth / 2 - itemWidth / 2;
+  // Add a small random offset so it doesn't look perfectly centered
+  const randomOffset = (Math.random() - 0.5) * 40;
+  const targetX = -(winIndex * itemWidth) + centerOffset + randomOffset;
 
-  function easeOutQuart(t) {
-    return 1 - Math.pow(1 - t, 4);
-  }
+  strip.style.transition = "none";
+  strip.style.transform = `translateX(0px)`;
 
-  function drawWheel(angle) {
-    ctx.clearRect(0, 0, W, H);
+  // Force reflow
+  strip.offsetHeight;
 
-    // Outer glow ring
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius + 6, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(0, 255, 204, 0.3)";
-    ctx.lineWidth = 3;
-    ctx.shadowColor = "#00ffcc";
-    ctx.shadowBlur = 15;
-    ctx.stroke();
-    ctx.restore();
+  // Start spinning with easing
+  strip.style.transition = "transform 4s cubic-bezier(0.15, 0.85, 0.25, 1)";
+  strip.style.transform = `translateX(${targetX}px)`;
 
-    // Draw segments
-    for (let i = 0; i < segments.length; i++) {
-      const startA = angle + i * segAngle;
-      const endA = startA + segAngle;
-      const char = segments[i];
-
-      // Segment fill
-      const colors = WHEEL_COLORS[char.rarity] || WHEEL_COLORS.common;
-      const colorIdx = i % colors.length;
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, radius, startA, endA);
-      ctx.closePath();
-
-      // gradient fill
-      const gradStart = {
-        x: cx + Math.cos(startA + segAngle / 2) * radius * 0.3,
-        y: cy + Math.sin(startA + segAngle / 2) * radius * 0.3,
-      };
-      const gradEnd = {
-        x: cx + Math.cos(startA + segAngle / 2) * radius,
-        y: cy + Math.sin(startA + segAngle / 2) * radius,
-      };
-      const grad = ctx.createLinearGradient(gradStart.x, gradStart.y, gradEnd.x, gradEnd.y);
-      grad.addColorStop(0, colors[colorIdx]);
-      grad.addColorStop(1, colors[(colorIdx + 1) % colors.length]);
-      ctx.fillStyle = grad;
-      ctx.fill();
-
-      // segment border
-      ctx.strokeStyle = "rgba(0,0,0,0.4)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.restore();
-
-      // Draw text
-      ctx.save();
-      const textAngle = startA + segAngle / 2;
-      const textR = radius * 0.65;
-      ctx.translate(cx + Math.cos(textAngle) * textR, cy + Math.sin(textAngle) * textR);
-      ctx.rotate(textAngle + Math.PI / 2);
-
-      // Name
-      ctx.fillStyle = "#fff";
-      ctx.font = "bold 11px 'Segoe UI', sans-serif";
-      ctx.textAlign = "center";
-      ctx.shadowColor = "rgba(0,0,0,0.8)";
-      ctx.shadowBlur = 4;
-      ctx.fillText(char.name, 0, 0);
-
-      // Rarity label
-      ctx.font = "9px 'Segoe UI', sans-serif";
-      ctx.fillStyle = "rgba(255,255,255,0.7)";
-      ctx.fillText(char.rarity.toUpperCase(), 0, 13);
-      ctx.restore();
-    }
-
-    // Center circle
-    ctx.save();
-    const centerGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, 30);
-    centerGrad.addColorStop(0, "#1a1a2e");
-    centerGrad.addColorStop(1, "#0d0d11");
-    ctx.beginPath();
-    ctx.arc(cx, cy, 28, 0, Math.PI * 2);
-    ctx.fillStyle = centerGrad;
-    ctx.fill();
-    ctx.strokeStyle = "#00ffcc";
-    ctx.lineWidth = 3;
-    ctx.shadowColor = "#00ffcc";
-    ctx.shadowBlur = 10;
-    ctx.stroke();
-    ctx.restore();
-
-    // Center icon
-    ctx.save();
-    ctx.fillStyle = "#00ffcc";
-    ctx.font = "20px sans-serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText("🎰", cx, cy);
-    ctx.restore();
-  }
-
-  function tick(now) {
-    const elapsed = now - startTime;
-    const progress = Math.min(1, elapsed / duration);
-    const eased = easeOutQuart(progress);
-
-    currentAngle = eased * targetAngle;
-    drawWheel(currentAngle);
-
-    if (progress < 1) {
-      animId = requestAnimationFrame(tick);
-    } else {
-      // Spin complete - show result
-      onWheelComplete(winnerChar);
-    }
-  }
-
-  // Initial draw
-  drawWheel(0);
-
-  // Start spin after brief pause
+  // 5. After animation completes, show result
   setTimeout(() => {
-    animId = requestAnimationFrame(tick);
-  }, 300);
+    const alreadyOwned = state.ownedCharacters.includes(winnerChar.id);
 
-  function onWheelComplete(winner) {
-    const alreadyOwned = state.ownedCharacters.includes(winner.id);
+    // Flash the winning item
+    const items = strip.querySelectorAll(".spinner-item");
+    if (items[winIndex]) {
+      items[winIndex].classList.add("spinner-winner");
+    }
 
     if (alreadyOwned) {
-      const matRarity = winner.rarity;
+      // Duplicate → give material
+      const matRarity = winnerChar.rarity;
       state.resources[matRarity] = (state.resources[matRarity] || 0) + 1;
 
       titleDiv.innerText = "💰 Trùng lặp!";
       resultDiv.innerHTML = `
-        <div class="wheel-result-char" style="color:${getRarityColor(matRarity)}">
-          ${winner.name}
+        <div style="font-size:20px;color:${getRarityColor(matRarity)}">
+          ${winnerChar.name}
         </div>
-        <div class="wheel-result-sub" style="color:#ffd700;">
+        <div style="font-size:16px;color:#ffd700;margin-top:8px;">
           +1 Nguyên liệu ${matRarity}
         </div>
       `;
       resultDiv.className = `spinner-result gacha-${matRarity}`;
     } else {
-      state.ownedCharacters.push(winner.id);
+      // New character!
+      state.ownedCharacters.push(winnerChar.id);
 
       titleDiv.innerText = "🎉 NHÂN VẬT MỚI!";
       resultDiv.innerHTML = `
-        <div class="wheel-result-char" style="color:${getRarityColor(winner.rarity)}">
-          ${winner.name}
+        <div style="font-size:24px;color:${getRarityColor(winnerChar.rarity)}; font-weight:bold;">
+          ${winnerChar.name}
         </div>
-        <div class="wheel-result-sub" style="color:${getRarityColor(winner.rarity)}">
-          ⭐ ${winner.rarity.toUpperCase()}
+        <div style="font-size:14px;color:${getRarityColor(winnerChar.rarity)};margin-top:5px;">
+          ⭐ ${winnerChar.rarity.toUpperCase()}
         </div>
       `;
-      resultDiv.className = `spinner-result gacha-${winner.rarity}`;
+      resultDiv.className = `spinner-result gacha-${winnerChar.rarity}`;
     }
 
     saveGame(state, GHOST_DATA_KEY);
@@ -491,7 +414,7 @@ function startWheel(scrollRarity, probabilities) {
       overlay.classList.add("hidden");
       renderShop();
     };
-  }
+  }, 4300);
 }
 
 // ========================================
@@ -526,5 +449,5 @@ function renderTradingMenu() {
 }
 
 // Exports for backward compatibility
-export function rollGacha() {}
-export function tradeCharacters() {}
+export function rollGacha() { }
+export function tradeCharacters() { }
