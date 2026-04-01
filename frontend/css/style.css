@@ -530,74 +530,266 @@ button:disabled {
   100% { filter: brightness(1); }
 }
 
-#gacha-container, #trading-container {
-  margin: 20px;
-  padding: 10px;
-  border: 2px solid #ccc;
-  border-radius: 8px;
-  background-color: #f9f9f9;
+/* ========================================
+   SPINNER / ROULETTE
+   ======================================== */
+
+#spinner-viewport {
+  position: relative;
+  width: 600px;
+  height: 100px;
+  margin: 20px auto;
+  overflow: hidden;
+  border: 2px solid #444;
+  border-radius: 10px;
+  background: #0d0d11;
+  box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.8);
 }
 
-#gacha-container {
-  color: #007bff;
+#spinner-pointer {
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 104px;
+  background: linear-gradient(180deg, #ff0055, #ff4444);
+  z-index: 10;
+  box-shadow: 0 0 10px #ff0055, 0 0 20px rgba(255, 0, 85, 0.5);
 }
 
-#trading-container {
-  color: #28a745;
-}
-
-#gacha-container button, #trading-container button {
-  margin: 10px;
-  padding: 10px 20px;
+#spinner-pointer::before {
+  content: "▼";
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ff0055;
   font-size: 16px;
-  background-color: #333;
-  color: #fff;
-  border: 1px solid #555;
-  cursor: pointer;
+  text-shadow: 0 0 8px #ff0055;
 }
 
-#gacha-container button:hover, #trading-container button:hover {
-  background-color: #444;
-}
-
-/* Style for Gacha and Trading buttons */
-#gacha-button, #trade-button {
-  display: inline-block;
-  margin: 10px;
-  padding: 10px 20px;
+#spinner-pointer::after {
+  content: "▲";
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #ff0055;
   font-size: 16px;
+  text-shadow: 0 0 8px #ff0055;
+}
+
+#spinner-strip {
+  display: flex;
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  will-change: transform;
+}
+
+.spinner-item {
+  width: 120px;
+  min-width: 120px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid #333;
+  padding: 5px;
+  transition: background 0.3s;
+}
+
+.spinner-item-common {
+  background: rgba(74, 222, 128, 0.08);
+  border-bottom: 3px solid #22c55e;
+}
+
+.spinner-item-rare {
+  background: rgba(96, 165, 250, 0.08);
+  border-bottom: 3px solid #3b82f6;
+}
+
+.spinner-item-legendary {
+  background: rgba(192, 132, 252, 0.08);
+  border-bottom: 3px solid #a855f7;
+}
+
+.spinner-item-name {
+  font-size: 14px;
+  font-weight: bold;
   color: #fff;
-  background-color: #007bff;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background-color 0.3s;
+  text-align: center;
+  margin-bottom: 4px;
 }
 
-#gacha-button:hover, #trade-button:hover {
-  background-color: #0056b3;
-}
-#gacha-result {
-  transition: all 0.3s ease;
+.spinner-item-rarity {
+  font-size: 11px;
+  font-weight: bold;
+  text-transform: uppercase;
 }
 
+.spinner-winner {
+  animation: winnerFlash 0.5s ease 3;
+  box-shadow: inset 0 0 30px rgba(255, 215, 0, 0.4);
+}
+
+@keyframes winnerFlash {
+  0% { background: rgba(255, 215, 0, 0.1); }
+  50% { background: rgba(255, 215, 0, 0.4); }
+  100% { background: rgba(255, 215, 0, 0.1); }
+}
+
+.spinner-result {
+  min-height: 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: 15px;
+}
+
+/* ========================================
+   SCROLL CARDS IN SHOP
+   ======================================== */
+
+.scroll-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.scroll-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+}
+
+.scroll-common::before {
+  background: linear-gradient(90deg, transparent, #4ade80, transparent);
+}
+.scroll-rare::before {
+  background: linear-gradient(90deg, transparent, #60a5fa, transparent);
+}
+.scroll-legendary::before {
+  background: linear-gradient(90deg, transparent, #c084fc, transparent);
+}
+
+.scroll-common {
+  border-color: #22c55e44;
+}
+.scroll-common:hover {
+  border-color: #22c55e;
+  box-shadow: 0 0 15px rgba(34, 197, 94, 0.3);
+}
+
+.scroll-rare {
+  border-color: #3b82f644;
+}
+.scroll-rare:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.3);
+}
+
+.scroll-legendary {
+  border-color: #a855f744;
+  animation: legendaryPulse 2s ease-in-out infinite;
+}
+.scroll-legendary:hover {
+  border-color: #a855f7;
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
+}
+
+@keyframes legendaryPulse {
+  0%, 100% { box-shadow: 0 0 5px rgba(168, 85, 247, 0.2); }
+  50% { box-shadow: 0 0 15px rgba(168, 85, 247, 0.4); }
+}
+
+.scroll-icon {
+  font-size: 28px;
+  margin-bottom: 5px;
+}
+
+/* Gacha result colors (reused) */
 .gacha-common {
-  color: white;
-  text-shadow: 0 0 5px #fff;
+  color: #4ade80;
+  text-shadow: 0 0 10px rgba(74, 222, 128, 0.5);
 }
 
 .gacha-rare {
-  color: #0070ff;
-  text-shadow: 0 0 10px #0070ff;
+  color: #60a5fa;
+  text-shadow: 0 0 15px rgba(96, 165, 250, 0.5);
 }
 
 .gacha-legendary {
-  color: #a335ee;
-  text-shadow: 0 0 20px #a335ee, 0 0 40px #a335ee;
+  color: #c084fc;
+  text-shadow: 0 0 20px #a855f7, 0 0 40px #a855f7;
   animation: glowPulse 1s infinite alternate;
 }
 
 @keyframes glowPulse {
-  from { text-shadow: 0 0 10px #a335ee; }
+  from { text-shadow: 0 0 10px #a855f7; }
   to { text-shadow: 0 0 30px #ff00ff; }
+}
+
+/* ========================================
+   BOSS FRAGMENT EXCHANGE
+   ======================================== */
+
+.fragment-section {
+  width: 100%;
+  margin-top: 20px;
+  padding: 15px;
+  background: rgba(255, 215, 0, 0.05);
+  border: 1px solid rgba(255, 215, 0, 0.2);
+  border-radius: 10px;
+}
+
+.fragment-grid {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.fragment-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  min-width: 90px;
+  transition: all 0.3s;
+}
+
+.fragment-owned {
+  background: rgba(255, 215, 0, 0.15);
+  border: 1px solid #ffd700;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+}
+
+.fragment-locked {
+  background: rgba(100, 100, 100, 0.15);
+  border: 1px solid #444;
+  opacity: 0.5;
+}
+
+.fragment-icon {
+  font-size: 24px;
+}
+
+.fragment-name {
+  font-size: 11px;
+  color: #ddd;
+  font-weight: bold;
+}
+
+.fragment-check {
+  font-size: 12px;
 }

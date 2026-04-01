@@ -120,6 +120,11 @@ export async function syncRemoteState() {
         "speedster",
       characterUpgrades:
         remote.characterUpgrades || remote.gameState.characterUpgrades || {},
+      resources:
+        remote.resources ||
+        remote.gameState.resources || { common: 0, rare: 0, legendary: 0 },
+      bossFragments:
+        remote.bossFragments || remote.gameState.bossFragments || [],
     };
 
     localStorage.setItem(GHOST_DATA_KEY, JSON.stringify(saved));
@@ -127,6 +132,8 @@ export async function syncRemoteState() {
     state.ownedCharacters = saved.ownedCharacters;
     state.selectedCharacter = saved.selectedCharacter;
     state.characterUpgrades = saved.characterUpgrades;
+    state.resources = saved.resources;
+    state.bossFragments = saved.bossFragments;
     if (remote.coins !== undefined) {
       if (!state.player) state.player = {};
       state.player.coins = remote.coins;

@@ -1,6 +1,17 @@
 export const FPS = 60;
 export const GHOST_DATA_KEY = "AsynchronousEchoes_V4";
 
+// 5 mảnh nguyên liệu đặc biệt rớt từ Boss (10% mỗi lần hạ boss)
+// Thu thập đủ 5 mảnh khác nhau → đổi 1 nhân vật Legendary bất kỳ
+export const BOSS_FRAGMENTS = [
+  { id: "frag_fire", name: "Mảnh Lửa", icon: "🔥", desc: "Mảnh nguyên liệu từ boss lửa" },
+  { id: "frag_ice", name: "Mảnh Băng", icon: "❄️", desc: "Mảnh nguyên liệu từ boss băng" },
+  { id: "frag_storm", name: "Mảnh Sấm", icon: "⚡", desc: "Mảnh nguyên liệu từ boss sấm" },
+  { id: "frag_shadow", name: "Mảnh Bóng Tối", icon: "🌑", desc: "Mảnh nguyên liệu từ boss bóng tối" },
+  { id: "frag_spirit", name: "Mảnh Linh Hồn", icon: "👻", desc: "Mảnh nguyên liệu từ boss linh hồn" },
+];
+export const BOSS_FRAGMENT_DROP_RATE = 0.10; // 10% chance
+
 export const UPGRADES = [
   {
     id: "spd",
@@ -661,11 +672,39 @@ export const BOSS_REWARDS = [
   },
 ];
 
-export const gachaConfig = {
-  cost: 1, // Cost per roll
-  probabilities: {
-    common: 0.7,
-    rare: 0.25,
-    legendary: 0.05,
+export const SCROLLS = [
+  {
+    id: "scroll_common",
+    name: "🟢 Vòng Quay Thường",
+    price: 300,
+    rarity: "common",
+    desc: "Quay ngẫu nhiên. Trùng nhân vật → +1 NL Common. 5 NL Common = 1 Vòng Quay Rare.",
+    probabilities: {
+      common: 0.7,
+      rare: 0.2,
+      legendary: 0.1,
+    },
   },
-};
+  {
+    id: "scroll_rare",
+    name: "🔵 Vòng Quay Rare",
+    rarity: "rare",
+    tradeFrom: "common",
+    tradeCost: 5,
+    desc: "100% nhân vật Rare. Trùng → +1 NL Rare. 5 NL Rare = 1 Vòng Quay Legendary.",
+    probabilities: {
+      rare: 1.0,
+    },
+  },
+  {
+    id: "scroll_legendary",
+    name: "🟣 Vòng Quay Legendary",
+    rarity: "legendary",
+    tradeFrom: "rare",
+    tradeCost: 5,
+    desc: "100% nhân vật Legendary. Cơ hội sở hữu nhân vật huyền thoại!",
+    probabilities: {
+      legendary: 1.0,
+    },
+  },
+];

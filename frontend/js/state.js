@@ -14,11 +14,12 @@ export const state = {
   currentRunRecord: [],
   ownedCharacters: ["speedster"],
   selectedCharacter: "speedster",
-    resources: {
+  resources: {
     common: 0,
     rare: 0,
     legendary: 0,
   },
+  bossFragments: [],
   characterUpgrades: {
     spd: { count: 0, specialEffect: false },
     fire: { count: 0, specialEffect: false },

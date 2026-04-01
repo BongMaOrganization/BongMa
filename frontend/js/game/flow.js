@@ -1,5 +1,5 @@
 import { state } from "../state.js";
-import { FPS, GHOST_DATA_KEY, UPGRADES, BOSS_REWARDS } from "../config.js";
+import { FPS, GHOST_DATA_KEY, UPGRADES, BOSS_REWARDS, BOSS_FRAGMENTS, BOSS_FRAGMENT_DROP_RATE } from "../config.js";
 import { saveGame } from "../utils.js";
 import { UI, updateHealthUI, updateXPUI, generateCards } from "../ui.js";
 import { generateDummy } from "../entities.js";
@@ -26,6 +26,8 @@ export function initGame(isNextLevel = false) {
       saved.selectedCharacter || state.selectedCharacter;
     state.characterUpgrades =
       saved.characterUpgrades || state.characterUpgrades;
+    state.resources = saved.resources || state.resources || { common: 0, rare: 0, legendary: 0 };
+    state.bossFragments = saved.bossFragments || state.bossFragments || [];
 
     if (saved.player) {
       state.player = saved.player;
@@ -74,7 +76,7 @@ export function initGame(isNextLevel = false) {
   if (state.player.experienceToLevel == null)
     state.player.experienceToLevel = 100;
 
-  state.isBossLevel = state.currentLevel % 1 === 0;
+  state.isBossLevel = state.currentLevel % 5 === 0;
 
   if (!isNextLevel) {
     state.player.x = 400;
@@ -268,9 +270,51 @@ export function nextStage(gameLoopFn) {
   saveGame(state, GHOST_DATA_KEY);
   persistState();
   if (state.isBossLevel) {
+    // 10% chance to drop a boss fragment
+    tryBossFragmentDrop();
     changeState("BOSS_REWARD", gameLoopFn);
   } else {
     initGame(true);
     changeState("PLAYING", gameLoopFn);
   }
+}
+
+function tryBossFragmentDrop() {
+  if (Math.random() >= BOSS_FRAGMENT_DROP_RATE) return;
+
+  // Find fragments the player doesn't own yet
+  const owned = state.bossFragments || [];
+  const missing = BOSS_FRAGMENTS.filter(f => !owned.includes(f.id));
+
+  if (missing.length === 0) return; // Already has all 5
+
+  // Pick a random missing fragment
+  const drop = missing[Math.floor(Math.random() * missing.length)];
+  state.bossFragments.push(drop.id);
+
+  saveGame(state, GHOST_DATA_KEY);
+  persistState();
+
+  // Show drop notification
+  showFragmentDrop(drop);
+}
+
+function showFragmentDrop(fragment) {
+  const overlay = document.getElementById("fragment-drop-overlay");
+  if (!overlay) return;
+
+  const icon = document.getElementById("fragment-drop-icon");
+  const name = document.getElementById("fragment-drop-name");
+  const count = document.getElementById("fragment-drop-count");
+  const closeBtn = document.getElementById("fragment-drop-close");
+
+  icon.innerText = fragment.icon;
+  name.innerText = fragment.name;
+  count.innerText = `${state.bossFragments.length} / ${BOSS_FRAGMENTS.length} mảnh`;
+
+  overlay.classList.remove("hidden");
+
+  closeBtn.onclick = () => {
+    overlay.classList.add("hidden");
+  };
 }

@@ -20,6 +20,11 @@ const UserSchema = new mongoose.Schema(
     selectedCharacter: { type: String, default: "speedster" },
     ownedCharacters: { type: [String], default: ["speedster"] },
     characterUpgrades: { type: mongoose.Schema.Types.Mixed, default: {} },
+    resources: {
+      type: mongoose.Schema.Types.Mixed,
+      default: { common: 0, rare: 0, legendary: 0 },
+    },
+    bossFragments: { type: [String], default: [] },
     gameState: { type: mongoose.Schema.Types.Mixed, default: {} },
   },
   { timestamps: true },
@@ -78,10 +83,20 @@ app.post("/api/save", authenticateToken, async (req, res) => {
     ownedCharacters,
     selectedCharacter,
     characterUpgrades,
+    resources,
+    bossFragments,
   } = req.body;
   const user = await User.findByIdAndUpdate(
     req.user.id,
-    { gameState, coins, ownedCharacters, selectedCharacter, characterUpgrades },
+    {
+      gameState,
+      coins,
+      ownedCharacters,
+      selectedCharacter,
+      characterUpgrades,
+      resources: resources || { common: 0, rare: 0, legendary: 0 },
+      bossFragments: bossFragments || [],
+    },
     { new: true },
   );
   res.json(user);

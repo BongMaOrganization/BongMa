@@ -1,6 +1,6 @@
 import { state } from "./state.js";
 import { evolve } from "./main.js";
-import { rollGacha, tradeCharacters, renderShop } from "./characters/shop.js";
+import { renderShop } from "./characters/shop.js";
 export const UI = {
   main: document.getElementById("screen-main"),
   upgrade: document.getElementById("screen-upgrade"),
@@ -264,38 +264,10 @@ export function updateCharacterUI(character) {
 }
 
 export function updateGachaUI() {
-  const gachaContainer = document.getElementById("gacha-container");
-  if (!gachaContainer) return;
-
-  gachaContainer.innerHTML = `
-    <h3>🎰 Gacha</h3>
-  `;
-
-  const btn = document.createElement("button");
-  btn.innerText = "Roll (1000 coins)";
-  btn.onclick = () => rollGacha();
-
-  gachaContainer.appendChild(btn);
+  // Handled by new shop system
 }
 
 export function updateTradingUI() {
-  const tradingContainer = document.getElementById("trading-container");
-  if (!tradingContainer) return;
-
-  tradingContainer.innerHTML = `<h3>🔁 Trade</h3>`;
-
-  ["common", "rare"].forEach((rarity) => {
-    const btn = document.createElement("button");
-    btn.innerText = `Trade 5 ${rarity} → ${
-      rarity === "common" ? "rare" : "legendary"
-    }`;
-
-    btn.onclick = () => {
-      tradeCharacters(rarity);
-      renderShop();
-    };
-
-    tradingContainer.appendChild(btn);
-  });
+  // Handled by new shop system
 }
 
