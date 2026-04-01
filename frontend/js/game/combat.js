@@ -2,12 +2,8 @@ import { state } from "../state.js";
 import { FPS } from "../config.js";
 import { dist } from "../utils.js";
 import { UI, updateHealthUI, updateXPUI } from "../ui.js";
-import { playSound } from "./audio.js"; // IMPORT ÂM THANH VÀO ĐÂY
+import { playSound } from "./audio.js";
 
-/**
- * Xử lý khi player nhận sát thương.
- * Tính đến grace period, dash, shield.
- */
 export function playerTakeDamage(ctx, canvas, changeStateFn) {
   if (state.player.gracePeriod > 0 || state.player.dashTimeLeft > 0) return;
 
@@ -169,6 +165,13 @@ export function updateBullets(
       if (boss && dist(b.x, b.y, boss.x, boss.y) < boss.radius + b.radius) {
         boss.hp -= b.damage || 1;
         UI.bossHp.style.width = Math.max(0, (boss.hp / boss.maxHp) * 100) + "%";
+
+        // Scout Mythical: Hưng phấn giảm hồi chiêu khi bắn trúng Boss
+        if (state.player.characterId === "scout" && buffs.r > 0) {
+          if (state.skillsCD.q > 0) state.skillsCD.q = Math.max(0, state.skillsCD.q - 0.5 * FPS);
+          if (state.skillsCD.e > 0) state.skillsCD.e = Math.max(0, state.skillsCD.e - 0.5 * FPS);
+        }
+
         // Sniper piercing shot stops at Boss for balance
         bullets.splice(i, 1);
         if (boss.hp <= 0) {
@@ -197,6 +200,13 @@ export function updateBullets(
             state.player.coins = (state.player.coins || 0) + 5;
           }
           hitGhost = true;
+
+          // Scout Mythical: Hưng phấn giảm hồi chiêu khi bắn trúng Quái
+          if (state.player.characterId === "scout" && buffs.r > 0) {
+            if (state.skillsCD.q > 0) state.skillsCD.q = Math.max(0, state.skillsCD.q - 0.5 * FPS);
+            if (state.skillsCD.e > 0) state.skillsCD.e = Math.max(0, state.skillsCD.e - 0.5 * FPS);
+          }
+
           // Piercing bullets do not get destroyed by ghosts
           if (!b.pierce) {
             if (b.bounces > 0) {

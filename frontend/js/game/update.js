@@ -31,6 +31,10 @@ export function update(ctx, canvas, changeStateFn) {
   let isSniperQ = player.characterId === "sniper" && buffs.q > 0;
   let isOracleR = player.characterId === "oracle" && buffs.r > 0;
 
+  // BUFF MỚI: BRAWLER & MEDIC
+  let isBrawlerE = player.characterId === "brawler" && buffs.e > 0;
+  let isMedicE = player.characterId === "medic" && buffs.e > 0;
+
   // --- ÁP DỤNG BUFF VÀO CHỈ SỐ KỸ NĂNG ---
   let isSpeedsterQ = player.characterId === "speedster" && buffs.q > 0;
   let currentSpeed = player.speed * (isSpeedsterQ ? 1.5 : 1);
@@ -38,6 +42,9 @@ export function update(ctx, canvas, changeStateFn) {
   if (isSniperQ) currentSpeed *= 0.5; // Tụ điểm làm chậm gắp đôi
   if (isEngineerE) currentSpeed *= 1.3;
   if (isDruidE) currentSpeed *= 1.3;
+  if (isBrawlerE) currentSpeed *= 1.3; // Tăng lực 30% tốc độ
+  if (isMedicE) currentSpeed *= 1.2;   // Tăng tốc nhẹ 20%
+
   let isSpeedsterE = player.characterId === "speedster" && buffs.e > 0;
   let currentFireRate = isSpeedsterE ? 4 : player.fireRate;
   if (isStormE) currentFireRate = Math.max(3, player.fireRate * 0.75);

@@ -113,99 +113,6 @@ function triggerSkill(key, canvas, changeStateFn) {
     if (key === "q") state.activeBuffs.q = 3 * FPS;
     if (key === "e") state.activeBuffs.e = 4 * FPS;
     if (key === "r") {
-      for (let i = 0; i < Math.PI * 2; i += Math.PI / 10) {
-        spawnBullet(
-          state.player.x,
-          state.player.y,
-          state.player.x + Math.cos(i),
-          state.player.y + Math.sin(i),
-          true,
-        );
-      }
-    }
-  } else if (char === "tank") {
-    if (key === "q") {
-      state.player.shield = Math.min((state.player.maxShield || 0) + 1, 5);
-      updateHealthUI();
-    }
-    if (key === "e") state.activeBuffs.e = 3 * FPS;
-    if (key === "r") {
-      state.bullets.forEach((b) => {
-        if (!b.isPlayer && dist(state.player.x, state.player.y, b.x, b.y) < 200)
-          b.life = 0;
-      });
-      state.activeBuffs.r = 15;
-    }
-  } else if (char === "sharpshooter") {
-    if (key === "q") state.activeBuffs.q = 5 * FPS;
-    if (key === "e") state.activeBuffs.e = 4 * FPS;
-    if (key === "r") {
-      state.ghosts.forEach((g) => {
-        if (g.x > 0) g.isStunned = 300;
-      });
-      if (state.boss) state.boss.hp -= 30;
-      state.activeBuffs.r = 10;
-    }
-  } else if (char === "ghost") {
-    if (key === "q") state.activeBuffs.e = 3 * FPS;
-    if (key === "e") {
-      state.player.x = Math.max(
-        state.player.radius,
-        Math.min(canvas.width - state.player.radius, state.mouse.x),
-      );
-      state.player.y = Math.max(
-        state.player.radius,
-        Math.min(canvas.height - state.player.radius, state.mouse.y),
-      );
-    }
-    if (key === "r") {
-      let absorbed = 0;
-      state.bullets.forEach((b) => {
-        if (
-          !b.isPlayer &&
-          dist(state.player.x, state.player.y, b.x, b.y) < 150
-        ) {
-          b.life = 0;
-          absorbed++;
-        }
-      });
-      if (absorbed > 0 && state.player.hp < state.player.maxHp) {
-        state.player.hp++;
-        updateHealthUI();
-      }
-    }
-  } else if (char === "mage") {
-    if (key === "q") {
-      for (let i = 0; i < Math.PI * 2; i += Math.PI / 4) {
-        spawnBullet(
-          state.player.x,
-          state.player.y,
-          state.player.x + Math.cos(i),
-          state.player.y + Math.sin(i),
-          true,
-          1,
-        );
-      }
-    }
-    if (key === "e") {
-      if (state.player.hp > 1) {
-        state.player.hp--;
-        updateHealthUI();
-        addExperience(50, changeStateFn);
-      }
-    }
-    if (key === "r") state.activeBuffs.r = 4 * FPS;
-  } else if (char === "brawler") {
-    if (key === "q") {
-      state.ghosts.forEach((g) => {
-        if (dist(state.player.x, state.player.y, g.x, g.y) < 80) {
-          g.x += (g.x - state.player.x) * 0.5;
-          g.y += (g.y - state.player.y) * 0.5;
-        }
-      });
-    }
-    if (key === "e") state.activeBuffs.e = 3 * FPS;
-    if (key === "r") {
       for (let i = 0; i < Math.PI * 2; i += Math.PI / 6) {
         spawnBullet(
           state.player.x,
@@ -217,20 +124,51 @@ function triggerSkill(key, canvas, changeStateFn) {
       }
     }
   } else if (char === "scout") {
-    if (key === "q") state.activeBuffs.q = 5 * FPS;
-    if (key === "e") state.player.dashTimeLeft = 10;
+    if (key === "q") {
+      state.activeBuffs.q = 15; // Animation 15 frames
+      state.ghosts.forEach(g => {
+        if (dist(state.player.x, state.player.y, g.x, g.y) < 100) {
+          g.hp -= 2;
+          g.isStunned = 30;
+        }
+      });
+      if (state.boss && dist(state.player.x, state.player.y, state.boss.x, state.boss.y) < 120) {
+        state.boss.hp -= 5;
+      }
+    }
+    if (key === "e") {
+      let mx = state.mouse.x;
+      let my = state.mouse.y;
+      let dx = mx - state.player.x;
+      let dy = my - state.player.y;
+      let len = Math.sqrt(dx * dx + dy * dy);
+      if (len > 0) {
+        dx /= len;
+        dy /= len;
+      }
+      state.player.dashTimeLeft = Math.min(20, Math.floor(len / (state.player.speed * 3))); // Lướt đến đúng điểm chuột
+      state.player.dashDx = dx;
+      state.player.dashDy = dy;
+      state.player.grappleTarget = { x: mx, y: my };
+      state.activeBuffs.e = state.player.dashTimeLeft;
+    }
     if (key === "r") {
-      state.ghosts.forEach((g) => (g.isStunned = 120));
+      state.activeBuffs.r = 6 * FPS; // Kích hoạt Hưng Phấn 6 giây
     }
   } else if (char === "medic") {
-    if (key === "q" && state.player.hp < state.player.maxHp) {
-      state.player.hp++;
-      updateHealthUI();
+    if (key === "q") {
+      if (state.player.hp < state.player.maxHp) {
+        state.player.hp++;
+        updateHealthUI();
+      }
+      state.activeBuffs.q = 30; // Hiện UI +1 HP bay lên
     }
-    if (key === "e") state.activeBuffs.e = 4 * FPS;
+    if (key === "e") state.activeBuffs.e = 5 * FPS; // Tăng tốc nhẹ 5s
     if (key === "r") {
       state.player.hp = state.player.maxHp;
+      state.player.gracePeriod = 120; // Tặng thêm 2s bất tử
       updateHealthUI();
+      state.activeBuffs.r = 60; // Hiệu ứng thánh giá
     }
   } else if (char === "hunter") {
     if (key === "q") {

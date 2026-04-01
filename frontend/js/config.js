@@ -527,19 +527,20 @@ export const CHARACTERS = [
         name: "Chấn Động",
         desc: "Shockwave diện rộng.",
         cooldown: 40,
+        initialCooldown: 20,
       },
     ],
   },
   {
     id: "scout",
     name: "Trinh Sát",
-    price: 380,
-    rarity: "common",
+    price: 700,
+    rarity: "mythical",
     baseStats: { hp: 3, speed: 6.2, fireRate: 16, multiShot: 1, bounces: 1 },
     skills: [
-      { key: "q", name: "Scan", desc: "Hiện đạn rõ hơn.", cooldown: 10 },
-      { key: "e", name: "Lướt", desc: "Dash nhanh.", cooldown: 8 },
-      { key: "r", name: "Radar", desc: "Hiện địch toàn map.", cooldown: 40 },
+      { key: "q", name: "Trảm Xoáy", desc: "Chém diện rộng quanh bản thân.", cooldown: 6 },
+      { key: "e", name: "Bắn Móc", desc: "Phóng móc và đu tới vị trí chuột (Có thể dùng Q khi bay).", cooldown: 8 },
+      { key: "r", name: "Hưng Phấn", desc: "Tăng 40% Tốc độ & Tốc bắn trong 6s. Đánh trúng địch giảm 0.5s hồi Q, E.", cooldown: 45, initialCooldown: 10 },
     ],
   },
   {
@@ -550,8 +551,8 @@ export const CHARACTERS = [
     baseStats: { hp: 4, speed: 5, fireRate: 17, multiShot: 1, bounces: 0 },
     skills: [
       { key: "q", name: "Hồi Máu", desc: "+1 HP.", cooldown: 12 },
-      { key: "e", name: "Buff", desc: +"Tăng tốc nhẹ.", cooldown: 10 },
-      { key: "r", name: "Cứu Sinh", desc: "Hồi full HP.", cooldown: 60 },
+      { key: "e", name: "Tăng tốc", desc: "Tăng tốc nhẹ.", cooldown: 10 },
+      { key: "r", name: "Cứu Sinh", desc: "Hồi full HP.", cooldown: 60, initialCooldown: 30 },
     ],
   },
 
@@ -565,7 +566,7 @@ export const CHARACTERS = [
     skills: [
       { key: "q", name: "Bẫy", desc: "Đặt bẫy damage.", cooldown: 10 },
       { key: "e", name: "Truy Dấu", desc: "Tăng dmg.", cooldown: 12 },
-      { key: "r", name: "Săn Đêm", desc: "Buff crit.", cooldown: 45 },
+      { key: "r", name: "Săn Đêm", desc: "Buff crit.", cooldown: 45, initialCooldown: 30 },
     ],
   },
   {
@@ -577,7 +578,7 @@ export const CHARACTERS = [
     skills: [
       { key: "q", name: "Freeze", desc: "Đóng băng.", cooldown: 10 },
       { key: "e", name: "Băng Giáp", desc: "Shield nhỏ.", cooldown: 12 },
-      { key: "r", name: "Bão Tuyết", desc: "Slow map.", cooldown: 50 },
+      { key: "r", name: "Bão Tuyết", desc: "Slow map.", cooldown: 50, initialCooldown: 25 },
     ],
   },
   {
@@ -589,7 +590,7 @@ export const CHARACTERS = [
     skills: [
       { key: "q", name: "Burst", desc: "Bắn nhanh.", cooldown: 8 },
       { key: "e", name: "Overheat", desc: "Spam đạn.", cooldown: 12 },
-      { key: "r", name: "Bullet Hell", desc: "Spam toàn màn.", cooldown: 50 },
+      { key: "r", name: "Bullet Hell", desc: "Spam toàn màn.", cooldown: 50, initialCooldown: 30 },
     ],
   },
 
@@ -603,7 +604,7 @@ export const CHARACTERS = [
     skills: [
       { key: "q", name: "Slow Time", desc: "Làm chậm đạn.", cooldown: 10 },
       { key: "e", name: "Rewind", desc: "Quay lại vị trí.", cooldown: 15 },
-      { key: "r", name: "Stop Time", desc: "Dừng thời gian.", cooldown: 60 },
+      { key: "r", name: "Stop Time", desc: "Dừng thời gian.", cooldown: 60, initialCooldown: 35 },
     ],
   },
   {
@@ -615,7 +616,7 @@ export const CHARACTERS = [
     skills: [
       { key: "q", name: "Hút", desc: "Hút đạn.", cooldown: 10 },
       { key: "e", name: "Nổ", desc: "AOE.", cooldown: 12 },
-      { key: "r", name: "Black Hole", desc: "Hút map.", cooldown: 55 },
+      { key: "r", name: "Black Hole", desc: "Hút map.", cooldown: 55, initialCooldown: 28 },
     ],
   },
   {
@@ -627,7 +628,7 @@ export const CHARACTERS = [
     skills: [
       { key: "q", name: "Lightning", desc: "Sét đơn.", cooldown: 8 },
       { key: "e", name: "Chain", desc: "Sét lan.", cooldown: 12 },
-      { key: "r", name: "Thunderstorm", desc: "Sét toàn map.", cooldown: 55 },
+      { key: "r", name: "Thunderstorm", desc: "Sét toàn map.", cooldown: 55, initialCooldown: 30 },
     ],
   },
   {
