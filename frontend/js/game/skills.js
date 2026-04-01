@@ -334,7 +334,7 @@ function triggerSkill(key, canvas, changeStateFn) {
           true,
         );
       }
-      for(let i = prevLen; i < state.bullets.length; i++) {
+      for (let i = prevLen; i < state.bullets.length; i++) {
         state.bullets[i].life = 15; // Rất ngắn
       }
     }
@@ -353,20 +353,25 @@ function triggerSkill(key, canvas, changeStateFn) {
     if (key === "q") {
       state.activeBuffs.q = 2 * FPS; // Xuyên đạn 2 giây
       // Kích hoạt lướt dài
-      let dx = 0, dy = 0;
+      let dx = 0,
+        dy = 0;
       if (state.keys["w"] || state.keys["arrowup"]) dy -= 1;
       if (state.keys["s"] || state.keys["arrowdown"]) dy += 1;
       if (state.keys["a"] || state.keys["arrowleft"]) dx -= 1;
       if (state.keys["d"] || state.keys["arrowright"]) dx += 1;
-      
+
       if (dx === 0 && dy === 0) {
         let mx = state.mouse.x - state.player.x;
         let my = state.mouse.y - state.player.y;
-        let len = Math.sqrt(mx*mx + my*my);
-        if(len > 0) { dx = mx/len; dy = my/len; }
+        let len = Math.sqrt(mx * mx + my * my);
+        if (len > 0) {
+          dx = mx / len;
+          dy = my / len;
+        }
       } else {
-        let len = Math.sqrt(dx*dx + dy*dy);
-        dx /= len; dy /= len;
+        let len = Math.sqrt(dx * dx + dy * dy);
+        dx /= len;
+        dy /= len;
       }
 
       state.player.dashTimeLeft = 20; // Lướt xa hơn (20 frame thay vì 12)
@@ -385,14 +390,14 @@ function triggerSkill(key, canvas, changeStateFn) {
           let dirX = state.mouse.x - state.player.x;
           let dirY = state.mouse.y - state.player.y;
           let angle = Math.atan2(dirY, dirX) + angOffset;
-          
+
           spawnBullet(
             state.player.x,
             state.player.y,
             state.player.x + Math.cos(angle) * 100,
             state.player.y + Math.sin(angle) * 100,
             true,
-            1.5
+            1.5,
           );
         }, i * 60);
       }
@@ -439,7 +444,7 @@ function triggerSkill(key, canvas, changeStateFn) {
           1,
         );
       }
-      for(let i = prevLen; i < state.bullets.length; i++) {
+      for (let i = prevLen; i < state.bullets.length; i++) {
         let b = state.bullets[i];
         b.radius = 8;
         b.life = 40;
@@ -468,10 +473,16 @@ function triggerSkill(key, canvas, changeStateFn) {
       // Dịch chuyển đến chuột
       let mx = state.mouse.x;
       let my = state.mouse.y;
-      
+
       // Clamp vào màn hình
-      mx = Math.max(state.player.radius, Math.min(800 - state.player.radius, mx));
-      my = Math.max(state.player.radius, Math.min(600 - state.player.radius, my));
+      mx = Math.max(
+        state.player.radius,
+        Math.min(800 - state.player.radius, mx),
+      );
+      my = Math.max(
+        state.player.radius,
+        Math.min(600 - state.player.radius, my),
+      );
 
       // Tạo phantom tĩnh (dư ảnh)
       if (!state.phantoms) state.phantoms = [];
@@ -480,7 +491,7 @@ function triggerSkill(key, canvas, changeStateFn) {
         y: state.player.y,
         life: 2 * FPS, // Tồn tại 2 giây
         color: state.player.color,
-        radius: state.player.radius
+        radius: state.player.radius,
       });
 
       state.player.x = mx;
@@ -507,7 +518,7 @@ function triggerSkill(key, canvas, changeStateFn) {
       if (state.bullets.length > prevLen) {
         let b = state.bullets[state.bullets.length - 1];
         b.pierce = true; // Xuyên thấu!
-        b.damage = 5;    // Cực mạnh
+        b.damage = 5; // Cực mạnh
         b.radius = 8;
         b.style = 2; // Màu riêng
       }
@@ -519,32 +530,36 @@ function triggerSkill(key, canvas, changeStateFn) {
       let targetObj = null;
       let { player, boss, ghosts } = state;
       if (boss) {
-         nearestDist = Math.sqrt((player.x - boss.x)**2 + (player.y - boss.y)**2);
-         targetObj = boss;
+        nearestDist = Math.sqrt(
+          (player.x - boss.x) ** 2 + (player.y - boss.y) ** 2,
+        );
+        targetObj = boss;
       }
-      ghosts.forEach(g => {
-         if (g.x > 0 && g.isStunned <= 0) {
-             let d = Math.sqrt((player.x - g.x)**2 + (player.y - g.y)**2);
-             if (d < nearestDist) { nearestDist = d; targetObj = g; }
-         }
+      ghosts.forEach((g) => {
+        if (g.x > 0 && g.isStunned <= 0) {
+          let d = Math.sqrt((player.x - g.x) ** 2 + (player.y - g.y) ** 2);
+          if (d < nearestDist) {
+            nearestDist = d;
+            targetObj = g;
+          }
+        }
       });
 
       for (let i = 0; i < 5; i++) {
         setTimeout(() => {
-          let tx = state.mouse.x, ty = state.mouse.y;
+          let tx = state.mouse.x,
+            ty = state.mouse.y;
           // Cập nhật vị trí đích theo target live, nếu bị tiêu diệt thì bắn vị trí cũ
-          if (targetObj && (targetObj === boss || (targetObj.x > 0 && targetObj.isStunned <= 0))) {
-            tx = targetObj.x; ty = targetObj.y;
+          if (
+            targetObj &&
+            (targetObj === boss ||
+              (targetObj.x > 0 && targetObj.isStunned <= 0))
+          ) {
+            tx = targetObj.x;
+            ty = targetObj.y;
           }
           let oldLen = state.bullets.length;
-          spawnBullet(
-            state.player.x,
-            state.player.y,
-            tx,
-            ty,
-            true,
-            2,
-          );
+          spawnBullet(state.player.x, state.player.y, tx, ty, true, 2);
           if (state.bullets.length > oldLen) {
             let b = state.bullets[state.bullets.length - 1];
             b.damage = 2;
@@ -557,38 +572,89 @@ function triggerSkill(key, canvas, changeStateFn) {
 
   // ===== ENGINEER =====
   else if (char === "engineer") {
-    if (key === "q") state.activeBuffs.q = 6 * FPS;
+    // ===== Q: Turret =====
+    if (key === "q") {
+      if (!state.engineerTurrets) state.engineerTurrets = [];
 
-    if (key === "e") state.activeBuffs.e = 4 * FPS;
+      state.engineerTurrets.push({
+        x: state.player.x,
+        y: state.player.y,
+        life: 6 * FPS, // 6s
+      });
+    }
 
-    if (key === "r") state.activeBuffs.r = 5 * FPS;
+    // ===== E: Buff =====
+    if (key === "e") {
+      state.activeBuffs.e = 4 * FPS;
+    }
+
+    // ===== R: Shield =====
+    if (key === "r") {
+      state.activeBuffs.r = 5 * FPS;
+    }
   }
 
   // ===== SPIRIT =====
   else if (char === "spirit") {
-    if (key === "q") state.activeBuffs.q = 3 * FPS;
+    // ===== Q: Hóa Hồn =====
+    if (key === "q") {
+      state.activeBuffs.q = 3 * FPS;
+    }
 
-    if (key === "e") state.activeBuffs.e = 4 * FPS;
+    // ===== E: Truy Hồn =====
+    if (key === "e") {
+      state.activeBuffs.e = 4 * FPS;
+    }
 
+    // ===== R: Thiên Phạt =====
     if (key === "r") {
-      state.ghosts.forEach((g) => (g.hp -= 2));
+      // Damage toàn map
+      state.ghosts.forEach((g) => {
+        if (g.x > 0) {
+          g.hp = (g.hp || 1) - 3;
+          g.isStunned = 60;
+        }
+      });
+
+      if (state.boss) {
+        state.boss.hp -= 20;
+      }
+      state.activeBuffs.r = 10; // 10 frame flash
     }
   }
 
   // ===== DRUID =====
   else if (char === "druid") {
-    if (key === "q") state.activeBuffs.q = 5 * FPS;
+    // ===== Q: Hạt Mầm =====
+    if (key === "q") {
+      state.activeBuffs.q = 5 * FPS;
 
-    if (key === "e") {
-      state.player.hp++;
-      updateHealthUI();
-      state.activeBuffs.e = 3 * FPS;
+      if (!state.druidOrbs) state.druidOrbs = [];
+
+      state.druidOrbs = [];
+      for (let i = 0; i < 3; i++) {
+        state.druidOrbs.push({
+          angle: (i * Math.PI * 2) / 3,
+          radius: 40,
+        });
+      }
     }
 
-    if (key === "r") state.activeBuffs.r = 4 * FPS;
+    // ===== E: Tái Sinh =====
+    if (key === "e") {
+      if (state.player.hp < state.player.maxHp) {
+        state.player.hp++;
+        updateHealthUI();
+      }
+      state.activeBuffs.e = 4 * FPS;
+    }
+
+    // ===== R: Split shot =====
+    if (key === "r") {
+      state.activeBuffs.r = 4 * FPS;
+    }
   }
 }
-
 export function handleSkillsUpdate(canvas, changeStateFn) {
   if (!state.skillsCD) initSkills();
 

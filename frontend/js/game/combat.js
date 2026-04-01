@@ -14,8 +14,13 @@ export function playerTakeDamage(ctx, canvas, changeStateFn) {
   // Bất tử từ Kỹ năng
   let buffs = state.activeBuffs || { q: 0, e: 0, r: 0 };
   let isInvulnSkill =
-    (buffs.e > 0 && (state.player.characterId === "tank" || state.player.characterId === "ghost")) ||
-    (buffs.q > 0 && (state.player.characterId === "warden" || state.player.characterId === "assassin"));
+    (buffs.e > 0 &&
+      (state.player.characterId === "tank" ||
+        state.player.characterId === "ghost")) ||
+    (buffs.q > 0 &&
+      (state.player.characterId === "warden" ||
+        state.player.characterId === "assassin" ||
+        state.player.characterId === "spirit"));
 
   if (isInvulnSkill) {
     return;
@@ -74,15 +79,38 @@ export function updateBullets(
   let { player, boss, bullets, ghosts } = state;
   let buffs = state.activeBuffs || { q: 0, e: 0, r: 0 };
   let isInvulnSkill =
-    (buffs.e > 0 && (player.characterId === "tank" || player.characterId === "ghost")) ||
-    (buffs.q > 0 && (player.characterId === "warden" || player.characterId === "assassin"));
+    (buffs.e > 0 &&
+      (player.characterId === "tank" || player.characterId === "ghost")) ||
+    (buffs.q > 0 &&
+      (player.characterId === "warden" || player.characterId === "assassin"));
   let isInvulnerable =
     player.gracePeriod > 0 || player.dashTimeLeft > 0 || isInvulnSkill;
   let isSummonerQ = player.characterId === "summoner" && buffs.q > 0;
 
   for (let i = bullets.length - 1; i >= 0; i--) {
     let b = bullets[i];
+    //Spirit E đẩy đạn địch ra xa player
+    let isSpiritE = player.characterId === "spirit" && buffs.e > 0;
 
+    if (isSpiritE && !b.isPlayer) {
+      let d = dist(b.x, b.y, player.x, player.y);
+      if (d < 200) {
+        // đẩy hướng ra xa player
+        let angle = Math.atan2(b.y - player.y, b.x - player.x);
+        let speed = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+
+        b.vx = Math.cos(angle) * speed;
+        b.vy = Math.sin(angle) * speed;
+      }
+    }
+    // ===== ENGINEER SHIELD =====
+    let isEngineerR = player.characterId === "engineer" && buffs.r > 0;
+    if (isEngineerR) {
+      if (!b.isPlayer && dist(b.x, b.y, player.x, player.y) < 120) {
+        bullets.splice(i, 1);
+        continue;
+      }
+    }
     // Đạn địch bị đóng băng
     if (!b.isPlayer && isTimeFrozen) {
       // Giữ nguyên vị trí
@@ -127,7 +155,7 @@ export function updateBullets(
 
     if (b.isPlayer) {
       if (boss && dist(b.x, b.y, boss.x, boss.y) < boss.radius + b.radius) {
-        boss.hp -= (b.damage || 1);
+        boss.hp -= b.damage || 1;
         UI.bossHp.style.width = Math.max(0, (boss.hp / boss.maxHp) * 100) + "%";
         // Sniper piercing shot stops at Boss for balance
         bullets.splice(i, 1);
@@ -151,7 +179,7 @@ export function updateBullets(
             ghosts.splice(j, 1);
             state.player.coins = (state.player.coins || 0) + 10;
           } else {
-            g.isStunned = (b.damage === 2) ? 600 : 300;
+            g.isStunned = b.damage === 2 ? 600 : 300;
             g.hp = (g.hp || 1) - (b.damage || 1);
             addExperience(6, changeStateFn);
             state.player.coins = (state.player.coins || 0) + 5;
@@ -180,7 +208,10 @@ export function updateBullets(
       }
     } else {
       // Đạn địch
-      if (isSummonerQ && dist(b.x, b.y, player.x, player.y) < player.radius + 40) {
+      if (
+        isSummonerQ &&
+        dist(b.x, b.y, player.x, player.y) < player.radius + 40
+      ) {
         // Đạn địch bị phá hủy bởi khiên quay của Summoner
         bullets.splice(i, 1);
         continue;
@@ -210,7 +241,11 @@ export function updateBullets(
     }
     for (let j = ghosts.length - 1; j >= 0; j--) {
       let g = ghosts[j];
-      if (g.isStunned <= 0 && g.x > 0 && dist(player.x, player.y, g.x, g.y) < player.radius + 45) {
+      if (
+        g.isStunned <= 0 &&
+        g.x > 0 &&
+        dist(player.x, player.y, g.x, g.y) < player.radius + 45
+      ) {
         if (state.isBossLevel) {
           ghosts.splice(j, 1);
           state.player.coins = (state.player.coins || 0) + 10;

@@ -47,7 +47,13 @@ export function draw(ctx, canvas) {
     }
     if (buffs.q > 0) {
       ctx.beginPath();
-      ctx.arc(player.x, player.y, player.radius + 6 + Math.random() * 4, 0, Math.PI * 2);
+      ctx.arc(
+        player.x,
+        player.y,
+        player.radius + 6 + Math.random() * 4,
+        0,
+        Math.PI * 2,
+      );
       ctx.strokeStyle = "rgba(255, 0, 0, 0.8)";
       ctx.lineWidth = 3;
       ctx.stroke();
@@ -64,17 +70,17 @@ export function draw(ctx, canvas) {
 
   if (player.characterId === "summoner" && buffs.q > 0) {
     let angle = (state.frameCount || 0) * 0.1;
-    for(let i=0; i<2; i++) {
-        let a = angle + i * Math.PI;
-        let x = player.x + Math.cos(a) * 40;
-        let y = player.y + Math.sin(a) * 40;
-        ctx.beginPath();
-        ctx.arc(x, y, 6, 0, Math.PI * 2);
-        ctx.fillStyle = "#b400ff";
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = "#b400ff";
-        ctx.fill();
-        ctx.shadowBlur = 0;
+    for (let i = 0; i < 2; i++) {
+      let a = angle + i * Math.PI;
+      let x = player.x + Math.cos(a) * 40;
+      let y = player.y + Math.sin(a) * 40;
+      ctx.beginPath();
+      ctx.arc(x, y, 6, 0, Math.PI * 2);
+      ctx.fillStyle = "#b400ff";
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = "#b400ff";
+      ctx.fill();
+      ctx.shadowBlur = 0;
     }
   }
 
@@ -127,7 +133,52 @@ export function draw(ctx, canvas) {
     ctx.fillStyle = "rgba(255, 0, 0, 0.18)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
+  if (player.characterId === "engineer" && buffs.r > 0) {
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, 120, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(0, 200, 255, 0.6)";
+    ctx.lineWidth = 3;
+    ctx.setLineDash([6, 6]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  if (player.characterId === "spirit" && buffs.q > 0) {
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.radius + 6, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(200, 200, 255, 0.8)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  if (player.characterId === "spirit" && buffs.e > 0) {
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, 200, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(150, 150, 255, 0.4)";
+    ctx.setLineDash([5, 5]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  if (player.characterId === "spirit" && buffs.r > 0) {
+    for (let i = 0; i < 10; i++) {
+      let x = Math.random() * canvas.width;
 
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x + (Math.random() - 0.5) * 50, canvas.height);
+      ctx.strokeStyle = "rgba(255,255,255,0.7)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+  }
+  if (player.characterId === "druid" && buffs.r > 0) {
+    ctx.fillStyle = "rgba(0,255,100,0.08)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  if (player.characterId === "druid" && buffs.e > 0) {
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.radius + 4, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(0,255,100,0.6)";
+    ctx.stroke();
+  }
   // --- Boss ---
   if (boss) {
     const phase = boss.hp <= boss.maxHp / 2 ? 1 : 0;
@@ -275,10 +326,34 @@ export function draw(ctx, canvas) {
     else ctx.fillStyle = b.style === 1 ? "#ff00ff" : "#ff4444";
     ctx.fill();
   }
-
+  //Druid orbs
+  if (state.druidOrbs && player.characterId === "druid" && buffs.q > 0) {
+    state.druidOrbs.forEach((o) => {
+      ctx.beginPath();
+      ctx.arc(o.x, o.y, 6, 0, Math.PI * 2);
+      ctx.fillStyle = "#00ff88";
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = "#00ff88";
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    });
+  }
+  // ===== ENGINEER TURRET =====
+  if (state.engineerTurrets) {
+    state.engineerTurrets.forEach((t) => {
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, 10, 0, Math.PI * 2);
+      ctx.fillStyle = "#00ccff";
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = "#00ccff";
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    });
+  }
   // --- Player ---
   let isInvulnSkill =
-    (buffs.e > 0 && (player.characterId === "tank" || player.characterId === "ghost")) ||
+    (buffs.e > 0 &&
+      (player.characterId === "tank" || player.characterId === "ghost")) ||
     (buffs.q > 0 && player.characterId === "warden");
 
   if (player.dashTimeLeft > 0 || isInvulnSkill) {

@@ -20,14 +20,15 @@ export function update(ctx, canvas, changeStateFn) {
   let isWardenE = player.characterId === "warden" && buffs.e > 0;
   let isWardenR = player.characterId === "warden" && buffs.r > 0;
   let isAlchemistR = player.characterId === "alchemist" && buffs.r > 0;
-
+  let isEngineerE = player.characterId === "engineer" && buffs.e > 0;
+  let isEngineerR = player.characterId === "engineer" && buffs.r > 0;
   // ===== ORIGINAL CHARACTER BUFF FLAGS =====
   let isHunterE = player.characterId === "hunter" && buffs.e > 0;
   let isFrostR = player.characterId === "frost" && buffs.r > 0;
   let isVoidR = player.characterId === "void" && buffs.r > 0;
   let isStormE = player.characterId === "storm" && buffs.e > 0;
   let isReaperR = player.characterId === "reaper" && buffs.r > 0;
-  
+  let isDruidE = player.characterId === "druid" && buffs.e > 0;
   let isSniperQ = player.characterId === "sniper" && buffs.q > 0;
   let isOracleR = player.characterId === "oracle" && buffs.r > 0;
 
@@ -36,12 +37,13 @@ export function update(ctx, canvas, changeStateFn) {
   let currentSpeed = player.speed * (isSpeedsterQ ? 1.5 : 1);
   if (isBerserkerQ) currentSpeed *= 1.2;
   if (isSniperQ) currentSpeed *= 0.5; // Tụ điểm làm chậm gắp đôi
-  
+  if (isEngineerE) currentSpeed *= 1.3;
+  if (isDruidE) currentSpeed *= 1.3;
   let isSpeedsterE = player.characterId === "speedster" && buffs.e > 0;
   let currentFireRate = isSpeedsterE ? 4 : player.fireRate;
   if (isStormE) currentFireRate = Math.max(3, player.fireRate * 0.75);
   if (isBerserkerQ) currentFireRate = Math.max(2, player.fireRate * 0.65);
-
+  if (isEngineerE) currentFireRate = Math.max(3, player.fireRate * 0.6);
   let isSharpshootE = player.characterId === "sharpshooter" && buffs.e > 0;
   let currentMultiShot = player.multiShot + (isSharpshootE ? 3 : 0);
   if (isSummonerE) currentMultiShot += 2;
@@ -138,42 +140,111 @@ export function update(ctx, canvas, changeStateFn) {
     let originalBounce = state.player.bounces;
     state.player.multiShot = currentMultiShot;
     state.player.bounces = currentBounces;
-
+    let isDruidR = player.characterId === "druid" && buffs.r > 0;
     if (isAssassinE) {
       state.activeBuffs.e = 0; // consume buff
       // Auto-aim to closest enemy
       let nearestDist = Infinity;
       let targetObj = null;
       if (boss) {
-         nearestDist = dist(player.x, player.y, boss.x, boss.y);
-         targetObj = boss;
+        nearestDist = dist(player.x, player.y, boss.x, boss.y);
+        targetObj = boss;
       }
-      state.ghosts.forEach(g => {
-         if (g.x > 0 && g.isStunned <= 0) {
-             let d = dist(player.x, player.y, g.x, g.y);
-             if (d < nearestDist) { nearestDist = d; targetObj = g; }
-         }
+      state.ghosts.forEach((g) => {
+        if (g.x > 0 && g.isStunned <= 0) {
+          let d = dist(player.x, player.y, g.x, g.y);
+          if (d < nearestDist) {
+            nearestDist = d;
+            targetObj = g;
+          }
+        }
       });
-      
-      let tx = mouse.x, ty = mouse.y;
-      if (targetObj) { tx = targetObj.x; ty = targetObj.y; }
+
+      let tx = mouse.x,
+        ty = mouse.y;
+      if (targetObj) {
+        tx = targetObj.x;
+        ty = targetObj.y;
+      }
 
       let oldLen = state.bullets.length;
       spawnBullet(player.x, player.y, tx, ty, true);
-      for(let i = oldLen; i < state.bullets.length; i++) {
+      for (let i = oldLen; i < state.bullets.length; i++) {
+        let b = state.bullets[i];
+        b.damage = 2; // Double damage
+        b.radius = 8; // Bigger bullet
+      }
+      // ===== 🌳 DRUID R =====
+      if (isDruidR) {
+        let newLen = state.bullets.length; // fix infinite loop
+
+        for (let i = oldLen; i < newLen; i++) {
           let b = state.bullets[i];
-          b.damage = 2; // Double damage
-          b.radius = 8; // Bigger bullet
+
+          // ❌ đã split rồi thì bỏ qua
+          if (b.isSplit) continue;
+
+          for (let j = -1; j <= 1; j += 2) {
+            let angle = Math.atan2(b.vy, b.vx) + j * 0.4;
+
+            spawnBullet(
+              b.x,
+              b.y,
+              b.x + Math.cos(angle) * 100,
+              b.y + Math.sin(angle) * 100,
+              true,
+            );
+
+            // 👉 đánh dấu bullet con
+            let newB = state.bullets[state.bullets.length - 1];
+            newB.isSplit = true;
+            newB.damage = 0.5; // optional balance
+          }
+
+          // 👉 đánh dấu bullet gốc đã split
+          b.isSplit = true;
+        }
       }
     } else {
       let oldLen = state.bullets.length;
       spawnBullet(player.x, player.y, mouse.x, mouse.y, true);
-      if(isSniperQ) {
-         for(let i = oldLen; i < state.bullets.length; i++) {
-             state.bullets[i].damage = 3;
-             state.bullets[i].radius = 6;
-             state.bullets[i].style = 1;
-         }
+      if (isSniperQ) {
+        for (let i = oldLen; i < state.bullets.length; i++) {
+          state.bullets[i].damage = 3;
+          state.bullets[i].radius = 6;
+          state.bullets[i].style = 1;
+        }
+      }
+      // ===== 🌳 DRUID R =====
+      if (isDruidR) {
+        let newLen = state.bullets.length; // fix infinite loop
+
+        for (let i = oldLen; i < newLen; i++) {
+          let b = state.bullets[i];
+
+          // ❌ đã split rồi thì bỏ qua
+          if (b.isSplit) continue;
+
+          for (let j = -1; j <= 1; j += 2) {
+            let angle = Math.atan2(b.vy, b.vx) + j * 0.4;
+
+            spawnBullet(
+              b.x,
+              b.y,
+              b.x + Math.cos(angle) * 100,
+              b.y + Math.sin(angle) * 100,
+              true,
+            );
+
+            // 👉 đánh dấu bullet con
+            let newB = state.bullets[state.bullets.length - 1];
+            newB.isSplit = true;
+            newB.damage = 0.5; // optional balance
+          }
+
+          // 👉 đánh dấu bullet gốc đã split
+          b.isSplit = true;
+        }
       }
     }
 
@@ -226,37 +297,60 @@ export function update(ctx, canvas, changeStateFn) {
   }
   // ===== SPECIAL EFFECTS =====
 
+  // ===== DRUID Q: orbit =====
+  if (player.characterId === "druid" && buffs.q > 0 && state.druidOrbs) {
+    state.druidOrbs.forEach((o) => {
+      o.angle += 0.05;
+
+      o.x = player.x + Math.cos(o.angle) * o.radius;
+      o.y = player.y + Math.sin(o.angle) * o.radius;
+
+      // damage ghost
+      state.ghosts.forEach((g) => {
+        if (g.x > 0 && dist(o.x, o.y, g.x, g.y) < g.radius + 6) {
+          g.isStunned = 30;
+          g.hp = (g.hp || 1) - 1;
+        }
+      });
+
+      // damage boss
+      if (boss && dist(o.x, o.y, boss.x, boss.y) < boss.radius + 6) {
+        boss.hp -= 0.2;
+      }
+    });
+  }
+
   // Summoner R: Auto fire directions
   if (isSummonerR && (state.frameCount || 0) % 15 === 0) {
-    for(let i=0; i<4; i++) {
+    for (let i = 0; i < 4; i++) {
       let angle = Math.random() * Math.PI * 2;
       spawnBullet(
         player.x,
         player.y,
         player.x + Math.cos(angle) * 100,
         player.y + Math.sin(angle) * 100,
-        true
+        true,
       );
     }
   }
 
   // Warden R: Holy Sanctuary pushback
   if (isWardenR) {
-    state.ghosts.forEach(g => {
+    state.ghosts.forEach((g) => {
       let d = dist(player.x, player.y, g.x, g.y);
       if (d < 150) {
         let dx = g.x - player.x;
         let dy = g.y - player.y;
         let force = (150 - d) * 0.05;
-        g.x += dx * force / d;
-        g.y += dy * force / d;
+        g.x += (dx * force) / d;
+        g.y += (dy * force) / d;
       }
     });
   }
 
   // Alchemist R: Convert enemy bullets to player bullets
   if (isAlchemistR) {
-    state.bullets.forEach(b => {
+    state.bullets.forEach((b) => {
       if (!b.isPlayer && dist(player.x, player.y, b.x, b.y) < 250) {
         b.isPlayer = true;
         b.vx *= -1;
@@ -267,39 +361,45 @@ export function update(ctx, canvas, changeStateFn) {
 
   // Oracle R: Homing bullets function
   if (isOracleR && state.frame % 3 === 0) {
-     state.bullets.forEach(b => {
-        if (b.isPlayer) {
-           let nearestDist = 300; // Search radius for homing
-           let target = null;
-           if (boss) {
-             let d = dist(b.x, b.y, boss.x, boss.y);
-             if (d < nearestDist && d > boss.radius) { nearestDist = d; target = boss; }
-           }
-           state.ghosts.forEach(g => {
-             if (g.isStunned <= 0 && g.x > 0) {
-                let d = dist(b.x, b.y, g.x, g.y);
-                if (d < nearestDist) { nearestDist = d; target = g; }
-             }
-           });
-           
-           if(target) {
-               let currentAngle = Math.atan2(b.vy, b.vx);
-               let targetAngle = Math.atan2(target.y - b.y, target.x - b.x);
-               // Homing strength: 0.1 radians per 3 frames
-               let diff = targetAngle - currentAngle;
-               // Normalize diff to -PI, PI
-               diff = Math.atan2(Math.sin(diff), Math.cos(diff));
-               let maxTurn = 0.15;
-               if(diff > maxTurn) diff = maxTurn;
-               if(diff < -maxTurn) diff = -maxTurn;
-               
-               currentAngle += diff;
-               let speed = Math.sqrt(b.vx*b.vx + b.vy*b.vy);
-               b.vx = Math.cos(currentAngle) * speed;
-               b.vy = Math.sin(currentAngle) * speed;
-           }
+    state.bullets.forEach((b) => {
+      if (b.isPlayer) {
+        let nearestDist = 300; // Search radius for homing
+        let target = null;
+        if (boss) {
+          let d = dist(b.x, b.y, boss.x, boss.y);
+          if (d < nearestDist && d > boss.radius) {
+            nearestDist = d;
+            target = boss;
+          }
         }
-     });
+        state.ghosts.forEach((g) => {
+          if (g.isStunned <= 0 && g.x > 0) {
+            let d = dist(b.x, b.y, g.x, g.y);
+            if (d < nearestDist) {
+              nearestDist = d;
+              target = g;
+            }
+          }
+        });
+
+        if (target) {
+          let currentAngle = Math.atan2(b.vy, b.vx);
+          let targetAngle = Math.atan2(target.y - b.y, target.x - b.x);
+          // Homing strength: 0.1 radians per 3 frames
+          let diff = targetAngle - currentAngle;
+          // Normalize diff to -PI, PI
+          diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+          let maxTurn = 0.15;
+          if (diff > maxTurn) diff = maxTurn;
+          if (diff < -maxTurn) diff = -maxTurn;
+
+          currentAngle += diff;
+          let speed = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+          b.vx = Math.cos(currentAngle) * speed;
+          b.vy = Math.sin(currentAngle) * speed;
+        }
+      }
+    });
   }
 
   // Frost: freeze aura
@@ -360,6 +460,43 @@ export function update(ctx, canvas, changeStateFn) {
     }
   }
 
+  // ===== ENGINEER Q: Turret =====
+  if (player.characterId === "engineer" && state.engineerTurrets) {
+    state.engineerTurrets.forEach((t) => {
+      t.life--;
+
+      // Auto fire
+      if ((state.frameCount || 0) % 20 === 0) {
+        let target = null;
+        let nearest = 9999;
+
+        if (boss) {
+          let d = dist(t.x, t.y, boss.x, boss.y);
+          if (d < nearest) {
+            nearest = d;
+            target = boss;
+          }
+        }
+
+        state.ghosts.forEach((g) => {
+          if (g.x > 0 && g.isStunned <= 0) {
+            let d = dist(t.x, t.y, g.x, g.y);
+            if (d < nearest) {
+              nearest = d;
+              target = g;
+            }
+          }
+        });
+
+        if (target) {
+          spawnBullet(t.x, t.y, target.x, target.y, true);
+        }
+      }
+    });
+
+    // remove turret hết hạn
+    state.engineerTurrets = state.engineerTurrets.filter((t) => t.life > 0);
+  }
   // --- Bullet update & collision ---
   updateBullets(ctx, canvas, changeStateFn, isTimeFrozen);
 
