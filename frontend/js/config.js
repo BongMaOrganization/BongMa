@@ -4,13 +4,38 @@ export const GHOST_DATA_KEY = "AsynchronousEchoes_V4";
 // 5 mảnh nguyên liệu đặc biệt rớt từ Boss (10% mỗi lần hạ boss)
 // Thu thập đủ 5 mảnh khác nhau → đổi 1 nhân vật Legendary bất kỳ
 export const BOSS_FRAGMENTS = [
-  { id: "frag_fire", name: "Mảnh Lửa", icon: "🔥", desc: "Mảnh nguyên liệu từ boss lửa" },
-  { id: "frag_ice", name: "Mảnh Băng", icon: "❄️", desc: "Mảnh nguyên liệu từ boss băng" },
-  { id: "frag_storm", name: "Mảnh Sấm", icon: "⚡", desc: "Mảnh nguyên liệu từ boss sấm" },
-  { id: "frag_shadow", name: "Mảnh Bóng Tối", icon: "🌑", desc: "Mảnh nguyên liệu từ boss bóng tối" },
-  { id: "frag_spirit", name: "Mảnh Linh Hồn", icon: "👻", desc: "Mảnh nguyên liệu từ boss linh hồn" },
+  {
+    id: "frag_fire",
+    name: "Mảnh Lửa",
+    icon: "🔥",
+    desc: "Mảnh nguyên liệu từ boss lửa",
+  },
+  {
+    id: "frag_ice",
+    name: "Mảnh Băng",
+    icon: "❄️",
+    desc: "Mảnh nguyên liệu từ boss băng",
+  },
+  {
+    id: "frag_storm",
+    name: "Mảnh Sấm",
+    icon: "⚡",
+    desc: "Mảnh nguyên liệu từ boss sấm",
+  },
+  {
+    id: "frag_shadow",
+    name: "Mảnh Bóng Tối",
+    icon: "🌑",
+    desc: "Mảnh nguyên liệu từ boss bóng tối",
+  },
+  {
+    id: "frag_spirit",
+    name: "Mảnh Linh Hồn",
+    icon: "👻",
+    desc: "Mảnh nguyên liệu từ boss linh hồn",
+  },
 ];
-export const BOSS_FRAGMENT_DROP_RATE = 0.10; // 10% chance
+export const BOSS_FRAGMENT_DROP_RATE = 0.1; // 10% chance
 
 export const UPGRADES = [
   {
@@ -538,9 +563,25 @@ export const CHARACTERS = [
     rarity: "mythical",
     baseStats: { hp: 3, speed: 6.2, fireRate: 16, multiShot: 1, bounces: 1 },
     skills: [
-      { key: "q", name: "Trảm Xoáy", desc: "Chém diện rộng quanh bản thân.", cooldown: 6 },
-      { key: "e", name: "Bắn Móc", desc: "Phóng móc và đu tới vị trí chuột (Có thể dùng Q khi bay).", cooldown: 8 },
-      { key: "r", name: "Hưng Phấn", desc: "Tăng 40% Tốc độ & Tốc bắn trong 6s. Đánh trúng địch giảm 0.5s hồi Q, E.", cooldown: 45, initialCooldown: 10 },
+      {
+        key: "q",
+        name: "Trảm Xoáy",
+        desc: "Chém diện rộng quanh bản thân.",
+        cooldown: 6,
+      },
+      {
+        key: "e",
+        name: "Bắn Móc",
+        desc: "Phóng móc và đu tới vị trí chuột (Có thể dùng Q khi bay).",
+        cooldown: 8,
+      },
+      {
+        key: "r",
+        name: "Hưng Phấn",
+        desc: "Tăng 40% Tốc độ & Tốc bắn trong 6s. Đánh trúng địch giảm 0.5s hồi Q, E.",
+        cooldown: 45,
+        initialCooldown: 10,
+      },
     ],
   },
   {
@@ -552,7 +593,13 @@ export const CHARACTERS = [
     skills: [
       { key: "q", name: "Hồi Máu", desc: "+1 HP.", cooldown: 12 },
       { key: "e", name: "Tăng tốc", desc: "Tăng tốc nhẹ.", cooldown: 10 },
-      { key: "r", name: "Cứu Sinh", desc: "Hồi full HP.", cooldown: 60, initialCooldown: 30 },
+      {
+        key: "r",
+        name: "Cứu Sinh",
+        desc: "Hồi full HP.",
+        cooldown: 60,
+        initialCooldown: 30,
+      },
     ],
   },
 
@@ -564,9 +611,25 @@ export const CHARACTERS = [
     rarity: "rare",
     baseStats: { hp: 4, speed: 5.5, fireRate: 14, multiShot: 2, bounces: 0 },
     skills: [
-      { key: "q", name: "Bẫy Gấu", desc: "Đặt 1 bẫy tại chỗ. Kẻ địch dẫm phải sẽ bị trói 3s và mất máu.", cooldown: 8 },
-      { key: "e", name: "Đánh Dấu", desc: "Tạo ra 1 vùng từ trường bất tử trong 3s.", cooldown: 12 },
-      { key: "r", name: "Lốc Xoáy Phi Tiêu", desc: "Phóng 1 phi tiêu khổng lồ xuyên thấu càn quét mọi thứ trên đường bay.", cooldown: 40, initialCooldown: 15 },
+      {
+        key: "q",
+        name: "Bẫy Gấu",
+        desc: "Đặt 1 bẫy tại chỗ. Kẻ địch dẫm phải sẽ bị trói 3s và mất máu.",
+        cooldown: 8,
+      },
+      {
+        key: "e",
+        name: "Đánh Dấu",
+        desc: "Tạo ra 1 vùng từ trường bất tử trong 3s.",
+        cooldown: 12,
+      },
+      {
+        key: "r",
+        name: "Lốc Xoáy Phi Tiêu",
+        desc: "Phóng 1 phi tiêu khổng lồ xuyên thấu càn quét mọi thứ trên đường bay.",
+        cooldown: 40,
+        initialCooldown: 15,
+      },
     ],
   },
   {
@@ -576,9 +639,25 @@ export const CHARACTERS = [
     rarity: "rare",
     baseStats: { hp: 4, speed: 4.8, fireRate: 13, multiShot: 2, bounces: 0 },
     skills: [
-      { key: "q", name: "Đóng Băng Nguyên Tử", desc: "Tự phong ấn bản thân 2 giây. Bất động, Miễn nhiễm mọi sát thương và đóng băng quái xung quanh.", cooldown: 12 },
-      { key: "e", name: "Giáp Băng Nổ", desc: "Tạo 1 khiên chặn đòn. Khi khiên vỡ, phóng ra 8 mảnh băng sát thương xung quanh.", cooldown: 15 },
-      { key: "r", name: "Tâm Bão", desc: "Tạo 1 vùng bão tuyết khổng lồ bám theo bản thân trong 5s, liên tục làm chậm quái.", cooldown: 50, initialCooldown: 20 },
+      {
+        key: "q",
+        name: "Đóng Băng Nguyên Tử",
+        desc: "Tự phong ấn bản thân 2 giây. Bất động, Miễn nhiễm mọi sát thương và đóng băng quái xung quanh.",
+        cooldown: 12,
+      },
+      {
+        key: "e",
+        name: "Giáp Băng Nổ",
+        desc: "Tạo 1 khiên chặn đòn. Khi khiên vỡ, phóng ra 8 mảnh băng sát thương xung quanh.",
+        cooldown: 15,
+      },
+      {
+        key: "r",
+        name: "Tâm Bão",
+        desc: "Tạo 1 vùng bão tuyết khổng lồ bám theo bản thân trong 5s, liên tục làm chậm quái.",
+        cooldown: 50,
+        initialCooldown: 20,
+      },
     ],
   },
   {
@@ -588,9 +667,25 @@ export const CHARACTERS = [
     rarity: "rare",
     baseStats: { hp: 4, speed: 5, fireRate: 10, multiShot: 3, bounces: 0 },
     skills: [
-      { key: "q", name: "Súng Điện Từ", desc: "Bắn ngay lập tức 1 tia Laser xuyên thấu cực mạnh theo hướng chuột.", cooldown: 10 },
-      { key: "e", name: "Mìn Không Gian", desc: "Đặt 1 quả mìn. Tự phát nổ diện rộng khi có quái hoặc Boss bước vào.", cooldown: 10 },
-      { key: "r", name: "Pháo Kích", desc: "Gọi 1 đợt không kích rải thảm xuống vị trí trỏ chuột sau 1 giây.", cooldown: 40, initialCooldown: 15 },
+      {
+        key: "q",
+        name: "Súng Điện Từ",
+        desc: "Bắn ngay lập tức 1 tia Laser xuyên thấu cực mạnh theo hướng chuột.",
+        cooldown: 10,
+      },
+      {
+        key: "e",
+        name: "Mìn Không Gian",
+        desc: "Đặt 1 quả mìn. Tự phát nổ diện rộng khi có quái hoặc Boss bước vào.",
+        cooldown: 10,
+      },
+      {
+        key: "r",
+        name: "Pháo Kích",
+        desc: "Gọi 1 đợt không kích rải thảm xuống vị trí trỏ chuột sau 1 giây.",
+        cooldown: 40,
+        initialCooldown: 15,
+      },
     ],
   },
 
@@ -602,9 +697,25 @@ export const CHARACTERS = [
     rarity: "legendary",
     baseStats: { hp: 3, speed: 5, fireRate: 15, multiShot: 1, bounces: 0 },
     skills: [
-      { key: "q", name: "Bước Nhảy", desc: "Dịch chuyển tức thời đến con trỏ chuột.", cooldown: 5 },
-      { key: "e", name: "Ngưng Đọng", desc: "Đóng băng toàn bộ thời gian của kẻ địch và đạn trong 3 giây.", cooldown: 15 },
-      { key: "r", name: "Vòng Lặp", desc: "Xả đạn liên tục với tốc độ súng máy trong 4 giây.", cooldown: 40, initialCooldown: 20 },
+      {
+        key: "q",
+        name: "Bước Nhảy",
+        desc: "Dịch chuyển tức thời đến con trỏ chuột.",
+        cooldown: 5,
+      },
+      {
+        key: "e",
+        name: "Ngưng Đọng",
+        desc: "Đóng băng toàn bộ thời gian của kẻ địch và đạn trong 3 giây.",
+        cooldown: 15,
+      },
+      {
+        key: "r",
+        name: "Vòng Lặp",
+        desc: "Xả đạn liên tục với tốc độ súng máy trong 4 giây.",
+        cooldown: 40,
+        initialCooldown: 20,
+      },
     ],
   },
   {
@@ -614,9 +725,25 @@ export const CHARACTERS = [
     rarity: "legendary",
     baseStats: { hp: 4, speed: 4.5, fireRate: 18, multiShot: 2, bounces: 0 },
     skills: [
-      { key: "q", name: "Hố Đen", desc: "Tạo 1 hố đen hút quái vật xung quanh trong 3 giây.", cooldown: 12 },
-      { key: "e", name: "Nuốt Chửng", desc: "Xóa sổ ngay lập tức toàn bộ đạn địch trên màn hình. Hồi máu nếu xóa nhiều đạn.", cooldown: 10 },
-      { key: "r", name: "Tia Hủy Diệt", desc: "Bắn ra chùm tia Laser Hư Không liên tục theo hướng chuột trong 3 giây.", cooldown: 45, initialCooldown: 25 },
+      {
+        key: "q",
+        name: "Hố Đen",
+        desc: "Tạo 1 hố đen hút quái vật xung quanh trong 3 giây.",
+        cooldown: 12,
+      },
+      {
+        key: "e",
+        name: "Nuốt Chửng",
+        desc: "Xóa sổ ngay lập tức toàn bộ đạn địch trên màn hình. Hồi máu nếu xóa nhiều đạn.",
+        cooldown: 10,
+      },
+      {
+        key: "r",
+        name: "Tia Hủy Diệt",
+        desc: "Bắn ra chùm tia Laser Hư Không liên tục theo hướng chuột trong 3 giây.",
+        cooldown: 45,
+        initialCooldown: 25,
+      },
     ],
   },
   {
@@ -626,9 +753,25 @@ export const CHARACTERS = [
     rarity: "legendary",
     baseStats: { hp: 4, speed: 5.5, fireRate: 12, multiShot: 1, bounces: 2 },
     skills: [
-      { key: "q", name: "Sét Giật", desc: "Giật sét trực tiếp vào 3 kẻ địch gần nhất gây choáng và sát thương.", cooldown: 8 },
-      { key: "e", name: "Lướt Sét", desc: "Lướt tới trước, để lại các vùng điện từ gây sát thương.", cooldown: 10 },
-      { key: "r", name: "Trời Phạt", desc: "Gọi sấm sét giật ngẫu nhiên liên tục trên toàn bản đồ trong 5 giây.", cooldown: 40, initialCooldown: 20 },
+      {
+        key: "q",
+        name: "Sét Giật",
+        desc: "Giật sét trực tiếp vào 3 kẻ địch gần nhất gây choáng và sát thương.",
+        cooldown: 8,
+      },
+      {
+        key: "e",
+        name: "Lướt Sét",
+        desc: "Lướt tới trước, để lại các vùng điện từ gây sát thương.",
+        cooldown: 10,
+      },
+      {
+        key: "r",
+        name: "Trời Phạt",
+        desc: "Gọi sấm sét giật ngẫu nhiên liên tục trên toàn bản đồ trong 5 giây.",
+        cooldown: 40,
+        initialCooldown: 20,
+      },
     ],
   },
   {
@@ -638,9 +781,112 @@ export const CHARACTERS = [
     rarity: "legendary",
     baseStats: { hp: 5, speed: 4.8, fireRate: 20, multiShot: 1, bounces: 0 },
     skills: [
-      { key: "q", name: "Lưỡi Hái", desc: "Chém 1 vòng cung rộng phía trước, sát thương cực mạnh.", cooldown: 6 },
-      { key: "e", name: "Bóng Ma", desc: "Biến thành bóng ma bất tử, chạy xuyên quái trong 3s (không thể bắn).", cooldown: 12 },
-      { key: "r", name: "Phán Xét", desc: "Sau 2 giây niệm chú, tiêu diệt toàn bộ quái thường và trừ 15% máu Boss.", cooldown: 60, initialCooldown: 15 },
+      {
+        key: "q",
+        name: "Lưỡi Hái",
+        desc: "Chém 1 vòng cung rộng phía trước, sát thương cực mạnh.",
+        cooldown: 6,
+      },
+      {
+        key: "e",
+        name: "Bóng Ma",
+        desc: "Biến thành bóng ma bất tử, chạy xuyên quái trong 3s (không thể bắn).",
+        cooldown: 12,
+      },
+      {
+        key: "r",
+        name: "Phán Xét",
+        desc: "Sau 2 giây niệm chú, tiêu diệt toàn bộ quái thường và trừ 15% máu Boss.",
+        cooldown: 60,
+        initialCooldown: 15,
+      },
+    ],
+  },
+  {
+    id: "phoenix",
+    name: "Phượng Hoàng",
+    price: 950,
+    rarity: "mythical",
+    baseStats: { hp: 3, speed: 5.5, fireRate: 15, multiShot: 2, bounces: 0 },
+    skills: [
+      {
+        key: "q",
+        name: "Dấu Cháy",
+        desc: "Di chuyển để lại vệt lửa gây sát thương trong 5s.",
+        cooldown: 10,
+      },
+      {
+        key: "e",
+        name: "Tro Tàn",
+        desc: "Phát nổ tại chỗ, gây sát thương xung quanh, xóa đạn và dịch chuyển về vị trí con trỏ chuột.",
+        cooldown: 12,
+      },
+      {
+        key: "r",
+        name: "Tái Sinh",
+        desc: "Trong 5s: nhận sát thương chí tử sẽ không chết, sau đó hồi 50% HP và phát nổ (gây sát thương xung quanh, xóa đạn).",
+        cooldown: 20,
+        initialCooldown: 30,
+      },
+    ],
+  },
+  {
+    id: "necromancer",
+    name: "Tử Linh Sư",
+    rarity: "mythical",
+    baseStats: { hp: 4, speed: 4.5, fireRate: 16, multiShot: 1, bounces: 1 },
+    skills: [
+      {
+        key: "q",
+        name: "Triệu Hồn",
+        desc: "Thi triển 1 vòng tròn ma thuật triệu hồi 3 minion bảo vệ bạn trong 6s.",
+        cooldown: 10,
+        initialCooldown: 0,
+      },
+      {
+        key: "e",
+        name: "Hiến Tế",
+        desc: "Nổ toàn bộ minion gây sát thương lớn.",
+        cooldown: 5,
+        initialCooldown: 0,
+      },
+      {
+        key: "r",
+        name: "Địa Ngục",
+        desc: "Tạo 1 vùng địa ngục rộng lớn trong 10s, triệu hồi minion liên tục từ trong vùng đó.",
+        cooldown: 30,
+        initialCooldown: 0,
+      },
+    ],
+  },
+  {
+    id: "painter",
+    name: "Họa Sĩ",
+    price: 1000,
+    rarity: "mythical",
+    baseStats: { hp: 3, speed: 5.5, fireRate: 999, multiShot: 0, bounces: 0 },
+    skills: [
+      {
+        key: "q",
+        name: "Nét Vẽ",
+        desc: "Giữ phím để vẽ đường trên mặt đất trong tối đa 3s. Địch chạm vào sẽ nhận sát thương liên tục. Đường tồn tại 5s.",
+        cooldown: 6,
+        initialCooldown: 0,
+      },
+      {
+        key: "e",
+        name: "Màu Nổ",
+        desc: "Ném một quả màu tới vị trí con trỏ. Sau 0.5s phát nổ, gây sát thương diện rộng và để lại vùng màu gây damage theo thời gian trong 4s.",
+        cooldown: 10,
+        initialCooldown: 0,
+      },
+      {
+        key: "r",
+        name: "Bức Tranh Sống",
+        desc: "Trong 6s: mọi nét vẽ trở nên sống động — tự di chuyển, mở rộng và truy đuổi kẻ địch gần nhất. Đồng thời, các vùng màu lan rộng theo thời gian.",
+        cooldown: 30,
+        initialCooldown: 0,
+      },
     ],
   },
 ];

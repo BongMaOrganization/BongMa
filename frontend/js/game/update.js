@@ -68,7 +68,8 @@ export function update(ctx, canvas, changeStateFn) {
   let currentBounces = (player.bounces || 0) + (isSharpshootQ ? 2 : 0);
   if (isWardenE) currentBounces += 2;
 
-  let isTimeFrozen = (player.characterId === "mage" && buffs.r > 0) || isTimekeeperE;
+  let isTimeFrozen =
+    (player.characterId === "mage" && buffs.r > 0) || isTimekeeperE;
 
   if (player.gracePeriod > 0) player.gracePeriod--;
   if (player.dashCooldownTimer > 0) player.dashCooldownTimer--;
@@ -89,7 +90,8 @@ export function update(ctx, canvas, changeStateFn) {
     UI.dash.style.color = "#888";
   }
 
-  let dx = 0, dy = 0;
+  let dx = 0,
+    dy = 0;
   if (keys["w"] || keys["arrowup"]) dy -= 1;
   if (keys["s"] || keys["arrowdown"]) dy += 1;
   if (keys["a"] || keys["arrowleft"]) dx -= 1;
@@ -97,10 +99,16 @@ export function update(ctx, canvas, changeStateFn) {
 
   if (dx !== 0 && dy !== 0) {
     let len = Math.sqrt(dx * dx + dy * dy);
-    dx /= len; dy /= len;
+    dx /= len;
+    dy /= len;
   }
 
-  if (keys["space"] && player.dashCooldownTimer <= 0 && player.dashTimeLeft <= 0 && (dx !== 0 || dy !== 0)) {
+  if (
+    keys["space"] &&
+    player.dashCooldownTimer <= 0 &&
+    player.dashTimeLeft <= 0 &&
+    (dx !== 0 || dy !== 0)
+  ) {
     player.dashTimeLeft = 12;
     player.dashCooldownTimer = player.dashMaxCooldown;
     player.dashDx = dx;
@@ -117,19 +125,29 @@ export function update(ctx, canvas, changeStateFn) {
     player.y += dy * currentSpeed;
   }
 
-  player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
-  player.y = Math.max(player.radius, Math.min(canvas.height - player.radius, player.y));
+  player.x = Math.max(
+    player.radius,
+    Math.min(canvas.width - player.radius, player.x),
+  );
+  player.y = Math.max(
+    player.radius,
+    Math.min(canvas.height - player.radius, player.y),
+  );
 
   // --- Shooting ---
   let shotThisFrame = false;
-  let targetX = 0, targetY = 0;
+  let targetX = 0,
+    targetY = 0;
   if (player.cooldown > 0) player.cooldown--;
 
   if (isTimekeeperR) {
     if (player.cooldown > 1) player.cooldown = 1;
   }
 
-  if (
+  // ❗ Painter không được bắn
+  if (player.characterId === "painter") {
+    mouse.clicked = true;
+  } else if (
     (mouse.clicked || mouse.isDown) &&
     player.cooldown <= 0 &&
     player.dashTimeLeft <= 0 &&
@@ -154,25 +172,35 @@ export function update(ctx, canvas, changeStateFn) {
       state.ghosts.forEach((g) => {
         if (g.x > 0 && g.isStunned <= 0) {
           let d = dist(player.x, player.y, g.x, g.y);
-          if (d < nearestDist) { nearestDist = d; targetObj = g; }
+          if (d < nearestDist) {
+            nearestDist = d;
+            targetObj = g;
+          }
         }
       });
 
-      let tx = mouse.x, ty = mouse.y;
-      if (targetObj) { tx = targetObj.x; ty = targetObj.y; }
+      let tx = mouse.x,
+        ty = mouse.y;
+      if (targetObj) {
+        tx = targetObj.x;
+        ty = targetObj.y;
+      }
 
       let oldLen = state.bullets.length;
       spawnBullet(player.x, player.y, tx, ty, true);
       for (let i = oldLen; i < state.bullets.length; i++) {
         let b = state.bullets[i];
-        b.damage = 2; b.radius = 8;
+        b.damage = 2;
+        b.radius = 8;
       }
     } else {
       let oldLen = state.bullets.length;
       spawnBullet(player.x, player.y, mouse.x, mouse.y, true);
       if (isSniperQ) {
         for (let i = oldLen; i < state.bullets.length; i++) {
-          state.bullets[i].damage = 3; state.bullets[i].radius = 6; state.bullets[i].style = 1;
+          state.bullets[i].damage = 3;
+          state.bullets[i].radius = 6;
+          state.bullets[i].style = 1;
         }
       }
     }
@@ -186,9 +214,16 @@ export function update(ctx, canvas, changeStateFn) {
 
         for (let j = -1; j <= 1; j += 2) {
           let angle = Math.atan2(b.vy, b.vx) + j * 0.4;
-          spawnBullet(b.x, b.y, b.x + Math.cos(angle) * 100, b.y + Math.sin(angle) * 100, true);
+          spawnBullet(
+            b.x,
+            b.y,
+            b.x + Math.cos(angle) * 100,
+            b.y + Math.sin(angle) * 100,
+            true,
+          );
           let newB = state.bullets[state.bullets.length - 1];
-          newB.isSplit = true; newB.damage = 0.5;
+          newB.isSplit = true;
+          newB.damage = 0.5;
         }
         b.isSplit = true;
       }
@@ -198,7 +233,8 @@ export function update(ctx, canvas, changeStateFn) {
     state.player.bounces = originalBounce;
     player.cooldown = currentFireRate;
     shotThisFrame = true;
-    targetX = mouse.x; targetY = mouse.y;
+    targetX = mouse.x;
+    targetY = mouse.y;
   }
   mouse.clicked = false;
 
@@ -208,8 +244,16 @@ export function update(ctx, canvas, changeStateFn) {
     state.currentRunRecord.push(frameData);
   }
 
-  let isInvulnSkill = buffs.e > 0 && (player.characterId === "tank" || player.characterId === "ghost" || player.characterId === "reaper");
-  let isInvulnerable = player.gracePeriod > 0 || player.dashTimeLeft > 0 || isInvulnSkill || isFrostQ;
+  let isInvulnSkill =
+    buffs.e > 0 &&
+    (player.characterId === "tank" ||
+      player.characterId === "ghost" ||
+      player.characterId === "reaper");
+  let isInvulnerable =
+    player.gracePeriod > 0 ||
+    player.dashTimeLeft > 0 ||
+    isInvulnSkill ||
+    isFrostQ;
 
   // --- Boss logic ---
   if (!isTimeFrozen) {
@@ -228,20 +272,266 @@ export function update(ctx, canvas, changeStateFn) {
           boss.summonCooldown = 10 * FPS;
         }
       }
-      if (!isInvulnerable && dist(boss.x, boss.y, player.x, player.y) < boss.radius + player.radius) {
+      if (
+        !isInvulnerable &&
+        dist(boss.x, boss.y, player.x, player.y) < boss.radius + player.radius
+      ) {
         playerTakeDamage(ctx, canvas, changeStateFn);
       }
     }
   }
 
   // ===== SPECIAL EFFECTS =====
+  //Painter
+  // ===== 🎨 PAINTER DRAW (PAINT STYLE) =====
+  if (player.characterId === "painter" && state.painterDrawing) {
+    state.painterDrawTime--;
 
+    // 👉 detect bắt đầu giữ chuột
+    if (state.mouse.isDown && !state.prevMouseDown) {
+      // tạo nét mới
+      state.painterTrails.push({
+        points: [],
+        life: 5 * FPS,
+      });
+    }
+
+    // 👉 đang giữ chuột → vẽ
+    if (state.mouse.isDown) {
+      let trail = state.painterTrails[state.painterTrails.length - 1];
+      if (!trail) return;
+
+      let last = trail.points[trail.points.length - 1];
+
+      if (!last || dist(last.x, last.y, state.mouse.x, state.mouse.y) > 5) {
+        trail.points.push({
+          x: state.mouse.x,
+          y: state.mouse.y,
+        });
+      }
+    }
+
+    // lưu trạng thái chuột frame trước
+    state.prevMouseDown = state.mouse.isDown;
+
+    // hết thời gian thì tắt
+    if (state.painterDrawTime <= 0) {
+      state.painterDrawing = false;
+    }
+  }
+  if (state.painterBomb) {
+    state.painterBomb.life--;
+
+    if (state.painterBomb.life <= 0) {
+      let x = state.painterBomb.x;
+      let y = state.painterBomb.y;
+
+      // 💥 NỔ NGAY (QUAN TRỌNG)
+      state.ghosts.forEach((g) => {
+        if (dist(x, y, g.x, g.y) < 120) {
+          g.hp -= 2;
+
+          // ❗ stun đúng cách
+          g.isStunned = Math.max(g.isStunned, 40);
+        }
+      });
+
+      if (boss && dist(x, y, boss.x, boss.y) < 120) {
+        boss.hp -= 2;
+      }
+
+      // 🧹 clear bullet
+      state.bullets = state.bullets.filter((b) => dist(b.x, b.y, x, y) > 120);
+
+      // 🎨 tạo zone (damage theo thời gian)
+      state.painterZones.push({
+        x,
+        y,
+        radius: 60,
+        life: 4 * FPS,
+      });
+
+      // 🎨 visual explosion (nếu có draw)
+      if (!state.painterExplosions) state.painterExplosions = [];
+      state.painterExplosions.push({
+        x,
+        y,
+        life: 20,
+      });
+
+      state.painterBomb = null;
+    }
+  }
+  let isPainterR = player.characterId === "painter" && buffs.r > 0;
+
+  if (isPainterR && state.frameCount % 10 === 0) {
+    if (!state.painterTrails) return;
+
+    let newTrails = [];
+
+    state.painterTrails.forEach((t) => {
+      // ❗ init generation
+      if (t.generation === undefined) t.generation = 0;
+
+      // ❗ giới hạn depth (QUAN TRỌNG NHẤT)
+      if (t.generation >= 3) return;
+
+      // ❗ giới hạn số lần spawn mỗi trail
+      if (!t.spawnCount) t.spawnCount = 0;
+      if (t.spawnCount >= 3) return;
+
+      if (!t.points || t.points.length === 0) return;
+
+      t.spawnCount++;
+
+      let last = t.points[t.points.length - 1];
+
+      for (let i = 0; i < 3; i++) {
+        let angle = Math.random() * Math.PI * 2;
+
+        let newTrail = {
+          points: [{ x: last.x, y: last.y }],
+          life: 60,
+
+          // ❗ tăng cấp
+          generation: t.generation + 1,
+
+          // ❗ reset count cho nhánh
+          spawnCount: 0,
+        };
+
+        for (let j = 1; j <= 5; j++) {
+          newTrail.points.push({
+            x: last.x + Math.cos(angle) * j * 20,
+            y: last.y + Math.sin(angle) * j * 20,
+          });
+        }
+
+        newTrails.push(newTrail);
+      }
+    });
+
+    state.painterTrails.push(...newTrails);
+  }
+  state.painterTrails.forEach((t) => t.life--);
+  state.painterTrails = state.painterTrails.filter((t) => t.life > 0);
+  if (state.painterTrails.length > 200) return;
+  state.painterZones.forEach((z) => z.life--);
+  state.painterZones = state.painterZones.filter((z) => z.life > 0);
+  //Phoenix Q: Tạo vệt lửa sau lưng khi di chuyển
+  if (player.characterId === "phoenix" && buffs.q > 0) {
+    if (!state.phoenixTrails) state.phoenixTrails = [];
+
+    state.phoenixTrails.push({
+      x: player.x,
+      y: player.y,
+      life: 60,
+    });
+  }
+
+  // update trail
+  if (state.phoenixTrails) {
+    state.phoenixTrails.forEach((t) => t.life--);
+    state.phoenixTrails = state.phoenixTrails.filter((t) => t.life > 0);
+
+    // damage
+    state.phoenixTrails.forEach((t) => {
+      state.ghosts.forEach((g) => {
+        if (dist(t.x, t.y, g.x, g.y) < 20) {
+          g.hp -= 0.2;
+          g.isStunned = 10;
+        }
+      });
+
+      if (boss && dist(t.x, t.y, boss.x, boss.y) < boss.radius) {
+        boss.hp -= 0.05;
+      }
+    });
+  }
+  if (state.phoenixReviveFx > 0) state.phoenixReviveFx--;
+  if (state.phoenixEfx) {
+    state.phoenixEfx.life--;
+    if (state.phoenixEfx.life <= 0) state.phoenixEfx = null;
+  }
+  // Necromancer
+  //Minion system
+  if (state.necroMinions) {
+    state.necroMinions.forEach((m) => {
+      m.life--;
+
+      // ===== ORBIT =====
+      if (m.type === "orbit") {
+        m.angle += 0.05;
+
+        m.x = player.x + Math.cos(m.angle) * m.radius;
+        m.y = player.y + Math.sin(m.angle) * m.radius;
+      }
+
+      // ===== HELL SPAWN MINION =====
+      if (m.type === "seeker") {
+        let target = null;
+        let nearest = Infinity;
+
+        state.ghosts.forEach((g) => {
+          if (g.x > 0) {
+            let d = dist(m.x, m.y, g.x, g.y);
+            if (d < nearest) {
+              nearest = d;
+              target = g;
+            }
+          }
+        });
+
+        if (state.boss) {
+          let d = dist(m.x, m.y, state.boss.x, state.boss.y);
+          if (d < nearest) target = state.boss;
+        }
+
+        if (target) {
+          let dx = target.x - m.x;
+          let dy = target.y - m.y;
+          let len = Math.hypot(dx, dy) || 1;
+
+          m.x += (dx / len) * 2;
+          m.y += (dy / len) * 2;
+
+          if (len < 12) {
+            m.life = 0;
+          }
+        }
+      }
+    });
+
+    state.necroMinions = state.necroMinions.filter((m) => m.life > 0);
+  }
+  if (state.necroZone) {
+    let z = state.necroZone;
+    z.life--;
+
+    z.spawnTick++;
+
+    // spawn minion mỗi 20 frame
+    if (z.spawnTick % 20 === 0) {
+      state.necroMinions.push({
+        x: z.x + (Math.random() - 0.5) * 100,
+        y: z.y + (Math.random() - 0.5) * 100,
+        life: 120,
+        type: "seeker",
+      });
+    }
+
+    if (z.life <= 0) state.necroZone = null;
+  }
+  if (state.necroExplosions) {
+    state.necroExplosions.forEach((e) => e.life--);
+    state.necroExplosions = state.necroExplosions.filter((e) => e.life > 0);
+  }
   // SỬA LỖI HÚT CỦA VOID: Khóa chuyển động của quái khi bị hút
   if (player.characterId === "void" && state.voidBlackholes) {
     for (let i = state.voidBlackholes.length - 1; i >= 0; i--) {
       let bh = state.voidBlackholes[i];
       bh.life--;
-      state.ghosts.forEach(g => {
+      state.ghosts.forEach((g) => {
         if (g.x > 0) {
           let d = dist(bh.x, bh.y, g.x, g.y);
           if (d < 350) {
@@ -259,7 +549,10 @@ export function update(ctx, canvas, changeStateFn) {
     let angle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
     state.voidLaser = { x: player.x, y: player.y, angle: angle };
     let p1 = { x: player.x, y: player.y };
-    let p2 = { x: player.x + Math.cos(angle) * 1500, y: player.y + Math.sin(angle) * 1500 };
+    let p2 = {
+      x: player.x + Math.cos(angle) * 1500,
+      y: player.y + Math.sin(angle) * 1500,
+    };
     const distToLine = (p, v, w) => {
       let l2 = dist(v.x, v.y, w.x, w.y) ** 2;
       if (l2 === 0) return dist(p.x, p.y, v.x, v.y);
@@ -268,14 +561,21 @@ export function update(ctx, canvas, changeStateFn) {
       return dist(p.x, p.y, v.x + t * (w.x - v.x), v.y + t * (w.y - v.y));
     };
     if (state.frameCount % 5 === 0) {
-      state.ghosts.forEach(g => {
+      state.ghosts.forEach((g) => {
         if (g.x > 0 && distToLine({ x: g.x, y: g.y }, p1, p2) < g.radius + 20) {
-          g.hp -= 2; g.isStunned = 15;
+          g.hp -= 2;
+          g.isStunned = 15;
         }
       });
-      if (boss && distToLine({ x: boss.x, y: boss.y }, p1, p2) < boss.radius + 20) boss.hp -= 3;
+      if (
+        boss &&
+        distToLine({ x: boss.x, y: boss.y }, p1, p2) < boss.radius + 20
+      )
+        boss.hp -= 3;
     }
-  } else { state.voidLaser = null; }
+  } else {
+    state.voidLaser = null;
+  }
 
   if (player.dashTimeLeft > 0 && isStormE) {
     if (state.frameCount % 3 === 0) {
@@ -287,8 +587,11 @@ export function update(ctx, canvas, changeStateFn) {
     for (let i = state.stormTraps.length - 1; i >= 0; i--) {
       let t = state.stormTraps[i];
       t.life--;
-      state.ghosts.forEach(g => {
-        if (g.x > 0 && dist(t.x, t.y, g.x, g.y) < 30) { g.hp -= 1; g.isStunned = 45; }
+      state.ghosts.forEach((g) => {
+        if (g.x > 0 && dist(t.x, t.y, g.x, g.y) < 30) {
+          g.hp -= 1;
+          g.isStunned = 45;
+        }
       });
       if (t.life <= 0) state.stormTraps.splice(i, 1);
     }
@@ -301,20 +604,32 @@ export function update(ctx, canvas, changeStateFn) {
         let lx = player.x + (Math.random() - 0.5) * 800;
         let ly = player.y + (Math.random() - 0.5) * 800;
         state.stormLightnings.push({ x: lx, y: ly, life: 15 });
-        state.ghosts.forEach(g => {
-          if (g.x > 0 && dist(lx, ly, g.x, g.y) < 100) { g.hp -= 5; g.isStunned = 60; }
+        state.ghosts.forEach((g) => {
+          if (g.x > 0 && dist(lx, ly, g.x, g.y) < 100) {
+            g.hp -= 5;
+            g.isStunned = 60;
+          }
         });
-        if (boss && dist(lx, ly, boss.x, boss.y) < 100 + boss.radius) boss.hp -= 10;
+        if (boss && dist(lx, ly, boss.x, boss.y) < 100 + boss.radius)
+          boss.hp -= 10;
       }
     }
   }
 
   if (player.characterId === "reaper") {
     if (buffs.r === 1) {
-      state.ghosts.forEach(g => { if (g.x > 0) g.hp = 0; });
+      state.ghosts.forEach((g) => {
+        if (g.x > 0) g.hp = 0;
+      });
       if (boss) boss.hp -= boss.maxHp * 0.15;
       if (!state.explosions) state.explosions = [];
-      state.explosions.push({ x: canvas.width / 2, y: canvas.height / 2, radius: 2000, life: 20, color: "rgba(0, 0, 0, 0.8)" });
+      state.explosions.push({
+        x: canvas.width / 2,
+        y: canvas.height / 2,
+        radius: 2000,
+        life: 20,
+        color: "rgba(0, 0, 0, 0.8)",
+      });
     }
   }
 
@@ -324,16 +639,26 @@ export function update(ctx, canvas, changeStateFn) {
       o.x = player.x + Math.cos(o.angle) * o.radius;
       o.y = player.y + Math.sin(o.angle) * o.radius;
       state.ghosts.forEach((g) => {
-        if (g.x > 0 && dist(o.x, o.y, g.x, g.y) < g.radius + 6) { g.isStunned = 30; g.hp = (g.hp || 1) - 1; }
+        if (g.x > 0 && dist(o.x, o.y, g.x, g.y) < g.radius + 6) {
+          g.isStunned = 30;
+          g.hp = (g.hp || 1) - 1;
+        }
       });
-      if (boss && dist(o.x, o.y, boss.x, boss.y) < boss.radius + 6) boss.hp -= 0.2;
+      if (boss && dist(o.x, o.y, boss.x, boss.y) < boss.radius + 6)
+        boss.hp -= 0.2;
     });
   }
 
   if (isSummonerR && (state.frameCount || 0) % 15 === 0) {
     for (let i = 0; i < 4; i++) {
       let angle = Math.random() * Math.PI * 2;
-      spawnBullet(player.x, player.y, player.x + Math.cos(angle) * 100, player.y + Math.sin(angle) * 100, true);
+      spawnBullet(
+        player.x,
+        player.y,
+        player.x + Math.cos(angle) * 100,
+        player.y + Math.sin(angle) * 100,
+        true,
+      );
     }
   }
 
@@ -341,8 +666,11 @@ export function update(ctx, canvas, changeStateFn) {
     state.ghosts.forEach((g) => {
       let d = dist(player.x, player.y, g.x, g.y);
       if (d < 150) {
-        let dx = g.x - player.x, dy = g.y - player.y, force = (150 - d) * 0.05;
-        g.x += (dx * force) / d; g.y += (dy * force) / d;
+        let dx = g.x - player.x,
+          dy = g.y - player.y,
+          force = (150 - d) * 0.05;
+        g.x += (dx * force) / d;
+        g.y += (dy * force) / d;
       }
     });
   }
@@ -350,7 +678,9 @@ export function update(ctx, canvas, changeStateFn) {
   if (isAlchemistR) {
     state.bullets.forEach((b) => {
       if (!b.isPlayer && dist(player.x, player.y, b.x, b.y) < 250) {
-        b.isPlayer = true; b.vx *= -1; b.vy *= -1;
+        b.isPlayer = true;
+        b.vx *= -1;
+        b.vy *= -1;
       }
     });
   }
@@ -365,15 +695,22 @@ export function update(ctx, canvas, changeStateFn) {
   if (isOracleR && (state.frameCount || 0) % 2 === 0) {
     state.bullets.forEach((b) => {
       if (b.isPlayer) {
-        let nearestDist = 400; let target = null;
+        let nearestDist = 400;
+        let target = null;
         if (boss) {
           let d = dist(b.x, b.y, boss.x, boss.y);
-          if (d < nearestDist && d > boss.radius) { nearestDist = d; target = boss; }
+          if (d < nearestDist && d > boss.radius) {
+            nearestDist = d;
+            target = boss;
+          }
         }
         state.ghosts.forEach((g) => {
           if (g.x > 0) {
             let d = dist(b.x, b.y, g.x, g.y);
-            if (d < nearestDist) { nearestDist = d; target = g; }
+            if (d < nearestDist) {
+              nearestDist = d;
+              target = g;
+            }
           }
         });
         if (target) {
@@ -396,31 +733,44 @@ export function update(ctx, canvas, changeStateFn) {
   if (isFrostR) {
     if (state.frameCount % 10 === 0) {
       state.ghosts.forEach((g) => {
-        if (g.x > 0 && dist(player.x, player.y, g.x, g.y) < 200) { g.hp = (g.hp || 1) - 10; }
+        if (g.x > 0 && dist(player.x, player.y, g.x, g.y) < 200) {
+          g.hp = (g.hp || 1) - 10;
+        }
       });
-      if (boss && dist(player.x, player.y, boss.x, boss.y) < 200 + boss.radius) { boss.hp -= 2; }
+      if (
+        boss &&
+        dist(player.x, player.y, boss.x, boss.y) < 200 + boss.radius
+      ) {
+        boss.hp -= 2;
+      }
     }
   }
 
   if (isVoidR) {
-    state.bullets.forEach((b) => { if (!b.isPlayer) b.life = 0; });
+    state.bullets.forEach((b) => {
+      if (!b.isPlayer) b.life = 0;
+    });
   }
 
   if (isReaperR) {
     state.ghosts.forEach((g) => {
-      if (g.x > 0 && dist(player.x, player.y, g.x, g.y) < 180) g.isStunned = Math.max(g.isStunned, 60);
+      if (g.x > 0 && dist(player.x, player.y, g.x, g.y) < 180)
+        g.isStunned = Math.max(g.isStunned, 60);
     });
   }
 
   if (isBerserkerR) {
     state.ghosts.forEach((g) => {
-      if (g.x > 0 && dist(player.x, player.y, g.x, g.y) < 100) g.isStunned = Math.max(g.isStunned, 60);
+      if (g.x > 0 && dist(player.x, player.y, g.x, g.y) < 100)
+        g.isStunned = Math.max(g.isStunned, 60);
     });
   }
 
   if (isHunterE) {
     state.ghosts.forEach((g) => {
-      if (g.x > 0 && dist(player.x, player.y, g.x, g.y) < 300) { g.hp = 0; }
+      if (g.x > 0 && dist(player.x, player.y, g.x, g.y) < 300) {
+        g.hp = 0;
+      }
     });
     if (boss && dist(player.x, player.y, boss.x, boss.y) < 300 + boss.radius) {
       if (state.frameCount % 15 === 0) boss.hp -= 2;
@@ -435,7 +785,13 @@ export function update(ctx, canvas, changeStateFn) {
 
   if (player.characterId === "summoner" && buffs.q > 0) {
     if (state.frameCount % 20 === 0) {
-      spawnBullet(player.x, player.y, player.x + Math.random() * 100, player.y + Math.random() * 100, true);
+      spawnBullet(
+        player.x,
+        player.y,
+        player.x + Math.random() * 100,
+        player.y + Math.random() * 100,
+        true,
+      );
     }
   }
 
@@ -444,17 +800,29 @@ export function update(ctx, canvas, changeStateFn) {
       let m = state.gunnerMines[i];
       let triggered = false;
 
-      state.ghosts.forEach(g => { if (g.x > 0 && dist(m.x, m.y, g.x, g.y) < 40) triggered = true; });
-      if (boss && dist(m.x, m.y, boss.x, boss.y) < boss.radius + 40) triggered = true;
+      state.ghosts.forEach((g) => {
+        if (g.x > 0 && dist(m.x, m.y, g.x, g.y) < 40) triggered = true;
+      });
+      if (boss && dist(m.x, m.y, boss.x, boss.y) < boss.radius + 40)
+        triggered = true;
 
       if (triggered) {
-        state.ghosts.forEach(g => {
-          if (g.x > 0 && dist(m.x, m.y, g.x, g.y) < 100) { g.hp = (g.hp || 1) - 1; g.isStunned = 45; }
+        state.ghosts.forEach((g) => {
+          if (g.x > 0 && dist(m.x, m.y, g.x, g.y) < 100) {
+            g.hp = (g.hp || 1) - 1;
+            g.isStunned = 45;
+          }
         });
         if (boss && dist(m.x, m.y, boss.x, boss.y) < 100) boss.hp -= 5;
 
         if (!state.explosions) state.explosions = [];
-        state.explosions.push({ x: m.x, y: m.y, radius: 100, life: 10, color: "rgba(255,100,0,0.8)" });
+        state.explosions.push({
+          x: m.x,
+          y: m.y,
+          radius: 100,
+          life: 10,
+          color: "rgba(255,100,0,0.8)",
+        });
         state.gunnerMines.splice(i, 1);
       }
     }
@@ -465,15 +833,28 @@ export function update(ctx, canvas, changeStateFn) {
       let strike = state.gunnerAirstrikes[i];
       strike.timer--;
       if (strike.timer <= 0) {
-        state.ghosts.forEach(g => {
-          if (g.x > 0 && dist(strike.x, strike.y, g.x, g.y) < 200) { g.hp -= 5; g.isStunned = 120; }
+        state.ghosts.forEach((g) => {
+          if (g.x > 0 && dist(strike.x, strike.y, g.x, g.y) < 200) {
+            g.hp -= 5;
+            g.isStunned = 120;
+          }
         });
-        if (boss && dist(strike.x, strike.y, boss.x, boss.y) < 200) boss.hp -= 30;
+        if (boss && dist(strike.x, strike.y, boss.x, boss.y) < 200)
+          boss.hp -= 30;
 
-        state.bullets.forEach(b => { if (!b.isPlayer && dist(strike.x, strike.y, b.x, b.y) < 200) b.life = 0; });
+        state.bullets.forEach((b) => {
+          if (!b.isPlayer && dist(strike.x, strike.y, b.x, b.y) < 200)
+            b.life = 0;
+        });
 
         if (!state.explosions) state.explosions = [];
-        state.explosions.push({ x: strike.x, y: strike.y, radius: 200, life: 15, color: "rgba(255,0,0,1)" });
+        state.explosions.push({
+          x: strike.x,
+          y: strike.y,
+          radius: 200,
+          life: 15,
+          color: "rgba(255,0,0,1)",
+        });
         state.gunnerAirstrikes.splice(i, 1);
       }
     }
@@ -483,9 +864,11 @@ export function update(ctx, canvas, changeStateFn) {
     for (let i = state.hunterTraps.length - 1; i >= 0; i--) {
       let trap = state.hunterTraps[i];
       let triggered = false;
-      state.ghosts.forEach(g => {
+      state.ghosts.forEach((g) => {
         if (!triggered && g.x > 0 && dist(trap.x, trap.y, g.x, g.y) < 40) {
-          g.isStunned = 180; g.hp -= 2; triggered = true;
+          g.isStunned = 180;
+          g.hp -= 2;
+          triggered = true;
         }
       });
       if (triggered) state.hunterTraps.splice(i, 1);
@@ -496,15 +879,22 @@ export function update(ctx, canvas, changeStateFn) {
     state.engineerTurrets.forEach((t) => {
       t.life--;
       if ((state.frameCount || 0) % 20 === 0) {
-        let target = null; let nearest = 9999;
+        let target = null;
+        let nearest = 9999;
         if (boss) {
           let d = dist(t.x, t.y, boss.x, boss.y);
-          if (d < nearest) { nearest = d; target = boss; }
+          if (d < nearest) {
+            nearest = d;
+            target = boss;
+          }
         }
         state.ghosts.forEach((g) => {
           if (g.x > 0 && g.isStunned <= 0) {
             let d = dist(t.x, t.y, g.x, g.y);
-            if (d < nearest) { nearest = d; target = g; }
+            if (d < nearest) {
+              nearest = d;
+              target = g;
+            }
           }
         });
         if (target) spawnBullet(t.x, t.y, target.x, target.y, true);
@@ -515,12 +905,48 @@ export function update(ctx, canvas, changeStateFn) {
 
   // SỬA LỖI UI MÁU BOSS: Đồng bộ máu boss liên tục để chiêu R Storm, Reaper... hiển thị đúng
   if (boss && boss.hp !== boss.prevHp) {
-    if (UI.bossHp) UI.bossHp.style.width = Math.max(0, (boss.hp / boss.maxHp) * 100) + "%";
+    if (UI.bossHp)
+      UI.bossHp.style.width = Math.max(0, (boss.hp / boss.maxHp) * 100) + "%";
     boss.prevHp = boss.hp;
   }
 
   updateBullets(ctx, canvas, changeStateFn, isTimeFrozen);
+  // ===== 🎨 PAINTER ZONE DAMAGE =====
+  if (player.characterId === "painter" && state.painterZones) {
+    state.painterZones.forEach((z) => {
+      state.ghosts.forEach((g) => {
+        if (dist(z.x, z.y, g.x, g.y) < z.radius) {
+          g.hp -= 0.1;
 
+          // ❗ stun đúng cách
+          g.isStunned = Math.max(g.isStunned, 60);
+        }
+      });
+
+      if (boss && dist(z.x, z.y, boss.x, boss.y) < z.radius) {
+        boss.hp -= 0.05;
+      }
+    });
+  }
+  // ===== 🎨 PAINTER DAMAGE =====
+  if (player.characterId === "painter" && state.painterTrails) {
+    state.painterTrails.forEach((t) => {
+      t.points.forEach((p) => {
+        state.ghosts.forEach((g) => {
+          if (dist(p.x, p.y, g.x, g.y) < g.radius + 4) {
+            g.hp -= 0.05;
+
+            // ⚠️ tránh stun vô hạn
+            g.isStunned = Math.max(g.isStunned, 60);
+          }
+        });
+
+        if (boss && dist(p.x, p.y, boss.x, boss.y) < boss.radius + 4) {
+          boss.hp -= 0.03;
+        }
+      });
+    });
+  }
   if (boss && boss.hp <= 0 && !state._bossKilled) {
     state.player.coins = (state.player.coins || 0) + 100;
     state._bossKilled = true;
@@ -540,13 +966,22 @@ export function update(ctx, canvas, changeStateFn) {
       if (g.x > 0) {
         state.player.coins = (state.player.coins || 0) + 2;
         if (!state.explosions) state.explosions = [];
-        state.explosions.push({ x: g.x, y: g.y, radius: 15, life: 10, color: "rgba(255, 68, 68, 0.6)" }); // Nổ khi chết!
+        state.explosions.push({
+          x: g.x,
+          y: g.y,
+          radius: 15,
+          life: 10,
+          color: "rgba(255, 68, 68, 0.6)",
+        }); // Nổ khi chết!
       }
       state.ghosts.splice(i, 1);
       continue;
     }
     let exactIndex = g.timer * g.speedRate;
-    if (exactIndex >= g.record.length && (!g.historyPath || g.historyPath.length === 0)) {
+    if (
+      exactIndex >= g.record.length &&
+      (!g.historyPath || g.historyPath.length === 0)
+    ) {
       state.ghosts.splice(i, 1);
       continue;
     }
@@ -562,7 +997,8 @@ export function update(ctx, canvas, changeStateFn) {
         if (g.isStunned > 0) {
           g.isStunned--;
         } else {
-          let prevX = g.x, prevY = g.y;
+          let prevX = g.x,
+            prevY = g.y;
           let action1 = g.record[idx1];
 
           if (idx1 + 1 < g.record.length) {
@@ -571,7 +1007,8 @@ export function update(ctx, canvas, changeStateFn) {
             g.x = action1[0] + (action2[0] - action1[0]) * t;
             g.y = action1[1] + (action2[1] - action1[1]) * t;
           } else {
-            g.x = action1[0]; g.y = action1[1];
+            g.x = action1[0];
+            g.y = action1[1];
           }
 
           g.historyPath.push({ x: g.x, y: g.y });
@@ -583,14 +1020,19 @@ export function update(ctx, canvas, changeStateFn) {
           g.lastIdx = idx1;
 
           let ghostIsDashing = dist(g.x, g.y, prevX, prevY) > 8 * g.speedRate;
-          if (!isInvulnerable && !ghostIsDashing && dist(g.x, g.y, player.x, player.y) < player.radius + g.radius - 2) {
+          if (
+            !isInvulnerable &&
+            !ghostIsDashing &&
+            dist(g.x, g.y, player.x, player.y) < player.radius + g.radius - 2
+          ) {
             playerTakeDamage(ctx, canvas, changeStateFn);
           }
           g.timer++;
         }
       } else {
         g.historyPath.shift();
-        g.x = -100; g.y = -100;
+        g.x = -100;
+        g.y = -100;
         g.timer++;
       }
     } else {
@@ -606,7 +1048,8 @@ export function update(ctx, canvas, changeStateFn) {
     UI.ghosts.innerText = `Quái: ${activeGhosts}`;
   }
 
-  document.getElementById("coins-count").innerText = `Tiền: ${state.player?.coins || 0}`;
+  document.getElementById("coins-count").innerText =
+    `Tiền: ${state.player?.coins || 0}`;
 
   if (!state.isBossLevel && state.frameCount >= state.maxFramesToSurvive) {
     return "STAGE_CLEAR";
@@ -615,9 +1058,15 @@ export function update(ctx, canvas, changeStateFn) {
   state.frameCount++;
   if (!state.isBossLevel && state.frameCount % FPS === 0) {
     state.scoreTime++;
-    let maxMins = Math.floor(state.maxFramesToSurvive / FPS / 60).toString().padStart(2, "0");
-    let maxSecs = Math.floor((state.maxFramesToSurvive / FPS) % 60).toString().padStart(2, "0");
-    let mins = Math.floor(state.scoreTime / 60).toString().padStart(2, "0");
+    let maxMins = Math.floor(state.maxFramesToSurvive / FPS / 60)
+      .toString()
+      .padStart(2, "0");
+    let maxSecs = Math.floor((state.maxFramesToSurvive / FPS) % 60)
+      .toString()
+      .padStart(2, "0");
+    let mins = Math.floor(state.scoreTime / 60)
+      .toString()
+      .padStart(2, "0");
     let secs = (state.scoreTime % 60).toString().padStart(2, "0");
     UI.timer.innerText = `${mins}:${secs} / ${maxMins}:${maxSecs}`;
   }

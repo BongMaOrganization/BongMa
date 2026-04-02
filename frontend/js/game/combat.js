@@ -5,6 +5,7 @@ import { UI, updateHealthUI, updateXPUI } from "../ui.js";
 import { playSound } from "./audio.js";
 
 export function playerTakeDamage(ctx, canvas, changeStateFn) {
+  let player = state.player;
   if (state.player.gracePeriod > 0 || state.player.dashTimeLeft > 0) return;
 
   let buffs = state.activeBuffs || { q: 0, e: 0, r: 0 };
@@ -29,9 +30,15 @@ export function playerTakeDamage(ctx, canvas, changeStateFn) {
     playSound("damage");
 
     if (state.player.characterId === "frost" && buffs.e > 0) {
-      import("../entities.js").then(module => {
+      import("../entities.js").then((module) => {
         for (let i = 0; i < Math.PI * 2; i += Math.PI / 4) {
-          module.spawnBullet(state.player.x, state.player.y, state.player.x + Math.cos(i), state.player.y + Math.sin(i), true);
+          module.spawnBullet(
+            state.player.x,
+            state.player.y,
+            state.player.x + Math.cos(i),
+            state.player.y + Math.sin(i),
+            true,
+          );
         }
       });
       state.activeBuffs.e = 0;
@@ -47,7 +54,36 @@ export function playerTakeDamage(ctx, canvas, changeStateFn) {
   ctx.fillStyle = "rgba(255,0,0,0.5)";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  if (state.player.hp <= 0) changeStateFn("GAME_OVER");
+  if (player.hp <= 0) {
+    let isPhoenixR = player.characterId === "phoenix" && buffs.r > 0;
+
+    if (isPhoenixR && state.phoenixReviveReady) {
+      state.phoenixReviveReady = false;
+
+      player.hp = Math.min(player.maxHp, player.hp + 2); // ❤️ hồi 2 HP
+      player.gracePeriod = 60;
+      updateHealthUI();
+      // 💥 nổ
+      state.ghosts.forEach((g) => {
+        if (dist(player.x, player.y, g.x, g.y) < 150) {
+          g.hp -= 3;
+          g.isStunned = 60;
+        }
+      });
+
+      // 🧹 clear bullet
+      state.bullets = state.bullets.filter(
+        (b) => dist(b.x, b.y, player.x, player.y) > 150,
+      );
+
+      // 🎨 trigger effect
+      state.phoenixReviveFx = 20;
+    } else {
+      changeStateFn("GAME_OVER");
+    }
+
+    return;
+  }
 }
 
 export function addExperience(amount, changeStateFn) {
@@ -79,13 +115,15 @@ export function updateBullets(
   let buffs = state.activeBuffs || { q: 0, e: 0, r: 0 };
   let isInvulnSkill =
     (buffs.e > 0 &&
-      (player.characterId === "tank" || player.characterId === "ghost" || player.characterId === "reaper")) ||
+      (player.characterId === "tank" ||
+        player.characterId === "ghost" ||
+        player.characterId === "reaper")) ||
     (buffs.q > 0 &&
       (player.characterId === "warden" || player.characterId === "assassin"));
   let isInvulnerable =
     player.gracePeriod > 0 || player.dashTimeLeft > 0 || isInvulnSkill;
   let isSummonerQ = player.characterId === "summoner" && buffs.q > 0;
-
+  let isPhoenixR = player.characterId === "phoenix" && buffs.r > 0;
   let isOracleQ = player.characterId === "oracle" && buffs.q > 0;
   let isFrostR = player.characterId === "frost" && buffs.r > 0;
   let isHunterE = player.characterId === "hunter" && buffs.e > 0;
@@ -115,13 +153,17 @@ export function updateBullets(
     if (!b.isPlayer && isTimeFrozen) {
       // Giữ nguyên vị trí
     } else {
-      let speedMult = (!b.isPlayer && isOracleQ) ? 0.3 : 1;
+      let speedMult = !b.isPlayer && isOracleQ ? 0.3 : 1;
 
       if (!b.isPlayer && isFrostR && dist(b.x, b.y, player.x, player.y) < 200) {
         speedMult = 0.2;
       }
 
-      if (!b.isPlayer && isHunterE && dist(b.x, b.y, player.x, player.y) < 300) {
+      if (
+        !b.isPlayer &&
+        isHunterE &&
+        dist(b.x, b.y, player.x, player.y) < 300
+      ) {
         speedMult = 0.2;
       }
 
@@ -136,10 +178,24 @@ export function updateBullets(
     }
 
     let hitWall = false;
-    if (b.x < b.radius) { b.x = b.radius; b.vx *= -1; hitWall = true; }
-    else if (b.x > canvas.width - b.radius) { b.x = canvas.width - b.radius; b.vx *= -1; hitWall = true; }
-    if (b.y < b.radius) { b.y = b.radius; b.vy *= -1; hitWall = true; }
-    else if (b.y > canvas.height - b.radius) { b.y = canvas.height - b.radius; b.vy *= -1; hitWall = true; }
+    if (b.x < b.radius) {
+      b.x = b.radius;
+      b.vx *= -1;
+      hitWall = true;
+    } else if (b.x > canvas.width - b.radius) {
+      b.x = canvas.width - b.radius;
+      b.vx *= -1;
+      hitWall = true;
+    }
+    if (b.y < b.radius) {
+      b.y = b.radius;
+      b.vy *= -1;
+      hitWall = true;
+    } else if (b.y > canvas.height - b.radius) {
+      b.y = canvas.height - b.radius;
+      b.vy *= -1;
+      hitWall = true;
+    }
 
     if (hitWall) {
       if (b.bounces > 0) {
@@ -161,15 +217,22 @@ export function updateBullets(
         if (!b.hitList.includes("boss")) {
           b.hitList.push("boss");
           let finalDmg = b.damage || 1;
-          if (state.player.characterId === "hunter" && state.activeBuffs.e > 0 && state.hunterMarkTarget === boss) {
+          if (
+            state.player.characterId === "hunter" &&
+            state.activeBuffs.e > 0 &&
+            state.hunterMarkTarget === boss
+          ) {
             finalDmg *= 2;
           }
           boss.hp -= finalDmg;
-          UI.bossHp.style.width = Math.max(0, (boss.hp / boss.maxHp) * 100) + "%";
+          UI.bossHp.style.width =
+            Math.max(0, (boss.hp / boss.maxHp) * 100) + "%";
 
           if (state.player.characterId === "scout" && buffs.r > 0) {
-            if (state.skillsCD.q > 0) state.skillsCD.q = Math.max(0, state.skillsCD.q - 0.5 * FPS);
-            if (state.skillsCD.e > 0) state.skillsCD.e = Math.max(0, state.skillsCD.e - 0.5 * FPS);
+            if (state.skillsCD.q > 0)
+              state.skillsCD.q = Math.max(0, state.skillsCD.q - 0.5 * FPS);
+            if (state.skillsCD.e > 0)
+              state.skillsCD.e = Math.max(0, state.skillsCD.e - 0.5 * FPS);
           }
 
           if (!b.pierce) bullets.splice(i, 1);
@@ -200,7 +263,11 @@ export function updateBullets(
             state.player.coins = (state.player.coins || 0) + 10;
           } else {
             let finalDmg = b.damage || 1;
-            if (state.player.characterId === "hunter" && state.activeBuffs.e > 0 && state.hunterMarkTarget === g) {
+            if (
+              state.player.characterId === "hunter" &&
+              state.activeBuffs.e > 0 &&
+              state.hunterMarkTarget === g
+            ) {
               finalDmg *= 2;
             }
             g.isStunned = finalDmg >= 2 ? 600 : 300;
@@ -211,8 +278,10 @@ export function updateBullets(
           hitGhost = true;
 
           if (state.player.characterId === "scout" && buffs.r > 0) {
-            if (state.skillsCD.q > 0) state.skillsCD.q = Math.max(0, state.skillsCD.q - 0.5 * FPS);
-            if (state.skillsCD.e > 0) state.skillsCD.e = Math.max(0, state.skillsCD.e - 0.5 * FPS);
+            if (state.skillsCD.q > 0)
+              state.skillsCD.q = Math.max(0, state.skillsCD.q - 0.5 * FPS);
+            if (state.skillsCD.e > 0)
+              state.skillsCD.e = Math.max(0, state.skillsCD.e - 0.5 * FPS);
           }
 
           if (!b.pierce) {

@@ -98,14 +98,26 @@ function triggerSkill(key, canvas, changeStateFn) {
     if (key === "e") state.activeBuffs.e = 4 * FPS;
     if (key === "r") {
       for (let i = 0; i < Math.PI * 2; i += Math.PI / 6) {
-        spawnBullet(state.player.x, state.player.y, state.player.x + Math.cos(i), state.player.y + Math.sin(i), true);
+        spawnBullet(
+          state.player.x,
+          state.player.y,
+          state.player.x + Math.cos(i),
+          state.player.y + Math.sin(i),
+          true,
+        );
       }
     }
   } else if (char === "tank") {
-    if (key === "q") { state.player.shield = Math.min((state.player.maxShield || 0) + 1, 5); updateHealthUI(); }
+    if (key === "q") {
+      state.player.shield = Math.min((state.player.maxShield || 0) + 1, 5);
+      updateHealthUI();
+    }
     if (key === "e") state.activeBuffs.e = 3 * FPS;
     if (key === "r") {
-      state.bullets.forEach((b) => { if (!b.isPlayer && dist(state.player.x, state.player.y, b.x, b.y) < 200) b.life = 0; });
+      state.bullets.forEach((b) => {
+        if (!b.isPlayer && dist(state.player.x, state.player.y, b.x, b.y) < 200)
+          b.life = 0;
+      });
       state.activeBuffs.r = 15;
     }
   } else if (char === "brawler") {
@@ -122,22 +134,37 @@ function triggerSkill(key, canvas, changeStateFn) {
           g.hp = (g.hp || 1) - 1;
         }
       });
-      if (state.boss && dist(state.player.x, state.player.y, state.boss.x, state.boss.y) < 150) state.boss.hp -= 2;
+      if (
+        state.boss &&
+        dist(state.player.x, state.player.y, state.boss.x, state.boss.y) < 150
+      )
+        state.boss.hp -= 2;
     }
     if (key === "e") state.activeBuffs.e = 5 * FPS;
     if (key === "r") {
       state.activeBuffs.r = 30;
       state.ghosts.forEach((g) => {
-        if (dist(state.player.x, state.player.y, g.x, g.y) < 300) { g.hp -= 3; g.isStunned = 120; }
+        if (dist(state.player.x, state.player.y, g.x, g.y) < 300) {
+          g.hp -= 3;
+          g.isStunned = 120;
+        }
       });
-      if (state.boss && dist(state.player.x, state.player.y, state.boss.x, state.boss.y) < 300) state.boss.hp -= 10;
+      if (
+        state.boss &&
+        dist(state.player.x, state.player.y, state.boss.x, state.boss.y) < 300
+      )
+        state.boss.hp -= 10;
       state.bullets.forEach((b) => {
-        if (!b.isPlayer && dist(state.player.x, state.player.y, b.x, b.y) < 300) b.life = 0;
+        if (!b.isPlayer && dist(state.player.x, state.player.y, b.x, b.y) < 300)
+          b.life = 0;
       });
     }
   } else if (char === "medic") {
     if (key === "q") {
-      if (state.player.hp < state.player.maxHp) { state.player.hp++; updateHealthUI(); }
+      if (state.player.hp < state.player.maxHp) {
+        state.player.hp++;
+        updateHealthUI();
+      }
       state.activeBuffs.q = 30;
     }
     if (key === "e") state.activeBuffs.e = 5 * FPS;
@@ -154,7 +181,11 @@ function triggerSkill(key, canvas, changeStateFn) {
   } else if (char === "engineer") {
     if (key === "q") {
       if (!state.engineerTurrets) state.engineerTurrets = [];
-      state.engineerTurrets.push({ x: state.player.x, y: state.player.y, life: 6 * FPS });
+      state.engineerTurrets.push({
+        x: state.player.x,
+        y: state.player.y,
+        life: 6 * FPS,
+      });
     }
     if (key === "e") state.activeBuffs.e = 4 * FPS;
     if (key === "r") state.activeBuffs.r = 5 * FPS;
@@ -162,10 +193,14 @@ function triggerSkill(key, canvas, changeStateFn) {
     if (key === "q") {
       state.activeBuffs.q = 5 * FPS;
       state.druidOrbs = [];
-      for (let i = 0; i < 3; i++) state.druidOrbs.push({ angle: (i * Math.PI * 2) / 3, radius: 40 });
+      for (let i = 0; i < 3; i++)
+        state.druidOrbs.push({ angle: (i * Math.PI * 2) / 3, radius: 40 });
     }
     if (key === "e") {
-      if (state.player.hp < state.player.maxHp) { state.player.hp++; updateHealthUI(); }
+      if (state.player.hp < state.player.maxHp) {
+        state.player.hp++;
+        updateHealthUI();
+      }
       state.activeBuffs.e = 4 * FPS;
     }
     if (key === "r") state.activeBuffs.r = 4 * FPS;
@@ -179,25 +214,49 @@ function triggerSkill(key, canvas, changeStateFn) {
     }
     if (key === "r") {
       let prevLen = state.bullets.length;
-      spawnBullet(state.player.x, state.player.y, state.mouse.x, state.mouse.y, true);
+      spawnBullet(
+        state.player.x,
+        state.player.y,
+        state.mouse.x,
+        state.mouse.y,
+        true,
+      );
       if (state.bullets.length > prevLen) {
         let b = state.bullets[state.bullets.length - 1];
-        b.radius = 40; b.damage = 3; b.pierce = true; b.vx *= 0.5; b.vy *= 0.5; b.life = 120; b.isShuriken = true;
+        b.radius = 40;
+        b.damage = 3;
+        b.pierce = true;
+        b.vx *= 0.5;
+        b.vy *= 0.5;
+        b.life = 120;
+        b.isShuriken = true;
       }
     }
   } else if (char === "frost") {
     if (key === "q") state.activeBuffs.q = 2 * FPS;
     if (key === "e") {
-      state.player.shield = 1; updateHealthUI(); state.activeBuffs.e = 10 * FPS;
+      state.player.shield = 1;
+      updateHealthUI();
+      state.activeBuffs.e = 10 * FPS;
     }
     if (key === "r") state.activeBuffs.r = 5 * FPS;
   } else if (char === "gunner") {
     if (key === "q") {
       state.activeBuffs.q = 15;
-      let angle = Math.atan2(state.mouse.y - state.player.y, state.mouse.x - state.player.x);
-      state.gunnerLaser = { x: state.player.x, y: state.player.y, angle: angle };
+      let angle = Math.atan2(
+        state.mouse.y - state.player.y,
+        state.mouse.x - state.player.x,
+      );
+      state.gunnerLaser = {
+        x: state.player.x,
+        y: state.player.y,
+        angle: angle,
+      };
       let p1 = { x: state.player.x, y: state.player.y };
-      let p2 = { x: state.player.x + Math.cos(angle) * 1000, y: state.player.y + Math.sin(angle) * 1000 };
+      let p2 = {
+        x: state.player.x + Math.cos(angle) * 1000,
+        y: state.player.y + Math.sin(angle) * 1000,
+      };
       const distToLine = (p, v, w) => {
         let l2 = dist(v.x, v.y, w.x, w.y) ** 2;
         if (l2 === 0) return dist(p.x, p.y, v.x, v.y);
@@ -205,10 +264,18 @@ function triggerSkill(key, canvas, changeStateFn) {
         t = Math.max(0, Math.min(1, t));
         return dist(p.x, p.y, v.x + t * (w.x - v.x), v.y + t * (w.y - v.y));
       };
-      state.ghosts.forEach(g => {
-        if (g.x > 0 && distToLine({ x: g.x, y: g.y }, p1, p2) < g.radius + 15) { g.hp -= 3; g.isStunned = 60; }
+      state.ghosts.forEach((g) => {
+        if (g.x > 0 && distToLine({ x: g.x, y: g.y }, p1, p2) < g.radius + 15) {
+          g.hp -= 3;
+          g.isStunned = 60;
+        }
       });
-      if (state.boss && distToLine({ x: state.boss.x, y: state.boss.y }, p1, p2) < state.boss.radius + 15) state.boss.hp -= 15;
+      if (
+        state.boss &&
+        distToLine({ x: state.boss.x, y: state.boss.y }, p1, p2) <
+          state.boss.radius + 15
+      )
+        state.boss.hp -= 15;
     }
     if (key === "e") {
       if (!state.gunnerMines) state.gunnerMines = [];
@@ -216,93 +283,179 @@ function triggerSkill(key, canvas, changeStateFn) {
     }
     if (key === "r") {
       if (!state.gunnerAirstrikes) state.gunnerAirstrikes = [];
-      state.gunnerAirstrikes.push({ x: state.mouse.x, y: state.mouse.y, timer: 1 * FPS });
+      state.gunnerAirstrikes.push({
+        x: state.mouse.x,
+        y: state.mouse.y,
+        timer: 1 * FPS,
+      });
     }
   } else if (char === "sharpshooter") {
     if (key === "q") state.activeBuffs.q = 5 * FPS;
     if (key === "e") state.activeBuffs.e = 4 * FPS;
     if (key === "r") {
-      state.ghosts.forEach((g) => { if (g.x > 0) g.isStunned = 300; });
+      state.ghosts.forEach((g) => {
+        if (g.x > 0) g.isStunned = 300;
+      });
       if (state.boss) state.boss.hp -= 30;
       state.activeBuffs.r = 10;
     }
   } else if (char === "ghost") {
     if (key === "q") state.activeBuffs.q = 3 * FPS;
     if (key === "e") {
-      state.player.x = Math.max(state.player.radius, Math.min(canvas.width - state.player.radius, state.mouse.x));
-      state.player.y = Math.max(state.player.radius, Math.min(canvas.height - state.player.radius, state.mouse.y));
+      state.player.x = Math.max(
+        state.player.radius,
+        Math.min(canvas.width - state.player.radius, state.mouse.x),
+      );
+      state.player.y = Math.max(
+        state.player.radius,
+        Math.min(canvas.height - state.player.radius, state.mouse.y),
+      );
     }
     if (key === "r") {
       let absorbed = 0;
       state.bullets.forEach((b) => {
-        if (!b.isPlayer && dist(state.player.x, state.player.y, b.x, b.y) < 150) { b.life = 0; absorbed++; }
+        if (
+          !b.isPlayer &&
+          dist(state.player.x, state.player.y, b.x, b.y) < 150
+        ) {
+          b.life = 0;
+          absorbed++;
+        }
       });
-      if (absorbed > 0 && state.player.hp < state.player.maxHp) { state.player.hp++; updateHealthUI(); }
+      if (absorbed > 0 && state.player.hp < state.player.maxHp) {
+        state.player.hp++;
+        updateHealthUI();
+      }
     }
   } else if (char === "oracle") {
     if (key === "q") state.activeBuffs.q = 3 * FPS;
     if (key === "e") {
-      let mx = Math.max(state.player.radius, Math.min(canvas.width - state.player.radius, state.mouse.x));
-      let my = Math.max(state.player.radius, Math.min(canvas.height - state.player.radius, state.mouse.y));
+      let mx = Math.max(
+        state.player.radius,
+        Math.min(canvas.width - state.player.radius, state.mouse.x),
+      );
+      let my = Math.max(
+        state.player.radius,
+        Math.min(canvas.height - state.player.radius, state.mouse.y),
+      );
       if (!state.phantoms) state.phantoms = [];
-      state.phantoms.push({ x: state.player.x, y: state.player.y, life: 2 * FPS, color: state.player.color, radius: state.player.radius });
-      state.player.x = mx; state.player.y = my;
+      state.phantoms.push({
+        x: state.player.x,
+        y: state.player.y,
+        life: 2 * FPS,
+        color: state.player.color,
+        radius: state.player.radius,
+      });
+      state.player.x = mx;
+      state.player.y = my;
     }
     if (key === "r") state.activeBuffs.r = 4 * FPS;
   } else if (char === "mage") {
     if (key === "q") {
-      for (let i = 0; i < Math.PI * 2; i += Math.PI / 4) { spawnBullet(state.player.x, state.player.y, state.player.x + Math.cos(i), state.player.y + Math.sin(i), true, 1); }
+      for (let i = 0; i < Math.PI * 2; i += Math.PI / 4) {
+        spawnBullet(
+          state.player.x,
+          state.player.y,
+          state.player.x + Math.cos(i),
+          state.player.y + Math.sin(i),
+          true,
+          1,
+        );
+      }
     }
     if (key === "e") {
-      if (state.player.hp > 1) { state.player.hp--; updateHealthUI(); addExperience(50, changeStateFn); }
+      if (state.player.hp > 1) {
+        state.player.hp--;
+        updateHealthUI();
+        addExperience(50, changeStateFn);
+      }
     }
     if (key === "r") state.activeBuffs.r = 4 * FPS;
   } else if (char === "timekeeper") {
     if (key === "q") {
-      let mx = Math.max(state.player.radius, Math.min(canvas.width - state.player.radius, state.mouse.x));
-      let my = Math.max(state.player.radius, Math.min(canvas.height - state.player.radius, state.mouse.y));
+      let mx = Math.max(
+        state.player.radius,
+        Math.min(canvas.width - state.player.radius, state.mouse.x),
+      );
+      let my = Math.max(
+        state.player.radius,
+        Math.min(canvas.height - state.player.radius, state.mouse.y),
+      );
       if (!state.explosions) state.explosions = [];
-      state.explosions.push({ x: state.player.x, y: state.player.y, radius: 30, life: 10, color: "rgba(0, 255, 255, 0.5)" });
-      state.player.x = mx; state.player.y = my;
-      state.explosions.push({ x: mx, y: my, radius: 30, life: 10, color: "rgba(0, 255, 255, 0.8)" });
+      state.explosions.push({
+        x: state.player.x,
+        y: state.player.y,
+        radius: 30,
+        life: 10,
+        color: "rgba(0, 255, 255, 0.5)",
+      });
+      state.player.x = mx;
+      state.player.y = my;
+      state.explosions.push({
+        x: mx,
+        y: my,
+        radius: 30,
+        life: 10,
+        color: "rgba(0, 255, 255, 0.8)",
+      });
     }
     if (key === "e") state.activeBuffs.e = 3 * FPS;
     if (key === "r") state.activeBuffs.r = 4 * FPS;
   } else if (char === "void") {
     if (key === "q") {
       if (!state.voidBlackholes) state.voidBlackholes = [];
-      state.voidBlackholes.push({ x: state.mouse.x, y: state.mouse.y, life: 3 * FPS });
+      state.voidBlackholes.push({
+        x: state.mouse.x,
+        y: state.mouse.y,
+        life: 3 * FPS,
+      });
     }
     if (key === "e") {
       let count = 0;
       state.bullets.forEach((b) => {
-        if (!b.isPlayer) { b.life = 0; count++; }
+        if (!b.isPlayer) {
+          b.life = 0;
+          count++;
+        }
       });
-      if (count > 0 && state.player.hp < state.player.maxHp) { state.player.hp++; updateHealthUI(); }
+      if (count > 0 && state.player.hp < state.player.maxHp) {
+        state.player.hp++;
+        updateHealthUI();
+      }
       state.activeBuffs.e = 15;
     }
     if (key === "r") state.activeBuffs.r = 3 * FPS;
   } else if (char === "storm") {
     if (key === "q") {
-      let targets = [...state.ghosts].filter(g => g.x > 0 && g.isStunned <= 0);
-      targets.sort((a, b) => dist(state.player.x, state.player.y, a.x, a.y) - dist(state.player.x, state.player.y, b.x, b.y));
+      let targets = [...state.ghosts].filter(
+        (g) => g.x > 0 && g.isStunned <= 0,
+      );
+      targets.sort(
+        (a, b) =>
+          dist(state.player.x, state.player.y, a.x, a.y) -
+          dist(state.player.x, state.player.y, b.x, b.y),
+      );
       if (state.boss) targets.unshift(state.boss);
       targets = targets.slice(0, 3);
 
       if (!state.stormLightnings) state.stormLightnings = [];
-      targets.forEach(t => {
+      targets.forEach((t) => {
         state.stormLightnings.push({ x: t.x, y: t.y, life: 15 });
         t.hp -= 5;
         if (t !== state.boss) t.isStunned = 120;
       });
     }
     if (key === "e") {
-      let dx = 0, dy = 0;
+      let dx = 0,
+        dy = 0;
       if (state.keys["w"] || state.keys["arrowup"]) dy -= 1;
       if (state.keys["s"] || state.keys["arrowdown"]) dy += 1;
       if (state.keys["a"] || state.keys["arrowleft"]) dx -= 1;
       if (state.keys["d"] || state.keys["arrowright"]) dx += 1;
-      if (dx === 0 && dy === 0) { dx = 1; dy = 0; }
+      if (dx === 0 && dy === 0) {
+        dx = 1;
+        dy = 0;
+      }
       let len = Math.sqrt(dx * dx + dy * dy);
       state.player.dashDx = dx / len;
       state.player.dashDy = dy / len;
@@ -314,18 +467,36 @@ function triggerSkill(key, canvas, changeStateFn) {
   } else if (char === "reaper") {
     if (key === "q") {
       state.activeBuffs.q = 15;
-      let angle = Math.atan2(state.mouse.y - state.player.y, state.mouse.x - state.player.x);
-      state.reaperSlash = { x: state.player.x, y: state.player.y, angle: angle, life: 15 };
-      state.ghosts.forEach(g => {
+      let angle = Math.atan2(
+        state.mouse.y - state.player.y,
+        state.mouse.x - state.player.x,
+      );
+      state.reaperSlash = {
+        x: state.player.x,
+        y: state.player.y,
+        angle: angle,
+        life: 15,
+      };
+      state.ghosts.forEach((g) => {
         if (g.x > 0 && dist(state.player.x, state.player.y, g.x, g.y) < 150) {
           let a = Math.atan2(g.y - state.player.y, g.x - state.player.x);
           let diff = Math.abs(a - angle);
           if (diff > Math.PI) diff = 2 * Math.PI - diff;
-          if (diff < Math.PI / 2) { g.hp -= 8; g.isStunned = 60; }
+          if (diff < Math.PI / 2) {
+            g.hp -= 8;
+            g.isStunned = 60;
+          }
         }
       });
-      if (state.boss && dist(state.player.x, state.player.y, state.boss.x, state.boss.y) < 150 + state.boss.radius) {
-        let a = Math.atan2(state.boss.y - state.player.y, state.boss.x - state.player.x);
+      if (
+        state.boss &&
+        dist(state.player.x, state.player.y, state.boss.x, state.boss.y) <
+          150 + state.boss.radius
+      ) {
+        let a = Math.atan2(
+          state.boss.y - state.player.y,
+          state.boss.x - state.player.x,
+        );
         let diff = Math.abs(a - angle);
         if (diff > Math.PI) diff = 2 * Math.PI - diff;
         if (diff < Math.PI / 2) state.boss.hp -= 20;
@@ -337,46 +508,88 @@ function triggerSkill(key, canvas, changeStateFn) {
     if (key === "q") {
       let prevLen = state.bullets.length;
       for (let i = 0; i < Math.PI * 2; i += Math.PI / 5) {
-        spawnBullet(state.player.x, state.player.y, state.player.x + Math.cos(i), state.player.y + Math.sin(i), true, 1);
+        spawnBullet(
+          state.player.x,
+          state.player.y,
+          state.player.x + Math.cos(i),
+          state.player.y + Math.sin(i),
+          true,
+          1,
+        );
       }
       for (let i = prevLen; i < state.bullets.length; i++) {
-        state.bullets[i].radius = 8; state.bullets[i].life = 40;
+        state.bullets[i].radius = 8;
+        state.bullets[i].life = 40;
       }
     }
     if (key === "e") {
-      if (state.player.hp < state.player.maxHp) { state.player.hp++; updateHealthUI(); }
-      else { addExperience(50, changeStateFn); }
+      if (state.player.hp < state.player.maxHp) {
+        state.player.hp++;
+        updateHealthUI();
+      } else {
+        addExperience(50, changeStateFn);
+      }
     }
     if (key === "r") state.activeBuffs.r = 3 * FPS;
   } else if (char === "sniper") {
     if (key === "q") state.activeBuffs.q = 5 * FPS;
     if (key === "e") {
       let prevLen = state.bullets.length;
-      spawnBullet(state.player.x, state.player.y, state.mouse.x, state.mouse.y, true, 2);
+      spawnBullet(
+        state.player.x,
+        state.player.y,
+        state.mouse.x,
+        state.mouse.y,
+        true,
+        2,
+      );
       if (state.bullets.length > prevLen) {
         let b = state.bullets[state.bullets.length - 1];
-        b.pierce = true; b.damage = 5; b.radius = 8; b.style = 2;
+        b.pierce = true;
+        b.damage = 5;
+        b.radius = 8;
+        b.style = 2;
       }
     }
     if (key === "r") {
       let nearestDist = Infinity;
       let targetObj = null;
-      if (state.boss) { nearestDist = Math.sqrt((state.player.x - state.boss.x) ** 2 + (state.player.y - state.boss.y) ** 2); targetObj = state.boss; }
+      if (state.boss) {
+        nearestDist = Math.sqrt(
+          (state.player.x - state.boss.x) ** 2 +
+            (state.player.y - state.boss.y) ** 2,
+        );
+        targetObj = state.boss;
+      }
       state.ghosts.forEach((g) => {
         if (g.x > 0 && g.isStunned <= 0) {
-          let d = Math.sqrt((state.player.x - g.x) ** 2 + (state.player.y - g.y) ** 2);
-          if (d < nearestDist) { nearestDist = d; targetObj = g; }
+          let d = Math.sqrt(
+            (state.player.x - g.x) ** 2 + (state.player.y - g.y) ** 2,
+          );
+          if (d < nearestDist) {
+            nearestDist = d;
+            targetObj = g;
+          }
         }
       });
       for (let i = 0; i < 5; i++) {
         setTimeout(() => {
-          let tx = state.mouse.x, ty = state.mouse.y;
-          if (targetObj && (targetObj === state.boss || (targetObj.x > 0 && targetObj.isStunned <= 0))) { tx = targetObj.x; ty = targetObj.y; }
+          let tx = state.mouse.x,
+            ty = state.mouse.y;
+          if (
+            targetObj &&
+            (targetObj === state.boss ||
+              (targetObj.x > 0 && targetObj.isStunned <= 0))
+          ) {
+            tx = targetObj.x;
+            ty = targetObj.y;
+          }
           let oldLen = state.bullets.length;
           spawnBullet(state.player.x, state.player.y, tx, ty, true, 2);
           if (state.bullets.length > oldLen) {
             let b = state.bullets[state.bullets.length - 1];
-            b.damage = 2; b.radius = 6;
+            b.damage = 2;
+            b.radius = 6;
           }
         }, i * 150);
       }
@@ -385,14 +598,23 @@ function triggerSkill(key, canvas, changeStateFn) {
     if (key === "q") state.activeBuffs.q = 3 * FPS;
     if (key === "e") state.activeBuffs.e = 4 * FPS;
     if (key === "r") {
-      state.ghosts.forEach((g) => { if (g.x > 0) { g.hp = (g.hp || 1) - 3; g.isStunned = 60; } });
+      state.ghosts.forEach((g) => {
+        if (g.x > 0) {
+          g.hp = (g.hp || 1) - 3;
+          g.isStunned = 60;
+        }
+      });
       if (state.boss) state.boss.hp -= 20;
       state.activeBuffs.r = 10;
     }
   } else if (char === "summoner") {
     if (key === "q") state.activeBuffs.q = 6 * FPS;
     if (key === "e") {
-      if (state.player.hp > 1) { state.player.hp--; state.activeBuffs.e = 8 * FPS; updateHealthUI(); }
+      if (state.player.hp > 1) {
+        state.player.hp--;
+        state.activeBuffs.e = 8 * FPS;
+        updateHealthUI();
+      }
     }
     if (key === "r") state.activeBuffs.r = 5 * FPS;
   } else if (char === "berserker") {
@@ -400,32 +622,50 @@ function triggerSkill(key, canvas, changeStateFn) {
     if (key === "e") {
       let prevLen = state.bullets.length;
       for (let i = 0; i < Math.PI * 2; i += Math.PI / 6) {
-        spawnBullet(state.player.x, state.player.y, state.player.x + Math.cos(i), state.player.y + Math.sin(i), true);
+        spawnBullet(
+          state.player.x,
+          state.player.y,
+          state.player.x + Math.cos(i),
+          state.player.y + Math.sin(i),
+          true,
+        );
       }
-      for (let i = prevLen; i < state.bullets.length; i++) { state.bullets[i].life = 15; }
+      for (let i = prevLen; i < state.bullets.length; i++) {
+        state.bullets[i].life = 15;
+      }
     }
     if (key === "r") {
-      if (state.player.hp > 1) { state.player.hp--; updateHealthUI(); }
+      if (state.player.hp > 1) {
+        state.player.hp--;
+        updateHealthUI();
+      }
       state.activeBuffs.r = 5 * FPS;
     }
   } else if (char === "assassin") {
     if (key === "q") {
       state.activeBuffs.q = 2 * FPS;
-      let dx = 0, dy = 0;
+      let dx = 0,
+        dy = 0;
       if (state.keys["w"] || state.keys["arrowup"]) dy -= 1;
       if (state.keys["s"] || state.keys["arrowdown"]) dy += 1;
       if (state.keys["a"] || state.keys["arrowleft"]) dx -= 1;
       if (state.keys["d"] || state.keys["arrowright"]) dx += 1;
       if (dx === 0 && dy === 0) {
-        let mx = state.mouse.x - state.player.x, my = state.mouse.y - state.player.y;
+        let mx = state.mouse.x - state.player.x,
+          my = state.mouse.y - state.player.y;
         let len = Math.sqrt(mx * mx + my * my);
-        if (len > 0) { dx = mx / len; dy = my / len; }
+        if (len > 0) {
+          dx = mx / len;
+          dy = my / len;
+        }
       } else {
         let len = Math.sqrt(dx * dx + dy * dy);
-        dx /= len; dy /= len;
+        dx /= len;
+        dy /= len;
       }
       state.player.dashTimeLeft = 20;
-      state.player.dashDx = dx; state.player.dashDy = dy;
+      state.player.dashDx = dx;
+      state.player.dashDy = dy;
       state.player.dashCooldownTimer = state.player.dashMaxCooldown;
     }
     if (key === "e") state.activeBuffs.e = 10 * FPS;
@@ -433,31 +673,178 @@ function triggerSkill(key, canvas, changeStateFn) {
       for (let i = 0; i < 15; i++) {
         setTimeout(() => {
           let angOffset = (Math.random() - 0.5) * 0.8;
-          let dirX = state.mouse.x - state.player.x, dirY = state.mouse.y - state.player.y;
+          let dirX = state.mouse.x - state.player.x,
+            dirY = state.mouse.y - state.player.y;
           let angle = Math.atan2(dirY, dirX) + angOffset;
-          spawnBullet(state.player.x, state.player.y, state.player.x + Math.cos(angle) * 100, state.player.y + Math.sin(angle) * 100, true, 1.5);
+          spawnBullet(
+            state.player.x,
+            state.player.y,
+            state.player.x + Math.cos(angle) * 100,
+            state.player.y + Math.sin(angle) * 100,
+            true,
+            1.5,
+          );
         }, i * 60);
       }
     }
   } else if (char === "scout") {
     if (key === "q") {
       state.activeBuffs.q = 15;
-      state.ghosts.forEach(g => {
-        if (dist(state.player.x, state.player.y, g.x, g.y) < 100) { g.hp -= 2; g.isStunned = 30; }
+      state.ghosts.forEach((g) => {
+        if (dist(state.player.x, state.player.y, g.x, g.y) < 100) {
+          g.hp -= 2;
+          g.isStunned = 30;
+        }
       });
-      if (state.boss && dist(state.player.x, state.player.y, state.boss.x, state.boss.y) < 120) state.boss.hp -= 5;
+      if (
+        state.boss &&
+        dist(state.player.x, state.player.y, state.boss.x, state.boss.y) < 120
+      )
+        state.boss.hp -= 5;
     }
     if (key === "e") {
-      let mx = state.mouse.x, my = state.mouse.y;
-      let dx = mx - state.player.x, dy = my - state.player.y;
+      let mx = state.mouse.x,
+        my = state.mouse.y;
+      let dx = mx - state.player.x,
+        dy = my - state.player.y;
       let len = Math.sqrt(dx * dx + dy * dy);
-      if (len > 0) { dx /= len; dy /= len; }
-      state.player.dashTimeLeft = Math.min(20, Math.floor(len / (state.player.speed * 3)));
-      state.player.dashDx = dx; state.player.dashDy = dy;
+      if (len > 0) {
+        dx /= len;
+        dy /= len;
+      }
+      state.player.dashTimeLeft = Math.min(
+        20,
+        Math.floor(len / (state.player.speed * 3)),
+      );
+      state.player.dashDx = dx;
+      state.player.dashDy = dy;
       state.player.grappleTarget = { x: mx, y: my };
       state.activeBuffs.e = state.player.dashTimeLeft;
     }
     if (key === "r") state.activeBuffs.r = 6 * FPS;
+  } else if (char === "phoenix") {
+    // ===== Q: Dấu Cháy =====
+    if (key === "q") {
+      state.activeBuffs.q = 5 * FPS;
+
+      if (!state.phoenixTrails) state.phoenixTrails = [];
+    }
+
+    // ===== E: Tro Tàn =====
+    if (key === "e") {
+      state.activeBuffs.e = 10; // 👉 thêm dòng này (10 frame effect)
+      // 📍 lưu vị trí nổ
+      let ex = state.player.x;
+      let ey = state.player.y;
+
+      // 💥 nổ
+      state.ghosts.forEach((g) => {
+        let d = dist(ex, ey, g.x, g.y);
+        if (d < 120) {
+          g.hp -= 2;
+          g.isStunned = 60;
+        }
+      });
+
+      // 🧹 clear bullet
+      state.bullets = state.bullets.filter((b) => dist(b.x, b.y, ex, ey) > 120);
+
+      // 🎨 lưu effect vị trí nổ
+      state.phoenixEfx = {
+        x: ex,
+        y: ey,
+        life: 10,
+      };
+
+      // ⚡ teleport sau cùng
+      state.player.x = state.mouse.x;
+      state.player.y = state.mouse.y;
+    }
+
+    // ===== R: Tái Sinh =====
+    if (key === "r") {
+      state.activeBuffs.r = 5 * FPS;
+      state.phoenixReviveReady = true;
+    }
+  } else if (char === "necromancer") {
+    if (!state.necroMinions) state.necroMinions = [];
+
+    // ===== Q: spawn orbit =====
+    if (key === "q") {
+      for (let i = 0; i < 3; i++) {
+        state.necroMinions.push({
+          x: state.player.x,
+          y: state.player.y,
+          life: 6 * FPS,
+          type: "seeker",
+          angle: (i * Math.PI * 2) / 3,
+          radius: 40,
+        });
+      }
+    }
+
+    // ===== E: explode =====
+    if (key === "e") {
+      if (!state.necroExplosions) state.necroExplosions = [];
+
+      state.necroMinions.forEach((m) => {
+        // 💥 damage
+        state.ghosts.forEach((g) => {
+          if (dist(m.x, m.y, g.x, g.y) < 100) {
+            g.hp -= 3;
+            g.isStunned = 40;
+          }
+        });
+
+        if (state.boss && dist(m.x, m.y, state.boss.x, state.boss.y) < 100) {
+          state.boss.hp -= 3;
+        }
+
+        // 👉 lưu visual
+        state.necroExplosions.push({
+          x: m.x,
+          y: m.y,
+          life: 15,
+        });
+      });
+
+      // clear minion
+      state.necroMinions = [];
+    }
+
+    // ===== R: hell zone =====
+    if (key === "r") {
+      state.necroZone = {
+        x: state.player.x,
+        y: state.player.y,
+        life: 10 * FPS,
+        spawnTick: 0,
+      };
+    }
+  } else if (char === "painter") {
+    if (!state.painterTrails) state.painterTrails = [];
+    if (!state.painterZones) state.painterZones = [];
+
+    // ===== Q: Nét Vẽ =====
+    if (key === "q") {
+      if (!state.painterTrails) state.painterTrails = [];
+
+      state.painterDrawing = true;
+      state.painterDrawTime = 3 * FPS;
+    }
+    // ===== E: paint bomb =====
+    if (key === "e") {
+      state.painterBomb = {
+        x: state.mouse.x,
+        y: state.mouse.y,
+        life: 30, // delay ~0.5s
+      };
+    }
+
+    // ===== R: living painting =====
+    if (key === "r") {
+      state.activeBuffs.r = 6 * FPS;
+    }
   }
 }
 

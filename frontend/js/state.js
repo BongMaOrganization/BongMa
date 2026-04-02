@@ -10,6 +10,11 @@ export const state = {
   boss: null,
   bullets: [],
   ghosts: [],
+  // ===== Painter =====
+  painterTrails: [],
+  painterZones: [],
+  painterDrawing: false,
+  painterDrawTime: 0,
   pastRuns: [],
   currentRunRecord: [],
   ownedCharacters: ["speedster"],
@@ -62,5 +67,3 @@ export const state = {
 
   evolutionReady: null,
 };
-
-

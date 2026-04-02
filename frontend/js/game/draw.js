@@ -41,9 +41,15 @@ export function draw(ctx, canvas) {
 
   if (player.characterId === "void") {
     if (state.voidBlackholes) {
-      state.voidBlackholes.forEach(bh => {
+      state.voidBlackholes.forEach((bh) => {
         ctx.beginPath();
-        ctx.arc(bh.x, bh.y, 40 + Math.sin(state.frameCount * 0.2) * 10, 0, Math.PI * 2);
+        ctx.arc(
+          bh.x,
+          bh.y,
+          40 + Math.sin(state.frameCount * 0.2) * 10,
+          0,
+          Math.PI * 2,
+        );
         ctx.fillStyle = "black";
         ctx.fill();
         ctx.strokeStyle = "purple";
@@ -58,7 +64,10 @@ export function draw(ctx, canvas) {
     if (buffs.r > 0 && state.voidLaser) {
       ctx.beginPath();
       ctx.moveTo(state.voidLaser.x, state.voidLaser.y);
-      ctx.lineTo(state.voidLaser.x + Math.cos(state.voidLaser.angle) * 2000, state.voidLaser.y + Math.sin(state.voidLaser.angle) * 2000);
+      ctx.lineTo(
+        state.voidLaser.x + Math.cos(state.voidLaser.angle) * 2000,
+        state.voidLaser.y + Math.sin(state.voidLaser.angle) * 2000,
+      );
       ctx.strokeStyle = `rgba(100, 0, 200, 0.8)`;
       ctx.lineWidth = 40;
       ctx.stroke();
@@ -90,10 +99,13 @@ export function draw(ctx, canvas) {
       }
     }
     if (state.stormTraps) {
-      state.stormTraps.forEach(t => {
+      state.stormTraps.forEach((t) => {
         ctx.beginPath();
         ctx.arc(t.x, t.y, 15, 0, Math.PI * 2);
-        ctx.fillStyle = (state.frameCount % 10 < 5) ? "rgba(0,255,255,0.8)" : "rgba(255,255,255,0.8)";
+        ctx.fillStyle =
+          state.frameCount % 10 < 5
+            ? "rgba(0,255,255,0.8)"
+            : "rgba(255,255,255,0.8)";
         ctx.fill();
       });
     }
@@ -175,7 +187,13 @@ export function draw(ctx, canvas) {
     }
     if (buffs.q > 0) {
       ctx.beginPath();
-      ctx.arc(player.x, player.y, player.radius + 6 + Math.random() * 4, 0, Math.PI * 2);
+      ctx.arc(
+        player.x,
+        player.y,
+        player.radius + 6 + Math.random() * 4,
+        0,
+        Math.PI * 2,
+      );
       ctx.strokeStyle = "rgba(255, 0, 0, 0.8)";
       ctx.lineWidth = 3;
       ctx.stroke();
@@ -200,7 +218,13 @@ export function draw(ctx, canvas) {
     }
     if (buffs.e > 0) {
       ctx.beginPath();
-      ctx.arc(player.x, player.y, player.radius + 6 + Math.random() * 4, 0, Math.PI * 2);
+      ctx.arc(
+        player.x,
+        player.y,
+        player.radius + 6 + Math.random() * 4,
+        0,
+        Math.PI * 2,
+      );
       ctx.strokeStyle = "rgba(255, 100, 0, 0.7)";
       ctx.lineWidth = 4;
       ctx.stroke();
@@ -232,13 +256,25 @@ export function draw(ctx, canvas) {
       ctx.lineWidth = 2;
       ctx.stroke();
       ctx.beginPath();
-      ctx.arc(player.grappleTarget.x, player.grappleTarget.y, 5, 0, Math.PI * 2);
+      ctx.arc(
+        player.grappleTarget.x,
+        player.grappleTarget.y,
+        5,
+        0,
+        Math.PI * 2,
+      );
       ctx.fillStyle = "#aaa";
       ctx.fill();
     }
     if (buffs.r > 0) {
       ctx.beginPath();
-      ctx.arc(player.x, player.y, player.radius + 10 + Math.sin(state.frameCount * 0.2) * 5, 0, Math.PI * 2);
+      ctx.arc(
+        player.x,
+        player.y,
+        player.radius + 10 + Math.sin(state.frameCount * 0.2) * 5,
+        0,
+        Math.PI * 2,
+      );
       ctx.strokeStyle = "rgba(255, 50, 50, 0.8)";
       ctx.lineWidth = 3;
       ctx.stroke();
@@ -265,7 +301,13 @@ export function draw(ctx, canvas) {
       ctx.fillStyle = `rgba(0, 255, 150, ${(buffs.r / 60) * 0.2})`;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.beginPath();
-      ctx.arc(player.x, player.y, player.radius + (60 - buffs.r) * 2, 0, Math.PI * 2);
+      ctx.arc(
+        player.x,
+        player.y,
+        player.radius + (60 - buffs.r) * 2,
+        0,
+        Math.PI * 2,
+      );
       ctx.strokeStyle = `rgba(0, 255, 100, ${buffs.r / 60})`;
       ctx.lineWidth = 8;
       ctx.stroke();
@@ -412,7 +454,10 @@ export function draw(ctx, canvas) {
     if (buffs.q > 0 && state.gunnerLaser) {
       ctx.beginPath();
       ctx.moveTo(state.gunnerLaser.x, state.gunnerLaser.y);
-      ctx.lineTo(state.gunnerLaser.x + Math.cos(state.gunnerLaser.angle) * 2000, state.gunnerLaser.y + Math.sin(state.gunnerLaser.angle) * 2000);
+      ctx.lineTo(
+        state.gunnerLaser.x + Math.cos(state.gunnerLaser.angle) * 2000,
+        state.gunnerLaser.y + Math.sin(state.gunnerLaser.angle) * 2000,
+      );
       ctx.strokeStyle = `rgba(0, 255, 255, ${buffs.q / 15})`;
       ctx.lineWidth = 15;
       ctx.stroke();
@@ -421,21 +466,21 @@ export function draw(ctx, canvas) {
       ctx.stroke();
     }
     if (state.gunnerMines) {
-      state.gunnerMines.forEach(m => {
+      state.gunnerMines.forEach((m) => {
         ctx.beginPath();
         ctx.arc(m.x, m.y, 10, 0, Math.PI * 2);
         ctx.fillStyle = "#333";
         ctx.fill();
         ctx.beginPath();
         ctx.arc(m.x, m.y, 4, 0, Math.PI * 2);
-        ctx.fillStyle = (state.frameCount % 20 < 10) ? "#ff0000" : "#550000";
+        ctx.fillStyle = state.frameCount % 20 < 10 ? "#ff0000" : "#550000";
         ctx.fill();
       });
     }
     if (state.gunnerAirstrikes) {
-      state.gunnerAirstrikes.forEach(strike => {
+      state.gunnerAirstrikes.forEach((strike) => {
         let maxT = 1 * 60;
-        let progress = 1 - (strike.timer / maxT);
+        let progress = 1 - strike.timer / maxT;
         ctx.beginPath();
         ctx.arc(strike.x, strike.y, 200, 0, Math.PI * 2);
         ctx.strokeStyle = "rgba(255, 0, 0, 0.5)";
@@ -449,7 +494,6 @@ export function draw(ctx, canvas) {
       });
     }
   }
-
   if (state.explosions) {
     for (let i = state.explosions.length - 1; i >= 0; i--) {
       let exp = state.explosions[i];
@@ -477,7 +521,7 @@ export function draw(ctx, canvas) {
       ctx.fill();
     }
     if (state.hunterTraps) {
-      state.hunterTraps.forEach(trap => {
+      state.hunterTraps.forEach((trap) => {
         ctx.beginPath();
         ctx.arc(trap.x, trap.y, 15, 0, Math.PI * 2);
         ctx.strokeStyle = "rgba(139, 69, 19, 0.8)";
@@ -488,7 +532,120 @@ export function draw(ctx, canvas) {
       });
     }
   }
+  if (state.phoenixTrails) {
+    state.phoenixTrails.forEach((t) => {
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, 6, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,120,0,0.5)";
+      ctx.fill();
+    });
+  }
+  if (player.characterId === "phoenix" && buffs.r > 0) {
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, player.radius + 6, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255,200,0,0.8)";
+    ctx.stroke();
+  }
+  if (state.phoenixReviveFx > 0) {
+    let progress = state.phoenixReviveFx / 20;
 
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, 150 * (1 - progress), 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255,120,0,0.9)";
+    ctx.lineWidth = 5;
+    ctx.stroke();
+
+    ctx.fillStyle = "rgba(255,150,0,0.15)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+  if (state.phoenixEfx && state.phoenixEfx.life > 0) {
+    let t = state.phoenixEfx.life / 10;
+
+    ctx.beginPath();
+    ctx.arc(
+      state.phoenixEfx.x,
+      state.phoenixEfx.y,
+      120 * (1 - t),
+      0,
+      Math.PI * 2,
+    );
+    ctx.strokeStyle = "rgba(255,120,0,0.9)";
+    ctx.lineWidth = 4;
+    ctx.stroke();
+
+    // flash giống R
+    ctx.fillStyle = "rgba(255,150,0,0.1)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+
+  //Necromancer
+  if (state.necroMinions) {
+    state.necroMinions.forEach((m) => {
+      ctx.beginPath();
+      ctx.arc(m.x, m.y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = m.type === "orbit" ? "#bb66ff" : "#6600aa";
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = "#aa00ff";
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    });
+  }
+  if (state.necroZone) {
+    let z = state.necroZone;
+
+    ctx.beginPath();
+    ctx.arc(z.x, z.y, 120, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(150,0,200,0.6)";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.fillStyle = "rgba(150,0,200,0.08)";
+    ctx.fill();
+  }
+  if (state.necroExplosions) {
+    state.necroExplosions.forEach((e) => {
+      let t = e.life / 15;
+
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, 100 * (1 - t), 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(180,0,255,0.8)";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, 50 * (1 - t), 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(255,0,255,0.5)";
+      ctx.stroke();
+    });
+  }
+  //Painter
+  if (state.painterTrails) {
+    state.painterTrails.forEach((t) => {
+      ctx.beginPath();
+      for (let i = 0; i < t.points.length; i++) {
+        let p = t.points[i];
+        if (i === 0) ctx.moveTo(p.x, p.y);
+        else ctx.lineTo(p.x, p.y);
+      }
+      ctx.strokeStyle = "rgba(255,100,200,0.8)";
+      ctx.lineWidth = 6;
+      ctx.stroke();
+    });
+  }
+  if (state.painterZones) {
+    state.painterZones.forEach((z) => {
+      ctx.beginPath();
+      ctx.arc(z.x, z.y, z.radius, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,150,200,0.2)";
+      ctx.fill();
+    });
+  }
+  if (state.painterBomb) {
+    ctx.beginPath();
+    ctx.arc(state.painterBomb.x, state.painterBomb.y, 10, 0, Math.PI * 2);
+    ctx.fillStyle = "pink";
+    ctx.fill();
+  }
   // --- Boss ---
   if (boss) {
     const phase = boss.hp <= boss.maxHp / 2 ? 1 : 0;
@@ -500,8 +657,12 @@ export function draw(ctx, canvas) {
     function lerpColor(a, b, t) {
       const ah = parseInt(a.replace("#", ""), 16);
       const bh = parseInt(b.replace("#", ""), 16);
-      const ar = (ah >> 16) & 255, ag = (ah >> 8) & 255, ab = ah & 255;
-      const br = (bh >> 16) & 255, bg = (bh >> 8) & 255, bb = bh & 255;
+      const ar = (ah >> 16) & 255,
+        ag = (ah >> 8) & 255,
+        ab = ah & 255;
+      const br = (bh >> 16) & 255,
+        bg = (bh >> 8) & 255,
+        bb = bh & 255;
       return `rgb(${(ar + t * (br - ar)) | 0},${(ag + t * (bg - ag)) | 0},${(ab + t * (bb - ab)) | 0})`;
     }
 
@@ -569,14 +730,15 @@ export function draw(ctx, canvas) {
   for (let g of ghosts) {
     if (g.x < 0) continue;
     let isDashing =
-      g.historyPath && g.historyPath.length > 2 &&
+      g.historyPath &&
+      g.historyPath.length > 2 &&
       dist(
         g.historyPath[g.historyPath.length - 1].x,
         g.historyPath[g.historyPath.length - 1].y,
         g.historyPath[g.historyPath.length - 2].x,
         g.historyPath[g.historyPath.length - 2].y,
       ) >
-      8 * g.speedRate;
+        8 * g.speedRate;
 
     if (g.historyPath && g.historyPath.length > 0 && g.isStunned <= 0) {
       ctx.beginPath();
@@ -621,8 +783,10 @@ export function draw(ctx, canvas) {
       ctx.translate(b.x, b.y);
       ctx.rotate(state.frameCount * 0.3);
       ctx.beginPath();
-      ctx.moveTo(-b.radius, 0); ctx.lineTo(b.radius, 0);
-      ctx.moveTo(0, -b.radius); ctx.lineTo(0, b.radius);
+      ctx.moveTo(-b.radius, 0);
+      ctx.lineTo(b.radius, 0);
+      ctx.moveTo(0, -b.radius);
+      ctx.lineTo(0, b.radius);
       ctx.strokeStyle = "#00ffcc";
       ctx.lineWidth = 8;
       ctx.stroke();
@@ -682,8 +846,11 @@ export function draw(ctx, canvas) {
   // --- Player ---
   let isInvulnSkill =
     (buffs.e > 0 &&
-      (player.characterId === "tank" || player.characterId === "ghost" || player.characterId === "reaper")) ||
-    (buffs.q > 0 && (player.characterId === "warden" || player.characterId === "frost"));
+      (player.characterId === "tank" ||
+        player.characterId === "ghost" ||
+        player.characterId === "reaper")) ||
+    (buffs.q > 0 &&
+      (player.characterId === "warden" || player.characterId === "frost"));
 
   if (player.dashTimeLeft > 0 || isInvulnSkill) {
     ctx.beginPath();
