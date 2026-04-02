@@ -211,17 +211,19 @@ export function draw(ctx, canvas) {
     } else if (h.type === "vortex") {
       ctx.save();
       ctx.translate(h.x, h.y);
-      ctx.rotate(state.frameCount * 0.1);
-      ctx.strokeStyle = `rgba(255, 255, 255, 0.3)`;
-      ctx.lineWidth = 4;
-      for (let i = 0; i < 3; i++) {
+      ctx.rotate(state.frameCount * 0.3); // Xoay cực nhanh
+      ctx.strokeStyle = `rgba(180, 255, 255, ${0.4 + Math.random() * 0.3})`;
+      ctx.lineWidth = 6;
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = "#00ffff";
+      for (let i = 0; i < 5; i++) {
         ctx.beginPath();
-        ctx.arc(0, 0, (h.radius / 3) * (i + 1), 0, Math.PI);
+        // Vẽ các dải gió cuộn vào trong
+        ctx.arc(0, 0, (h.radius / 5) * (i + 1), 0, Math.PI * (1 + Math.random() * 0.5));
         ctx.stroke();
       }
       ctx.restore();
     }
-    ctx.restore();
   });
 
   // --- Draw Global Hazard Overlay ---
@@ -242,9 +244,33 @@ export function draw(ctx, canvas) {
         });
       }
     } else if (state.globalHazard.type === "electric") {
-      if (state.frameCount % 4 === 0) {
-        ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
+      // 1. Tạo hiệu ứng chớp tắt màn hình mạnh hơn (Strobe effect)
+      if (state.frameCount % 10 === 0 && Math.random() < 0.4) {
+        ctx.fillStyle = "rgba(200, 255, 255, 0.15)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      // 2. Vẽ các tia sét đánh xuống ngẫu nhiên toàn bản đồ
+      if (state.frameCount % 8 === 0) { // Tần suất xuất hiện tia sét
+        ctx.save();
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
+        ctx.lineWidth = 2 + Math.random() * 2;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = "#00ffff";
+
+        let startX = Math.random() * canvas.width;
+        let curY = 0;
+        ctx.beginPath();
+        ctx.moveTo(startX, 0);
+
+        // Vẽ đường ziczac của tia sét
+        while (curY < canvas.height) {
+          startX += (Math.random() - 0.5) * 80; // Độ lệch ngang
+          curY += 30 + Math.random() * 40;     // Độ dài mỗi đoạn ziczac
+          ctx.lineTo(startX, curY);
+        }
+        ctx.stroke();
+        ctx.restore();
       }
     } else if (state.globalHazard.type === "ice") {
       // THÊM MỚI TẠI ĐÂY: Hiệu ứng sương giá và tuyết rơi bão bùng
@@ -260,6 +286,23 @@ export function draw(ctx, canvas) {
           life: 240,
           color: "#ffffff",
           size: 2 + Math.random() * 3
+        });
+      }
+    } else if (state.globalHazard.type === "wind") {
+      // Sương gió mờ mờ toàn map
+      ctx.fillStyle = "rgba(200, 255, 255, 0.1)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Phóng các hạt bụi với tốc độ cực kì xé gió (đảo chiều liên tục)
+      if (state.frameCount % 1 === 0) { // Mỗi frame đẻ ra 1 hạt
+        state.particles.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          vx: Math.cos(state.frameCount * 0.05) * 20, // Tốc độ đạn bắn
+          vy: Math.sin(state.frameCount * 0.05) * 20,
+          life: 20,
+          color: "#ccffff",
+          size: 1 + Math.random() * 3
         });
       }
     }
@@ -1265,6 +1308,7 @@ export function draw(ctx, canvas) {
         if (b.style === 2) ctx.fillStyle = "#00ffff"; // Ice
         if (b.style === 3) ctx.fillStyle = "#ffff00"; // Thunder
         if (b.style === 0) ctx.fillStyle = "#8b4513"; // Earth
+        if (b.style === 4) ctx.fillStyle = "rgba(180, 255, 255, 0.6)";
 
         if (isFrostR && dist(b.x, b.y, player.x, player.y) < 200) {
           ctx.fillStyle = "#00ffff";

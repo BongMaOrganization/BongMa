@@ -76,9 +76,14 @@ export function update(ctx, canvas, changeStateFn) {
   }
   if (s.burnTimer > 0) {
     s.burnTimer--;
-    // Increased damage: 0.2 HP every 30 frames (~0.4 HP/sec)
-    if (state.frameCount % 30 === 0) {
-      player.hp -= 0.2;
+
+    // Check xem có đang trong trạng thái bất tử không
+    let isInvincible = player.dashTimeLeft > 0 || player.gracePeriod > 0 ||
+      (buffs.e > 0 && ["tank", "knight", "reaper"].includes(player.characterId)) ||
+      (buffs.q > 0 && ["warden", "ghost", "assassin", "spirit", "frost"].includes(player.characterId));
+
+    if (state.frameCount % 30 === 0 && !isInvincible) {
+      player.hp -= 0.2; // Chỉ trừ máu khi KHÔNG bất tử
       updateHealthUI();
     }
   }
@@ -178,7 +183,7 @@ export function update(ctx, canvas, changeStateFn) {
     if (sz.y < 50 || sz.y > 550) sz.vy *= -1;
 
     if (sz.shrinking) {
-      sz.radius = Math.max(20, sz.radius - 0.2);
+      sz.radius = Math.max(20, sz.radius - 0.05);
       if (sz.radius < 50) sz.pulse = (Math.sin(state.frameCount * 0.2) + 1) * 0.5;
     }
   }
@@ -464,12 +469,12 @@ export function update(ctx, canvas, changeStateFn) {
       } else if (h.type === "frost") {
         state.playerStatus.slowTimer = 30; // Ground slow
       } else if (h.type === "static") {
-        state.playerStatus.stunTimer = 10; // Micro-stun field
+        state.playerStatus.stunTimer = 10;
       } else if (h.type === "vortex") {
-        // Pull player toward center
+        // Hút người chơi vào tâm rất mạnh
         const angle = Math.atan2(h.y - player.y, h.x - player.x);
-        player.x += Math.cos(angle) * 2;
-        player.y += Math.sin(angle) * 2;
+        player.x += Math.cos(angle) * 4;
+        player.y += Math.sin(angle) * 4;
       }
     }
 
@@ -508,6 +513,33 @@ export function update(ctx, canvas, changeStateFn) {
       if (state.globalHazard.type === "ice") {
         state.playerStatus.slowTimer = 5; // Làm chậm di chuyển liên tục
         player.cooldown += 0.5;           // Súng bị đóng băng, tốc độ bắn giảm cực mạnh
+      } else if (state.globalHazard.type === "wind") {
+        // Gió xoáy đùn người chơi văng lạng lách quanh màn hình
+        const windAngle = state.frameCount * 0.05;
+        player.x += Math.cos(windAngle) * 5;
+        player.y += Math.sin(windAngle) * 5;
+
+        // Kèm thêm lực hút giật ngược vào tâm Boss!
+        const dx = boss.x - player.x;
+        const dy = boss.y - player.y;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        if (len > 0) {
+          player.x += (dx / len) * 3;
+          player.y += (dy / len) * 3;
+        }
+      } else if (state.globalHazard.type === "electric") {
+        // Sinh hạt điện li ti quanh người chơi
+        if (state.frameCount % 5 === 0) {
+          state.particles.push({
+            x: player.x + (Math.random() - 0.5) * 100,
+            y: player.y + (Math.random() - 0.5) * 100,
+            vx: (Math.random() - 0.5) * 2,
+            vy: (Math.random() - 0.5) * 2,
+            life: 20,
+            color: "#00ffff",
+            size: 1 + Math.random() * 2
+          });
+        }
       }
     }
 
@@ -1560,8 +1592,23 @@ export function update(ctx, canvas, changeStateFn) {
 
         if (isColliding) {
           // Hazard Status Effects
-          if (h.type === "fire" || h.type === "fire_ring") state.playerStatus.burnTimer = 30;
-          if (h.type === "frost") state.playerStatus.slowTimer = 30;
+          let isInvincible = player.dashTimeLeft > 0 || player.gracePeriod > 0 ||
+            (buffs.e > 0 && ["tank", "knight", "reaper"].includes(player.characterId)) ||
+            (buffs.q > 0 && ["warden", "ghost", "assassin", "spirit", "frost"].includes(player.characterId));
+
+          // Kéo người chơi (Lốc xoáy) thì vẫn hoạt động, nhưng miễn nhiễm debuff và damage
+          if (h.type === "vortex") {
+            const angle = Math.atan2(h.y - player.y, h.x - player.x);
+            player.x += Math.cos(angle) * 2;
+            player.y += Math.sin(angle) * 2;
+          }
+
+          if (!isInvincible) {
+            // Hazard Status Effects
+            if (h.type === "fire" || h.type === "fire_ring") state.playerStatus.burnTimer = 30;
+            if (h.type === "frost") state.playerStatus.slowTimer = 30;
+            if (h.type === "static") state.playerStatus.stunTimer = 10;
+          }
 
           // Tick-based Damage with 100ms (6 frames) initial grace period
           if (h.firstEnterTime === 0) {

@@ -210,7 +210,7 @@ export const SPECIAL_SKILLS = {
     state.screenShake.intensity = 5;
     state.screenShake.type = 'earth';
     state.globalHazard = { type: "earth", active: true, timer: 600, damage: 1.2 };
-    spawnSafeZone(400, 300, 200, 600, { shrinking: true });
+    pawnSafeZone(400, 300, 250, 600, { shrinking: false });
   },
 
   // --- ICE ---
@@ -235,7 +235,7 @@ export const SPECIAL_SKILLS = {
   "GLACIAL AGE": (boss) => {
     boss.ultimatePhase = true;
     state.globalHazard = { type: "ice", active: true, timer: 600, damage: 0.8 };
-    spawnSafeZone(boss.x, boss.y, 250, 600, { vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4 });
+    spawnSafeZone(boss.x, boss.y, 300, 600, { vx: (Math.random() - 0.5) * 1.5, vy: (Math.random() - 0.5) * 1.5 });
 
     // NÂNG CẤP: Liên tục triệu hồi các bãi băng ngẫu nhiên trên mặt đất trong suốt 10 giây
     for (let i = 0; i < 20; i++) {
@@ -256,16 +256,23 @@ export const SPECIAL_SKILLS = {
   },
   "Vacuum Wave": (boss) => {
     activateShield(boss, 100);
-    const b = aim(boss);
-    for (let i = 0; i < 7; i++) fireAngle(boss.x, boss.y, b + (i - 3) * 0.15, 1);
+    // Sinh ra Lốc Xoáy siêu to khổng lồ ngay tại Boss hút người chơi lại gần
+    spawnHazard("vortex", boss.x, boss.y, 400, 300);
+
+    for (let i = 0; i < 5; i++) {
+      state.delayedTasks.push({
+        delay: i * 20,
+        action: () => fan(boss.x, boss.y, aim(boss), 7, 0.2, 4) // Bắn đạn Gió (Style 4)
+      });
+    }
   },
   "HURRICANE": (boss) => {
     boss.ultimatePhase = true;
-    state.windForce = { x: 0.2, y: 0, timer: 600 };
+    state.globalHazard = { type: "wind", active: true, timer: 600, damage: 0.5 };
     state.screenShake.timer = 600;
-    state.screenShake.intensity = 3;
+    state.screenShake.intensity = 5; // Rung màn hình mạnh hơn do bão
     state.screenShake.type = 'wind';
-    spawnSafeZone(400, 300, 150, 600, { vx: 3, vy: 0 });
+    spawnSafeZone(400, 300, 250, 600, { vx: 1.2, vy: 0 });
   },
 
   // --- THUNDER ---
@@ -281,11 +288,11 @@ export const SPECIAL_SKILLS = {
   "HEAVEN'S WRATH": (boss) => {
     boss.ultimatePhase = true;
     state.screenShake.timer = 600;
-    state.screenShake.intensity = 20;
+    state.screenShake.intensity = 8; // Giảm từ 20 xuống 8 để bớt rung
     state.screenShake.type = 'thunder';
     state.globalHazard = { type: "electric", active: true, timer: 600, damage: 1.5 };
-    spawnSafeZone(Math.random() * 800, Math.random() * 600, 100, 600, { vx: 2, vy: 2 });
-  }
+    spawnSafeZone(Math.random() * 800, Math.random() * 600, 250, 600, { vx: 1, vy: 1 });
+  },
 };
 
 export const BOSS_TYPES = {
@@ -295,7 +302,8 @@ export const BOSS_TYPES = {
     phases: [
       { attackModes: [0, 1, 2], special: "Inferno Pulse", speedMult: 1.0 },
       { attackModes: [3, 4], special: "Meteor Strike", speedMult: 1.3 },
-      { ultimate: "SUPERNOVA", speedMult: 1.6 }
+      // THÊM MỚI: Trộn các chiêu mạnh nhất lại
+      { attackModes: [0, 2, 4], ultimate: "SUPERNOVA", speedMult: 1.6 }
     ]
   },
   "earth": {
@@ -304,7 +312,8 @@ export const BOSS_TYPES = {
     phases: [
       { attackModes: [15, 16], special: "Seismic Rift", speedMult: 1.0 },
       { attackModes: [17, 18], special: "Earth Spikes", speedMult: 1.3 },
-      { ultimate: "EARTHQUAKE", speedMult: 1.5 }
+      // THÊM MỚI:
+      { attackModes: [16, 18], ultimate: "EARTHQUAKE", speedMult: 1.5 }
     ]
   },
   "ice": {
@@ -313,7 +322,8 @@ export const BOSS_TYPES = {
     phases: [
       { attackModes: [5, 6], special: "Frost Nova", speedMult: 1.0 },
       { attackModes: [7, 8], special: "Icicle Rain", speedMult: 1.4 },
-      { ultimate: "GLACIAL AGE", speedMult: 1.6 }
+      // THÊM MỚI:
+      { attackModes: [6, 8], ultimate: "GLACIAL AGE", speedMult: 1.6 }
     ]
   },
   "wind": {
@@ -322,7 +332,8 @@ export const BOSS_TYPES = {
     phases: [
       { attackModes: [20, 21], special: "Cyclone Barrage", speedMult: 1.0 },
       { attackModes: [22, 23], special: "Vacuum Wave", speedMult: 1.5 },
-      { ultimate: "HURRICANE", speedMult: 2.0 }
+      // THÊM MỚI:
+      { attackModes: [21, 23], ultimate: "HURRICANE", speedMult: 2.0 }
     ]
   },
   "thunder": {
@@ -331,7 +342,8 @@ export const BOSS_TYPES = {
     phases: [
       { attackModes: [10, 11], special: "Tesla Field", speedMult: 1.0 },
       { attackModes: [12, 13], special: "Chain Lightning", speedMult: 1.5 },
-      { ultimate: "HEAVEN'S WRATH", speedMult: 1.8 }
+      // THÊM MỚI:
+      { attackModes: [11, 13], ultimate: "HEAVEN'S WRATH", speedMult: 1.8 }
     ]
   }
 };

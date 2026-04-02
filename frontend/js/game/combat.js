@@ -14,14 +14,14 @@ export function playerTakeDamage(ctx, canvas, changeStateFn, amount = 1) {
   let isInvulnSkill =
     (buffs.e > 0 &&
       (state.player.characterId === "tank" ||
-        state.player.characterId === "ghost" ||
+        state.player.characterId === "knight" || // ĐÃ THÊM KỴ SĨ
         state.player.characterId === "reaper")) ||
     (buffs.q > 0 &&
       (state.player.characterId === "warden" ||
+        state.player.characterId === "ghost" ||  // ĐÃ CHUYỂN BÓNG MA VỀ Q
         state.player.characterId === "assassin" ||
         state.player.characterId === "spirit" ||
         state.player.characterId === "frost"));
-
   if (isInvulnSkill) {
     return;
   }
@@ -129,11 +129,15 @@ export function updateBullets(
   let buffs = state.activeBuffs || { q: 0, e: 0, r: 0 };
   let isInvulnSkill =
     (buffs.e > 0 &&
-      (player.characterId === "tank" ||
-        player.characterId === "ghost" ||
-        player.characterId === "reaper")) ||
+      (state.player.characterId === "tank" ||
+        state.player.characterId === "knight" || // ĐÃ THÊM KỴ SĨ
+        state.player.characterId === "reaper")) ||
     (buffs.q > 0 &&
-      (player.characterId === "warden" || player.characterId === "assassin"));
+      (state.player.characterId === "warden" ||
+        state.player.characterId === "ghost" ||  // ĐÃ CHUYỂN BÓNG MA VỀ Q
+        state.player.characterId === "assassin" ||
+        state.player.characterId === "spirit" ||
+        state.player.characterId === "frost"));
   let isInvulnerable =
     player.gracePeriod > 0 || player.dashTimeLeft > 0 || isInvulnSkill;
   let isSummonerQ = player.characterId === "summoner" && buffs.q > 0;
