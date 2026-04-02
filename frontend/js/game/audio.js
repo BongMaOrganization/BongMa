@@ -17,6 +17,7 @@ export const sounds = {
   damage: new Audio("assets/damage.wav"), // Tiếng nhân vật bị thương
   gameOver: new Audio("assets/gameover.wav"), // Tiếng thua game
   button: new Audio("assets/button.wav"), // Tiếng click nút
+  fragment: new Audio("assets/boss_reward_bgm.mp3"), // Âm thanh nhận mảnh ghép boss
 };
 
 // Cấu hình âm lượng và vòng lặp

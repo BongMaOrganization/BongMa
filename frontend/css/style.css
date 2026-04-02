@@ -806,6 +806,46 @@ button:disabled {
   text-shadow: 0 0 15px rgba(96, 165, 250, 0.5);
 }
 
+/* Fragment Toast Notification */
+.fragment-toast {
+  position: absolute;
+  top: 50px;
+  right: 20px;
+  background: rgba(0, 255, 204, 0.15);
+  backdrop-filter: blur(10px);
+  border: 2px solid #00ffcc;
+  border-radius: 12px;
+  padding: 15px 25px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
+  transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform: translateX(120%);
+  pointer-events: none;
+}
+
+.fragment-toast.show {
+  transform: translateX(0);
+}
+
+.fragment-toast-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+#fragment-toast-icon {
+  font-size: 24px;
+}
+
+#fragment-toast-text {
+  color: #fff;
+  font-weight: bold;
+  font-size: 16px;
+  letter-spacing: 1px;
+}
+
 .gacha-legendary {
   color: #c084fc;
   text-shadow: 0 0 20px #a855f7, 0 0 40px #a855f7;

@@ -9,6 +9,7 @@ export const state = {
   player: null,
   boss: null,
   bullets: [],
+  particles: [],
   ghosts: [],
   // ===== Painter =====
   painterTrails: [],
@@ -78,13 +79,44 @@ export const state = {
   knightShield: null,
   knightRage: null,
   isScoutQ: false,
+  
+  // ===== Elemental Combat System =====
+  hazards: [], // { x, y, radius, type, life, damage, color }
+  playerStatus: { 
+    slow: 1.0, // Multiplier (1.0 = normal)
+    slowTimer: 0,
+    stunTimer: 0,
+    burnTimer: 0,
+    lastHazardDamageTime: 0
+  },
+  windForce: { x: 0, y: 0, timer: 0 },
 
-  phaseTransitionTimer: 0,
   currentPhaseName: "",
   lastBossPhase: -1,
   
   // ===== Boss Special System =====
   screenShake: { x: 0, y: 0, timer: 0, intensity: 0 },
+  // ===== Cinematic Boss Overhaul & Safe Zones =====
+  bossBeams: [],       // { x1, y1, x2, y2, state: 'charge'|'fire', timer }
+  groundWarnings: [],  // { x, y, radius, timer, maxTimer, type: 'lightning'|'rock' }
+  safeZones: [],       // { x, y, radius, timer }
+  globalHazard: { 
+    type: null,        // 'fire', 'electric', 'ice'
+    active: false, 
+    timer: 0,
+    damage: 0
+  },
+  cinematicEffects: {
+    fogAlpha: 0,       // Ice blizzard overlay
+    distortion: 0,     // Earth tremor ripple
+    vortexPower: 0,    // Wind pull intensity
+    vortexCenter: { x: 400, y: 300 },
+    freezeTimer: 0,    // Player freeze duration
+    fieldBurn: 0       // Fire global burn timer
+  },
+  
+  phaseTransitionTimer: 0,
+
   bossSpecial: { name: "", type: "NORMAL", timer: 0, duration: 0, color: "#fff" },
   bossSpecialCD: 0,
 

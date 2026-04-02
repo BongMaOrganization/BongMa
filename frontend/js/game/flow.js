@@ -133,7 +133,7 @@ export function initGame(isNextLevel = false) {
     state.maxFramesToSurvive = 999999;
 
     // Debug: Force a specific boss for testing
-    const debugBossType = "fireBoss"; // Change this to the boss you want to test
+    const debugBossType = null; // Change this to the boss you want to test
 
     // Select boss type based on level or debug option
     const bossTypes = Object.keys(BOSS_TYPES);
@@ -300,6 +300,13 @@ function tryBossFragmentDrop() {
   if (owned.includes(fragment.id)) return;
 
   state.bossFragments.push(fragment.id);
+  state.lastDroppedFragment = fragment;
+  playSound("fragment");
+  
+  // Also show a toast if possible
+  if (typeof UI !== 'undefined' && UI.showFragmentToast) {
+      UI.showFragmentToast(fragment);
+  }
 
   saveGame(state, GHOST_DATA_KEY);
   persistState();
@@ -362,6 +369,7 @@ export async function openBossArena(changeStateFn, gameLoopFn) {
 
     card.onclick = () => {
       overlay.classList.add("hidden");
+      UI.main.classList.add("hidden"); // Ensure main menu is gone
       startBossArenaFight(key, changeStateFn, gameLoopFn);
     };
 
@@ -408,8 +416,19 @@ export function handleBossArenaReward(gameLoopFn) {
   // Cập nhật UI Thưởng
   document.getElementById("arena-coins-reward").innerText = `💰 +${reward.coins} Tiền`;
   document.getElementById("arena-rare-reward").innerText = gotTicket ? `🎫 +5 Nguyên liệu (Common)` : "";
-  document.getElementById("screen-arena-victory").classList.remove("hidden");
+  
+  // Show Fragment Info in Arena Victory Screen
+  const fragInfo = document.getElementById("arena-fragment-reward") || { innerText: "" };
+  if (state.lastDroppedFragment) {
+      fragInfo.innerText = `✨ NHẬN ĐƯỢC: ${state.lastDroppedFragment.icon} ${state.lastDroppedFragment.name}`;
+      fragInfo.style.color = "#00ffff";
+  } else {
+      fragInfo.innerText = "";
+  }
 
+  document.getElementById("screen-arena-victory").classList.remove("hidden");
+  state.gameState = "MENU"; // Freeze loop for reward screen
+  
   // Nút quay lại menu
   document.getElementById("btn-arena-victory-back").onclick = () => {
     document.getElementById("screen-arena-victory").classList.add("hidden");
@@ -459,8 +478,26 @@ export function resetSkillsState() {
   state.creatorTurrets = [];
   state.creatorHolyZone = null;
   state.creatorOrbs = [];
-  state.creatorDeathSave = false;
   state.knightCharge = null;
+  state.playerStatus.stunTimer = 0;
+  state.playerStatus.slowTimer = 0;
+  state.playerStatus.burnTimer = 0;
+  
+  // Clear boss cinamatics & hazards
+  state.hazards = [];
+  state.bossBeams = [];
+  state.groundWarnings = [];
+  state.safeZones = [];
+  state.globalHazard = { type: null, active: false, timer: 0, damage: 0 };
+  state.cinematicEffects = {
+    fogAlpha: 0,
+    distortion: 0,
+    vortexPower: 0,
+    vortexCenter: { x: 400, y: 300 },
+    freezeTimer: 0,
+    fieldBurn: 0
+  };
+  state.windForce = { x: 0, y: 0, timer: 0 };
 
   // Cập nhật lại UI kĩ năng (CD và Border)
   import("./skills.js").then(m => m.updateSkillsUI());

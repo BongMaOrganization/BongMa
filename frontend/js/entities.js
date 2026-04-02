@@ -1,13 +1,86 @@
 import { state } from "./state.js";
 import { FPS } from "./config.js";
+import { dist } from "./utils.js";
 
 // =======================
 // UTILITIES & HELPER FUNCTIONS
 // =======================
 const TAU = Math.PI * 2;
 
+export function activateShield(boss, amount) {
+  boss.shield = amount;
+  boss.maxShield = amount;
+  boss.shieldActive = true;
+  state.bossSpecial = {
+    name: "GỒNG CHIÊU (SHIELD)",
+    timer: 300,
+    duration: 300,
+    type: "SPECIAL",
+    color: "#00ffff"
+  };
+}
+
+export function spawnMeteor(tx, ty, destX, destY) {
+  state.bullets.push({
+    x: tx,
+    y: ty,
+    destX: destX,
+    destY: destY,
+    vx: (destX - tx) / 60,
+    vy: (destY - ty) / 60,
+    radius: 30,
+    isMeteor: true,
+    life: 60,
+    isPlayer: false,
+    style: 1
+  });
+}
+
 function fireAngle(sx, sy, angle, style = 0, source = "boss", damage = 1) {
   spawnBullet(sx, sy, sx + Math.cos(angle), sy + Math.sin(angle), false, style, source, damage);
+}
+
+export function spawnHazard(type, x, y, radius = 40, duration = 300, damage = 0.5, owner = "boss", targetRadius = 0) {
+  state.hazards.push({
+    x, y, radius, type,
+    life: duration,
+    maxLife: duration,
+    damage,
+    owner,
+    targetRadius: targetRadius || radius,
+    expanding: targetRadius > radius,
+    firstEnterTime: 0,
+    active: type !== "rock"
+  });
+}
+
+function spawnSafeZone(x, y, radius, duration, options = {}) {
+  state.safeZones.push({
+    x, y, radius,
+    timer: duration,
+    maxTimer: duration,
+    vx: options.vx || 0,
+    vy: options.vy || 0,
+    shrinking: options.shrinking || false
+  });
+}
+
+function spawnBeam(x1, y1, x2, y2, chargeTime, fireTime) {
+  const beam = { x1, y1, x2, y2, state: "charge", timer: chargeTime + fireTime, chargeTime, fireTime };
+  state.bossBeams.push(beam);
+
+  state.delayedTasks.push({
+    delay: chargeTime,
+    action: () => { beam.state = "fire"; }
+  });
+
+  state.delayedTasks.push({
+    delay: chargeTime + fireTime,
+    action: () => {
+      const idx = state.bossBeams.indexOf(beam);
+      if (idx > -1) state.bossBeams.splice(idx, 1);
+    }
+  });
 }
 
 function ring(sx, sy, count, offset = 0, style = 0, source = "boss", damage = 1) {
@@ -24,351 +97,351 @@ function fan(sx, sy, baseAngle, count, spread, style = 0, source = "boss", damag
 }
 
 function aim(boss, extraAngle = 0) {
-  return (
-    Math.atan2(state.player.y - boss.y, state.player.x - boss.x) + extraAngle
-  );
+  return Math.atan2(state.player.y - boss.y, state.player.x - boss.x) + extraAngle;
 }
 
-export const ATTACK_MODES = {
-  0: (boss) => { // Radial Fire
-    ring(boss.x, boss.y, 24, boss.attackTimer * 0.05, 1);
-  },
-  1: (boss) => { // Aimed Fire
-    const base = aim(boss);
-    fan(boss.x, boss.y, base, 9, 0.08, 1);
-  },
-  2: (boss) => { // Chaos Fire
-    for (let i = 0; i < 15; i++) fireAngle(boss.x, boss.y, Math.random() * TAU, 1);
-  },
-  3: (boss) => { // Spiral
-    const t = boss.attackTimer * 0.1;
-    ring(boss.x, boss.y, 12, t, 1);
-    ring(boss.x, boss.y, 12, -t, 1);
-  },
-  4: (boss) => { // Cross
-    const base = aim(boss);
-    for (let i = 0; i < 4; i++) fireAngle(boss.x, boss.y, base + i * Math.PI / 2, 1);
-  },
-  5: (boss) => { // Ice Ring
-    ring(boss.x, boss.y, 30, boss.attackTimer * 0.04, 2);
-  },
-  6: (boss) => { // Ice Fan
-    fan(boss.x, boss.y, aim(boss), 15, 0.05, 2);
-  },
-  7: (boss) => { // Slow Shot
-    fireAngle(boss.x, boss.y, aim(boss), 2);
-  },
-  8: (boss) => { // Ice Spiral
-    ring(boss.x, boss.y, 16, boss.attackTimer * 0.08, 2);
-  },
-  9: (boss) => { // Frost Burst
-    for (let i = 0; i < 20; i++) fireAngle(boss.x, boss.y, Math.random() * TAU, 2);
-  },
-  10: (boss) => { // Thunder Bolt (Fake)
-    fireAngle(boss.x, boss.y, aim(boss), 3);
-  },
-  11: (boss) => { // Spark Ring
-    ring(boss.x, boss.y, 18, Math.random() * TAU, 3);
-  },
-  12: (boss) => { // Chain Lightning (Fake)
-    fan(boss.x, boss.y, aim(boss), 7, 0.2, 3);
-  },
-  13: (boss) => { // Thunder Rain
-    const rx = Math.random() * 800;
-    spawnBullet(rx, -50, rx, 650, false, 3);
-  },
-  14: (boss) => { // Electric Spiral
-    ring(boss.x, boss.y, 22, boss.attackTimer * 0.15, 3);
-  },
-  15: (boss) => { // Rock Shot
-    fireAngle(boss.x, boss.y, aim(boss), 0);
-  },
-  16: (boss) => { // Earth Ring
-    ring(boss.x, boss.y, 14, 0, 0);
-  },
-  17: (boss) => { // Boulder Fall
-    for(let i=0; i<3; i++) spawnBullet(Math.random()*800, -50, Math.random()*800, 650, false, 0);
-  },
-  18: (boss) => { // Rock Spiral
-    ring(boss.x, boss.y, 12, boss.attackTimer * 0.05, 0);
-  },
-  19: (boss) => { // Ground Wave
-    fan(boss.x, boss.y, aim(boss), 21, 0.03, 0);
-  },
-  20: (boss) => { // Wind Gust
-    fan(boss.x, boss.y, aim(boss), 11, 0.1, 1);
-  },
-  21: (boss) => { // Tornado (Small)
-    ring(boss.x, boss.y, 8, boss.attackTimer * 0.2, 1);
-  },
-  22: (boss) => { // Slicing Wind
-    for(let i=0; i<10; i++) fireAngle(boss.x, boss.y, Math.random() * TAU, 1);
-  },
-  23: (boss) => { // Wind Fan
-    fan(boss.x, boss.y, aim(boss), 25, 0.04, 1);
-  },
-  24: (boss) => { // Cyclon
-    ring(boss.x, boss.y, 36, boss.attackTimer * 0.05, 1);
-  },
-  25: (boss) => { // Global Rain
-    for (let x = 0; x < 800; x += 100) spawnBullet(x + Math.random()*50, -50, x, 650, false, 1);
-  },
-  26: (boss) => { // Expanding Cross
-    const b = aim(boss);
-    for(let i=0; i<8; i++) fireAngle(boss.x, boss.y, b + i * Math.PI / 4, 1);
-  },
-  27: (boss) => { // Target Grid
-    const px = state.player.x, py = state.player.y;
-    spawnBullet(px - 100, -50, px, py, false, 2);
-    spawnBullet(px + 100, -50, px, py, false, 2);
-  },
-  28: (boss) => { // Hellfire
-    ring(boss.x, boss.y, 40, boss.attackTimer * 0.02, 1);
-  },
-  29: (boss) => { // Final Wave
-    ring(boss.x, boss.y, 60, boss.attackTimer * 0.01, 3);
-  }
-};
+function spawnWarning(x, y, radius, duration) {
+  state.groundWarnings.push({ x, y, radius, timer: duration });
+}
 
-const SPECIAL_SKILLS = {
+// =======================
+// BOSS SKILL DEFINITIONS
+// =======================
+
+export const SPECIAL_SKILLS = {
   // --- FIRE ---
-  "Inferno Ring": (boss) => {
-    state.screenShake.timer = 20;
-    state.screenShake.intensity = 8;
-    for (let i = 0; i < 40; i++) {
-        spawnBullet(boss.x, boss.y, boss.x + Math.cos(i * 0.16), boss.y + Math.sin(i * 0.16), false, 1, "boss", 2);
+  "Meteor Strike": (boss) => {
+    activateShield(boss, 150);
+    const count = 7;
+    for (let i = 0; i < count; i++) {
+      state.delayedTasks.push({
+        delay: i * 15,
+        action: () => {
+          const tx = state.player.x + (Math.random() - 0.5) * 150;
+          const ty = state.player.y + (Math.random() - 0.5) * 150;
+          spawnWarning(tx, ty, 70, 60);
+          state.delayedTasks.push({
+            delay: 60,
+            action: () => spawnMeteor(tx, -100, tx, ty)
+          });
+        }
+      });
     }
   },
-  "Meteor Rain": (boss) => {
-    state.screenShake.timer = 40;
-    state.screenShake.intensity = 10;
-    for (let i = 0; i < 15; i++) {
-      const rx = Math.random() * 800;
-      spawnBullet(rx, -50, rx + (Math.random() - 0.5) * 100, 650, false, 1, "boss", 2);
+  "Inferno Pulse": (boss) => {
+    // SỬA ĐỔI: Biến thành các Sóng Lửa (Vòng rỗng) bung ra toàn bản đồ
+    activateShield(boss, 100);
+    for (let i = 0; i < 3; i++) {
+      state.delayedTasks.push({
+        delay: i * 45,
+        action: () => {
+          state.screenShake.timer = 15;
+          state.screenShake.intensity = 8;
+          state.screenShake.type = 'earth';
+          // Tạo một Fire Ring lan từ bán kính 10 ra 1000 px trong 120 frames
+          spawnHazard("fire_ring", boss.x, boss.y, 10, 120, 1.0, "boss", 1000);
+        }
+      });
     }
   },
   "SUPERNOVA": (boss) => {
-    state.screenShake.timer = 60;
-    state.screenShake.intensity = 20;
-    for (let i = 0; i < 100; i++) {
-      const a = (i / 100) * TAU;
-      spawnBullet(boss.x, boss.y, boss.x + Math.cos(a), boss.y + Math.sin(a), false, 1, "boss", 3);
+    state.screenShake.timer = 200;
+    state.screenShake.intensity = 10;
+    state.screenShake.type = 'wind';
+    boss.ultimatePhase = true;
+    state.globalHazard = { type: "fire", active: true, timer: 600, damage: 1.0 };
+    // Moving and Shrinking safe zones
+    spawnSafeZone(100, 100, 150, 600, { vx: 2, vy: 1, shrinking: true });
+    spawnSafeZone(700, 500, 150, 600, { vx: -2, vy: -1, shrinking: true });
+  },
+
+  // --- EARTH ---
+  "Seismic Rift": (boss) => {
+    activateShield(boss, 180);
+    const targetAngle = aim(boss);
+    for (let i = 0; i < 10; i++) {
+      state.delayedTasks.push({
+        delay: i * 8,
+        action: () => {
+          const px = boss.x + Math.cos(targetAngle) * (i * 60 + 50);
+          const py = boss.y + Math.sin(targetAngle) * (i * 60 + 50);
+          spawnHazard("rock", px, py, 45, 400);
+          state.screenShake.timer = 5;
+          state.screenShake.intensity = 8;
+          state.screenShake.type = 'earth';
+        }
+      });
     }
+  },
+  "Rock Rain": (boss) => {
+    activateShield(boss, 150);
+    for (let i = 0; i < 20; i++) {
+      const rx = Math.random() * 800, ry = Math.random() * 600;
+      spawnWarning(rx, ry, 50, 40 + i * 3);
+      state.delayedTasks.push({
+        delay: 40 + i * 3,
+        action: () => {
+          spawnHazard("rock", rx, ry, 50, 300);
+          state.screenShake.timer = 10;
+          state.screenShake.intensity = 15;
+          state.screenShake.type = 'thunder';
+        }
+      });
+    }
+  },
+  "EARTHQUAKE": (boss) => {
+    boss.ultimatePhase = true;
+    state.screenShake.timer = 600;
+    state.screenShake.intensity = 5;
+    state.screenShake.type = 'earth';
+    state.globalHazard = { type: "earth", active: true, timer: 600, damage: 1.2 };
+    spawnSafeZone(400, 300, 200, 600, { shrinking: true });
   },
 
   // --- ICE ---
   "Frost Nova": (boss) => {
-    ring(boss.x, boss.y, 40, 0, 2, "boss", 2);
+    activateShield(boss, 100);
+    ring(boss.x, boss.y, 36, 0, 2);
+    spawnHazard("frost", boss.x, boss.y, 300, 240);
   },
-  "Ice Spike Fan": (boss) => {
-    const b = aim(boss);
-    fan(boss.x, boss.y, b, 25, 0.04, 2, "boss", 2);
-  },
-  "ABSOLUTE ZERO": (boss) => {
-    state.screenShake.timer = 40;
-    state.screenShake.intensity = 5;
-    for (let i = 0; i < 120; i++) {
-        const a = (i / 120) * TAU;
-        spawnBullet(boss.x, boss.y, boss.x + Math.cos(a), boss.y + Math.sin(a), false, 2, "boss", 3);
+  "Icicle Rain": (boss) => {
+    activateShield(boss, 120);
+    for (let i = 0; i < 40; i++) {
+      state.delayedTasks.push({
+        delay: i * 4,
+        action: () => {
+          const rx = Math.random() * 800;
+          fireAngle(rx, -20, Math.PI / 2, 2);
+        }
+      });
     }
   },
-
-  // --- THUNDER ---
-  "Tesla Coil": (boss) => {
-    for (let i = 0; i < 8; i++) {
-      const tx = Math.random() * 800;
-      const ty = Math.random() * 600;
-      spawnBullet(tx, -100, tx, ty, false, 3, "boss", 2);
-      state.screenShake.timer = 10;
-    }
-  },
-  "Volt Beam": (boss) => {
-    const b = aim(boss);
-    for(let i=0; i<15; i++) {
-        fireAngle(boss.x, boss.y, b + (i-7)*0.05, 3, "boss", 2);
-    }
-  },
-  "GOD'S JUDGMENT": (boss) => {
-    state.screenShake.timer = 60;
-    state.screenShake.intensity = 15;
-    for(let i=0; i<50; i++) {
-        const rx = Math.random() * 800;
-        const ry = Math.random() * 600;
-        spawnBullet(rx, -200, rx, ry, false, 3, "boss", 3);
-    }
-  },
-
-  // --- EARTH ---
-  "Shockwave": (boss) => {
-    state.screenShake.timer = 30;
-    state.screenShake.intensity = 12;
-    ring(boss.x, boss.y, 36, 0, 0, "boss", 2);
-  },
-  "Rock Fall": (boss) => {
-    state.screenShake.timer = 40;
-    state.screenShake.intensity = 15;
-    for(let i=0; i<20; i++) {
-        const rx = Math.random() * 800;
-        spawnBullet(rx, -100, rx, 700, false, 0, "boss", 2);
-    }
-  },
-  "THE GREAT QUAKE": (boss) => {
-    state.screenShake.timer = 100;
-    state.screenShake.intensity = 25;
-    for(let i=0; i<80; i++) {
-        const rx = Math.random() * 800;
-        spawnBullet(rx, 650, rx, -100, false, 0, "boss", 3);
-    }
+  "GLACIAL AGE": (boss) => {
+    boss.ultimatePhase = true;
+    state.globalHazard = { type: "ice", active: true, timer: 600, damage: 0.8 };
+    spawnSafeZone(boss.x, boss.y, 250, 600, { vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4 });
   },
 
   // --- WIND ---
-  "Gust Force": (boss) => {
+  "Cyclone Barrage": (boss) => {
+    activateShield(boss, 80);
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * TAU;
+      spawnHazard("vortex", boss.x + Math.cos(a) * 200, boss.y + Math.sin(a) * 200, 80, 480);
+    }
+  },
+  "Vacuum Wave": (boss) => {
+    activateShield(boss, 100);
     const b = aim(boss);
-    fan(boss.x, boss.y, b, 30, 0.1, 1, "boss", 2);
+    for (let i = 0; i < 7; i++) fireAngle(boss.x, boss.y, b + (i - 3) * 0.15, 1);
   },
-  "Razor Wind": (boss) => {
-    for(let i=0; i<50; i++) {
-        fireAngle(boss.x, boss.y, Math.random() * TAU, 1, "boss", 2);
-    }
+  "HURRICANE": (boss) => {
+    boss.ultimatePhase = true;
+    state.windForce = { x: 0.2, y: 0, timer: 600 };
+    state.screenShake.timer = 600;
+    state.screenShake.intensity = 3;
+    state.screenShake.type = 'wind';
+    spawnSafeZone(400, 300, 150, 600, { vx: 3, vy: 0 });
   },
-  "CATACLYSMIC VORTEX": (boss) => {
-    state.screenShake.timer = 50;
-    state.screenShake.intensity = 10;
-    for (let i = 0; i < 150; i++) {
-        const a = (i / 150) * TAU;
-        spawnBullet(boss.x, boss.y, boss.x + Math.cos(a), boss.y + Math.sin(a), false, 1, "boss", 3);
-    }
+
+  // --- THUNDER ---
+  "Tesla Field": (boss) => {
+    activateShield(boss, 120);
+    spawnBeam(boss.x, boss.y, state.player.x, state.player.y, 60, 40);
+  },
+  "Chain Lightning": (boss) => {
+    activateShield(boss, 100);
+    const b = aim(boss);
+    for (let i = 0; i < 3; i++) spawnBeam(boss.x, boss.y, boss.x + Math.cos(b + (i - 1) * 0.4) * 1000, boss.y + Math.sin(b + (i - 1) * 0.4) * 1000, 45, 30);
+  },
+  "HEAVEN'S WRATH": (boss) => {
+    boss.ultimatePhase = true;
+    state.screenShake.timer = 600;
+    state.screenShake.intensity = 20;
+    state.screenShake.type = 'thunder';
+    state.globalHazard = { type: "electric", active: true, timer: 600, damage: 1.5 };
+    spawnSafeZone(Math.random() * 800, Math.random() * 600, 100, 600, { vx: 2, vy: 2 });
+  }
+};
+
+export const BOSS_TYPES = {
+  "fire": {
+    name: "Hỏa Vương",
+    hp: 600, maxHp: 600, speed: 2, color: "#ff4400", originalColor: "#ff4400", elementColor: "#ffaa00", icon: "🔥",
+    phases: [
+      { attackModes: [0, 1, 2], special: "Inferno Pulse", speedMult: 1.0 },
+      { attackModes: [3, 4], special: "Meteor Strike", speedMult: 1.3 },
+      { ultimate: "SUPERNOVA", speedMult: 1.6 }
+    ]
+  },
+  "earth": {
+    name: "Địa Chấn Vương",
+    hp: 800, maxHp: 800, speed: 1.2, color: "#8b4513", originalColor: "#8b4513", elementColor: "#d2b48c", icon: "⛰️",
+    phases: [
+      { attackModes: [15, 16], special: "Seismic Rift", speedMult: 1.0 },
+      { attackModes: [17, 18], special: "Rock Rain", speedMult: 1.3 },
+      { ultimate: "EARTHQUAKE", speedMult: 1.5 }
+    ]
+  },
+  "ice": {
+    name: "Băng Hậu",
+    hp: 500, maxHp: 500, speed: 1.8, color: "#00ffff", originalColor: "#00ffff", elementColor: "#aaffff", icon: "❄️",
+    phases: [
+      { attackModes: [5, 6], special: "Frost Nova", speedMult: 1.0 },
+      { attackModes: [7, 8], special: "Icicle Rain", speedMult: 1.4 },
+      { ultimate: "GLACIAL AGE", speedMult: 1.6 }
+    ]
+  },
+  "wind": {
+    name: "Phong Thần",
+    hp: 450, maxHp: 450, speed: 3.2, color: "#00ffcc", originalColor: "#00ffcc", elementColor: "#ccfff5", icon: "🌪️",
+    phases: [
+      { attackModes: [20, 21], special: "Cyclone Barrage", speedMult: 1.0 },
+      { attackModes: [22, 23], special: "Vacuum Wave", speedMult: 1.5 },
+      { ultimate: "HURRICANE", speedMult: 2.0 }
+    ]
+  },
+  "thunder": {
+    name: "Lôi Thần",
+    hp: 550, maxHp: 550, speed: 2.8, color: "#ffff00", originalColor: "#ffff00", elementColor: "#ffffaa", icon: "⚡",
+    phases: [
+      { attackModes: [10, 11], special: "Tesla Field", speedMult: 1.0 },
+      { attackModes: [12, 13], special: "Chain Lightning", speedMult: 1.5 },
+      { ultimate: "HEAVEN'S WRATH", speedMult: 1.8 }
+    ]
   }
 };
 
 // =======================
-// BOSSES
+// CORE ENTITY LOGIC
 // =======================
-export const BOSS_TYPES = {
-  fireBoss: {
-    name: "Fire Lord",
-    hp: 400,
-    speed: 2,
-    color: "#ff4500",
-    shape: "circle",
-    icon: "🔥",
-    phaseCount: 3,
-    phases: [
-      { attackModes: [0, 1, 2], special: "Inferno Ring", speedMult: 1.0 },
-      { attackModes: [3, 4, 28], special: "Meteor Rain", speedMult: 1.3 },
-      { attackModes: [28, 27, 26], ultimate: "SUPERNOVA", speedMult: 1.6, rageFireRate: 0.7 },
-    ],
-    phaseColors: [
-      { start: "#ff4500", end: "#ff0000" },
-      { start: "#ff9900", end: "#ff2200" },
-      { start: "#ff0000", end: "#ffff00" },
-    ],
-  },
-  iceBoss: {
-    name: "Ice Queen",
-    hp: 350,
-    speed: 1.5,
-    color: "#00ffff",
-    shape: "hexagon",
-    icon: "❄️",
-    phaseCount: 2,
-    phases: [
-      { attackModes: [5, 6, 7], special: "Frost Nova", speedMult: 1.0 },
-      { attackModes: [8, 9, 26], ultimate: "ABSOLUTE ZERO", speedMult: 1.4, rageFireRate: 0.75 },
-    ],
-    phaseColors: [
-      { start: "#00ffff", end: "#0099ff" },
-      { start: "#99ffff", end: "#33ccff" },
-    ],
-  },
-  thunderBoss: {
-    name: "Thunder King",
-    hp: 450,
-    speed: 2.5,
-    color: "#ffff00",
-    shape: "triangle",
-    icon: "⚡",
-    phaseCount: 3,
-    phases: [
-      { attackModes: [10, 11, 12], special: "Tesla Coil", speedMult: 1.0 },
-      { attackModes: [13, 14, 29], special: "Volt Beam", speedMult: 1.4 },
-      { attackModes: [25, 26, 28], ultimate: "GOD'S JUDGMENT", speedMult: 1.8, rageFireRate: 0.6 },
-    ],
-    phaseColors: [
-      { start: "#ffff00", end: "#ffcc00" },
-      { start: "#ffcc33", end: "#ffaa00" },
-      { start: "#ffffff", end: "#ffff00" },
-    ],
-  },
-  earthBoss: {
-    name: "Earth Titan",
-    hp: 550,
-    speed: 1,
-    color: "#8b4513",
-    shape: "square",
-    icon: "🪨",
-    phaseCount: 2,
-    phases: [
-      { attackModes: [15, 16, 17], special: "Shockwave", speedMult: 1.0 },
-      { attackModes: [18, 19, 27], ultimate: "THE GREAT QUAKE", speedMult: 1.5, rageFireRate: 0.7 },
-    ],
-    phaseColors: [
-      { start: "#8b4513", end: "#5a3310" },
-      { start: "#a0522d", end: "#6b4226" },
-    ],
-  },
-  windBoss: {
-    name: "Wind Spirit",
-    hp: 380,
-    speed: 3,
-    color: "#00ffcc",
-    shape: "star",
-    icon: "🌪️",
-    phaseCount: 3,
-    phases: [
-      { attackModes: [20, 21, 22], special: "Gust Force", speedMult: 1.0 },
-      { attackModes: [23, 24, 29], special: "Razor Wind", speedMult: 1.5 },
-      { attackModes: [25, 26, 28], ultimate: "CATACLYSMIC VORTEX", speedMult: 2.0, rageFireRate: 0.5 },
-    ],
-    phaseColors: [
-      { start: "#00ffcc", end: "#00cc99" },
-      { start: "#33ffcc", end: "#00ffaa" },
-      { start: "#00ffff", end: "#ffffff" },
-    ],
-  },
-};
 
-// =======================
-// PLAYER
-// =======================
 export function getInitialPlayerState() {
   return {
-    x: 400,
-    y: 300,
-    radius: 12,
-    speed: 4.5,
-    color: "#00ffcc",
-    hp: 3,
-    maxHp: 3,
-    shield: 0,
-    maxShield: 0,
-    shieldRegenTimer: 0,
-    coins: 0,
-    gracePeriod: 120,
-    fireRate: 20,
-    cooldown: 0,
-    multiShot: 1,
-    bounces: 0,
-    dashTimeLeft: 0,
-    dashCooldownTimer: 0,
-    dashMaxCooldown: 90,
-    dashDx: 0,
-    dashDy: 0,
-    experience: 0,
-    experienceToLevel: 100,
-    buffs: { multiShot: 0, bounces: 0 },
+    x: 400, y: 300, radius: 12, speed: 4.5, color: "#00ffcc", hp: 10, maxHp: 10, coins: 0,
+    dashTimeLeft: 0, dashCooldownTimer: 0, dashMaxCooldown: 90, dashDx: 0, dashDy: 0,
+    isInvincible: false, experience: 0, experienceToLevel: 100, multiShot: 1, bounces: 0,
+    fireRate: 8, cooldown: 0 // RESTORED
   };
 }
+
+export function spawnBullet(sx, sy, tx, ty, isPlayer, style = 0, source = "enemy", damage = 1) {
+  const angle = Math.atan2(ty - sy, tx - sx);
+  const speed = isPlayer ? 10 : 4.5;
+  state.bullets.push({
+    x: sx, y: sy, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+    isPlayer, radius: isPlayer ? 4 : 8, life: 240, style, damage
+  });
+}
+
+export function createBoss(type) {
+  const cfg = BOSS_TYPES[type];
+  if (!cfg) return null;
+  return {
+    ...cfg,
+    x: 400, y: 150, radius: 45, attackTimer: 0, moveTimer: 0, moveTargetX: 400, moveTargetY: 150,
+    shield: 0, maxShield: 0, shieldActive: false, stunTimer: 0, ultimatePhase: false,
+    bossType: type, phaseCount: 3
+  };
+}
+
+export function updateBoss(boss) {
+  if (boss.stunTimer > 0) return;
+
+  boss.attackTimer++;
+  boss.moveTimer++;
+
+  // Movement
+  if (boss.moveTimer % 120 === 0) {
+    boss.moveTargetX = 100 + Math.random() * 600;
+    boss.moveTargetY = 100 + Math.random() * 200;
+  }
+  const phaseIdx = getBossPhase(boss);
+  const speed = boss.speed * (boss.phases[phaseIdx]?.speedMult || 1.0);
+  boss.x += (boss.moveTargetX - boss.x) * 0.02 * speed;
+  boss.y += (boss.moveTargetY - boss.y) * 0.02 * speed;
+
+  // Skill Logic
+  if (state.bossSpecial.timer > 0) {
+    state.bossSpecial.timer--;
+    if (state.bossSpecial.timer === 0) {
+      if (SPECIAL_SKILLS[state.bossSpecial.name]) SPECIAL_SKILLS[state.bossSpecial.name](boss);
+      state.bossSpecial.name = "";
+    }
+    return;
+  }
+
+  // Check for next skill
+  if (state.frameCount % 240 === 0) {
+    const phase = boss.phases[phaseIdx];
+    let nextSkill = "";
+    if (phase.ultimate && Math.random() < 0.4) nextSkill = phase.ultimate;
+    else if (phase.special) nextSkill = phase.special;
+
+    if (nextSkill) {
+      const isUlt = nextSkill === phase.ultimate;
+      state.bossSpecial = {
+        name: nextSkill,
+        timer: isUlt ? 180 : 90,
+        duration: isUlt ? 180 : 90,
+        type: isUlt ? "ULTIMATE" : "SPECIAL",
+        color: boss.color
+      };
+    }
+  }
+
+  // Attacks
+  if (boss.attackTimer % 60 === 0) {
+    const modes = boss.phases[phaseIdx].attackModes || [0];
+    const mode = modes[Math.floor(Math.random() * modes.length)];
+    if (ATTACK_MODES[mode]) ATTACK_MODES[mode](boss);
+  }
+}
+
+function getBossPhase(boss) {
+  const r = boss.hp / boss.maxHp;
+  if (r > 0.6) return 0;
+  if (r > 0.3) return 1;
+  return 2;
+}
+
+export const ATTACK_MODES = {
+  0: (b) => ring(b.x, b.y, 14, state.frameCount * 0.05, 1),
+  1: (b) => {
+    // FLAMETHROWER: Dense fan with high variability
+    const a = aim(b);
+    for (let i = 0; i < 20; i++) {
+      const va = a + (Math.random() - 0.5) * 0.6; // Slightly narrower spread
+      const vs = 4 + Math.random() * 10;
+      state.bullets.push({
+        x: b.x, y: b.y, vx: Math.cos(va) * vs, vy: Math.sin(va) * vs,
+        isPlayer: false,
+        radius: 4 + Math.random() * 10, // Varied sizes
+        life: 40 + Math.random() * 30, // Shorter life for dense "stream"
+        style: 1, damage: 1
+      });
+    }
+  },
+  2: (b) => { for (let i = 0; i < 8; i++) fireAngle(b.x, b.y, Math.random() * TAU, 1); },
+  3: (b) => ring(b.x, b.y, 8, -state.frameCount * 0.1, 1),
+  4: (b) => fan(b.x, b.y, aim(b), 3, 0.4, 1),
+  5: (b) => ring(b.x, b.y, 10, state.frameCount * 0.02, 2),
+  6: (b) => fan(b.x, b.y, aim(b), 7, 0.1, 2),
+  7: (b) => ring(b.x, b.y, 15, -state.frameCount * 0.05, 2),
+  8: (b) => fan(b.x, b.y, aim(b), 5, 0.3, 2),
+  10: (b) => ring(b.x, b.y, 12, 0, 3),
+  11: (b) => fan(b.x, b.y, aim(b), 3, 0.5, 3),
+  12: (b) => { for (let i = 0; i < 10; i++) fireAngle(b.x, b.y, Math.random() * TAU, 3); },
+  13: (b) => ring(b.x, b.y, 20, state.frameCount * 0.1, 3),
+  15: (b) => ring(b.x, b.y, 8, 0, 0),
+  16: (b) => fan(b.x, b.y, aim(b), 11, 0.1, 0),
+  17: (b) => ring(b.x, b.y, 12, state.frameCount * 0.04, 0),
+  18: (b) => fan(b.x, b.y, aim(b), 7, 0.2, 0),
+  20: (b) => ring(b.x, b.y, 10, state.frameCount * 0.08, 4), // Style 4: Wind
+  21: (b) => fan(b.x, b.y, aim(b), 15, 0.05, 4),
+  22: (b) => ring(b.x, b.y, 18, -state.frameCount * 0.05, 4),
+  23: (b) => fan(b.x, b.y, aim(b), 9, 0.15, 4),
+};
 
 // =======================
 // DUMMY (FIX LAG)
@@ -376,187 +449,19 @@ export function getInitialPlayerState() {
 export function generateDummy(targetFrames = 600) {
   targetFrames = Math.min(targetFrames, 5000);
   let dummy = [];
-  let speedMult =
-    state.currentLevel <= 2
-      ? 0.5
-      : Math.min(1.0, 0.5 + (state.currentLevel - 2) * 0.1);
+  let speedMult = state.currentLevel <= 2 ? 0.5 : Math.min(1.0, 0.5 + (state.currentLevel - 2) * 0.1);
 
   for (let i = 0; i < targetFrames; i++) {
     let x = 400 + Math.cos(i * 0.02 * speedMult) * 250;
     let y = 300 + Math.sin(i * 0.03 * speedMult) * 200;
-    dummy.push({ x: Math.round(x), y: Math.round(y) });
+    dummy.push([Math.round(x), Math.round(y)]);
   }
   return dummy;
 }
 
 // =======================
-// BULLET
+// GHOST SUMMONING
 // =======================
-export function spawnBullet(sx, sy, tx, ty, isPlayer, style = 0, source = "enemy", damage = 1) {
-  let angle = Math.atan2(ty - sy, tx - sx);
-  let speed = isPlayer
-    ? 10
-    : state.isBossLevel
-      ? 4.5
-      : 3.5 + state.currentLevel * 0.2;
-
-  let isGhostShot = source === "ghost";
-
-  let baseMulti = isPlayer || isGhostShot ? state.player.multiShot : 1;
-  let baseBounce = isPlayer || isGhostShot ? Math.max(0, state.player.bounces || 0) : 0;
-
-  if (isPlayer && state.player.buffs) {
-    baseMulti += state.player.buffs.multiShot;
-    baseBounce += state.player.buffs.bounces;
-  }
-
-  let spread = 0.1 + baseMulti * 0.02;
-  let startAngle = angle - (spread * (baseMulti - 1)) / 2;
-
-  for (let i = 0; i < baseMulti; i++) {
-    let a = startAngle + i * spread;
-    state.bullets.push({
-      x: sx,
-      y: sy,
-      vx: Math.cos(a) * speed,
-      vy: Math.sin(a) * speed,
-      isPlayer,
-      radius: state.isBossLevel && !isPlayer ? 8 : 4,
-      life: 240,
-      bounces: baseBounce,
-      style,
-      damage
-    });
-  }
-}
-
-// =======================
-// BOSS ATTACK (SYSTEM OVERHAUL)
-// =======================
-export function spawnBossAttack() {
-  const boss = state.boss;
-  if (!boss) return;
-
-  boss.attackTimer++;
-  if (state.bossSpecialCD > 0) state.bossSpecialCD--;
-
-  // --- Boss Movement ---
-  boss.moveTimer++;
-  if (boss.moveTimer % 120 === 0) {
-    const padding = 80;
-    boss.moveTargetX = padding + Math.random() * (800 - padding * 2);
-    boss.moveTargetY = padding + Math.random() * (300 - padding);
-  }
-  const currentPhaseIdx = getBossPhase(boss);
-  const phaseSpeedMult = boss.phases[currentPhaseIdx]?.speedMult || 1.0;
-  boss.x += (boss.moveTargetX - boss.x) * (boss.speed * phaseSpeedMult * 0.02);
-  boss.y += (boss.moveTargetY - boss.y) * (boss.speed * phaseSpeedMult * 0.02);
-
-  // --- Skill System Logic ---
-  if (state.bossSpecial.timer > 0) {
-    state.bossSpecial.timer--;
-    if (state.bossSpecial.timer === 0) {
-      // Execute the prepared skill
-      if (SPECIAL_SKILLS[state.bossSpecial.name]) {
-        SPECIAL_SKILLS[state.bossSpecial.name](boss);
-      }
-    }
-    return; // Don't perform other attacks while charging
-  }
-
-  // Check for Special/Ultimate Skills
-  if (state.bossSpecialCD <= 0) {
-    const phase = boss.phases[currentPhaseIdx];
-    let skillName = "";
-    let skillType = "SPECIAL";
-    let duration = 90; // 1.5s
-
-    // Pool skills from current and previous phases
-    let availableSpecials = [];
-    for(let i=0; i <= currentPhaseIdx; i++) {
-        if (boss.phases[i].special) availableSpecials.push(boss.phases[i].special);
-    }
-
-    if (phase.ultimate && Math.random() < 0.3) {
-      skillName = phase.ultimate;
-      skillType = "ULTIMATE";
-      duration = 180; // 3s
-    } else if (availableSpecials.length > 0) {
-      skillName = availableSpecials[Math.floor(Math.random() * availableSpecials.length)];
-    }
-
-    if (skillName) {
-      state.bossSpecial = {
-        name: skillName,
-        type: skillType,
-        timer: duration,
-        duration: duration,
-        color: boss.color
-      };
-      state.bossSpecialCD = (skillType === "ULTIMATE" ? 25 : 10) * FPS;
-      return;
-    }
-  }
-
-  // Regular Attack
-  const phaseModes = boss.phases[currentPhaseIdx].attackModes;
-  const rageRate = boss.phases[currentPhaseIdx].rageFireRate || 1.0;
-  const attackInterval = Math.max(25, Math.floor(50 * rageRate));
-
-  if (boss.attackTimer % attackInterval === 0) {
-    const mode = phaseModes[Math.floor(Math.random() * phaseModes.length)];
-    spawnMode(mode);
-  }
-}
-
-function getBossPhase(boss) {
-  const ratio = boss.hp / boss.maxHp;
-  if (boss.phaseCount === 3) {
-    if (ratio > 0.66) return 0;
-    if (ratio > 0.33) return 1;
-    return 2;
-  }
-  return ratio > 0.5 ? 0 : 1;
-}
-
-// =======================
-// CREATE BOSS
-// =======================
-export function createBoss(type) {
-  const cfg = BOSS_TYPES[type];
-
-  return {
-    x: 400,
-    y: 150,
-    radius: 40,
-    hp: cfg.hp,
-    maxHp: cfg.hp,
-    speed: cfg.speed,
-    attackTimer: 0,
-    summonCooldown: 5 * FPS,
-    ghostsActive: false,
-    color: cfg.color,
-    shape: cfg.shape,
-    name: cfg.name,
-    bossType: type,
-    phaseColors: cfg.phaseColors,
-    phaseCount: cfg.phaseCount || 2,
-    moveTimer: 0,
-    moveTargetX: 400,
-    moveTargetY: 150,
-    phases: cfg.phases.map(p => ({ ...p })),
-  };
-}
-
-// =======================
-// SPAWN MODE
-// =======================
-function spawnMode(mode) {
-  if (ATTACK_MODES[mode]) {
-    ATTACK_MODES[mode](state.boss);
-  }
-}
-
 export function bossSummonGhosts() {
   state.ghosts = [];
   let ghostLimit = Math.min(state.currentLevel, 10);
@@ -574,7 +479,8 @@ export function bossSummonGhosts() {
     state.ghosts.push({
       record: runData,
       speedRate: currentSpeedRate,
-      timer: 0,
+      burnTimer: 0,
+      lastHazardDamageTime: 0,
       lastIdx: -1,
       x: state.boss.x,
       y: state.boss.y,
@@ -585,4 +491,3 @@ export function bossSummonGhosts() {
     });
   });
 }
-

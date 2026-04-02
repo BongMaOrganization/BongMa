@@ -19,6 +19,9 @@ export const UI = {
   bossName: document.getElementById("boss-name"),
   xpBar: document.getElementById("xp-bar-fill"),
   xpText: document.getElementById("xp-text"),
+  fragmentToast: document.getElementById("fragment-toast"),
+  fragmentToastIcon: document.getElementById("fragment-toast-icon"),
+  fragmentToastText: document.getElementById("fragment-toast-text"),
 };
 
 // ======================
