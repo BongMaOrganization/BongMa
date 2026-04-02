@@ -365,13 +365,17 @@ export function update(ctx, canvas, changeStateFn) {
   // --- Boss Shield/Stance Logic ---
   if (state.boss && state.boss.shieldActive && state.boss.shield <= 0) {
     state.boss.shieldActive = false;
-    state.boss.stunTimer = 180; // 3 seconds stun
-    state.boss.specialTimer = 0; // Cancel charging skill
+    state.boss.stunTimer = 180; // Boss bị choáng 3 giây
+
+    // SỬA LỖI ĐÁNH VẦN Ở ĐÂY: Hủy gồng chiêu và xóa UI ngay lập tức
+    state.bossSpecial.timer = 0;
+    state.bossSpecial.name = "";
+
     state.screenShake.timer = 30;
     state.screenShake.intensity = 15;
-    state.screenShake.type = 'thunder'; // Impact snap
+    state.screenShake.type = 'thunder'; // Hiệu ứng vỡ giáp
 
-    // Cleanup hazards/beams on break
+    // Dọn dẹp các mìn/bẫy đang cast dở
     state.bossBeams = [];
     state.groundWarnings = [];
     state.safeZones = [];
@@ -1490,14 +1494,27 @@ export function update(ctx, canvas, changeStateFn) {
   if (state.groundWarnings) {
     state.groundWarnings = state.groundWarnings.filter(w => {
       w.timer--;
-      // Standing in indicator zone causes energy suppression (slow)
-      const d = Math.abs(player.x - w.x);
-      if (d < w.radius) {
-        state.playerStatus.slowTimer = Math.max(state.playerStatus.slowTimer, 2);
-        // Subtle shake build-up
-        state.screenShake.timer = Math.max(state.screenShake.timer, 1);
-        state.screenShake.intensity = Math.max(state.screenShake.intensity, 2);
+      const distToCenter = dist(player.x, player.y, w.x, w.y);
+
+      // Geyser sủi bọt gây bỏng nếu đứng trên nó
+      if (w.type === "geyser" || w.type === "laser") {
+        const inVerticalBeam = Math.abs(player.x - w.x) < w.radius && player.y <= w.y;
+        if (distToCenter < w.radius || inVerticalBeam) {
+          state.playerStatus.burnTimer = Math.max(state.playerStatus.burnTimer, 15);
+          if (state.frameCount % 30 === 0) playerTakeDamage(ctx, canvas, changeStateFn, 0.5);
+        }
       }
+      // Bóng thiên thạch chỉ làm chậm (khóa mục tiêu), KHÔNG gây bỏng trước khi đá rơi
+      else if (w.type === "meteor") {
+        if (distToCenter < w.radius) {
+          state.playerStatus.slowTimer = Math.max(state.playerStatus.slowTimer, 2);
+        }
+      }
+      // Gai đất (spike)
+      else if (w.type === "spike") {
+        if (distToCenter < w.radius) state.playerStatus.slowTimer = Math.max(state.playerStatus.slowTimer, 2);
+      }
+
       return w.timer > 0;
     });
   }

@@ -8,16 +8,6 @@ import { dist } from "./utils.js";
 const TAU = Math.PI * 2;
 
 export function activateShield(boss, amount) {
-  boss.shield = amount;
-  boss.maxShield = amount;
-  boss.shieldActive = true;
-  state.bossSpecial = {
-    name: "GỒNG CHIÊU (SHIELD)",
-    timer: 300,
-    duration: 300,
-    type: "SPECIAL",
-    color: "#00ffff"
-  };
 }
 
 export function spawnMeteor(tx, ty, destX, destY) {
@@ -26,11 +16,11 @@ export function spawnMeteor(tx, ty, destX, destY) {
     y: ty,
     destX: destX,
     destY: destY,
-    vx: (destX - tx) / 60,
-    vy: (destY - ty) / 60,
-    radius: 30,
+    vx: 0, // Rơi thẳng đứng
+    vy: 25, // Tốc độ rơi cực nhanh
+    radius: 35,
     isMeteor: true,
-    life: 60,
+    life: 120,
     isPlayer: false,
     style: 1
   });
@@ -100,8 +90,8 @@ function aim(boss, extraAngle = 0) {
   return Math.atan2(state.player.y - boss.y, state.player.x - boss.x) + extraAngle;
 }
 
-function spawnWarning(x, y, radius, duration) {
-  state.groundWarnings.push({ x, y, radius, timer: duration });
+function spawnWarning(x, y, radius, duration, type = "laser") {
+  state.groundWarnings.push({ x, y, radius, timer: duration, maxTimer: duration, type });
 }
 
 // =======================
@@ -119,9 +109,10 @@ export const SPECIAL_SKILLS = {
         action: () => {
           const tx = state.player.x + (Math.random() - 0.5) * 150;
           const ty = state.player.y + (Math.random() - 0.5) * 150;
-          spawnWarning(tx, ty, 70, 60);
+          // THAY ĐỔI: Dùng cảnh báo "meteor" (bóng đen)
+          spawnWarning(tx, ty, 70, 90, "laser");
           state.delayedTasks.push({
-            delay: 60,
+            delay: 90,
             action: () => spawnMeteor(tx, -100, tx, ty)
           });
         }
@@ -129,17 +120,24 @@ export const SPECIAL_SKILLS = {
     }
   },
   "Inferno Pulse": (boss) => {
-    // SỬA ĐỔI: Biến thành các Sóng Lửa (Vòng rỗng) bung ra toàn bản đồ
-    activateShield(boss, 100);
-    for (let i = 0; i < 3; i++) {
+    activateShield(boss, 120);
+    for (let i = 0; i < 8; i++) {
       state.delayedTasks.push({
-        delay: i * 45,
+        delay: i * 15,
         action: () => {
-          state.screenShake.timer = 15;
-          state.screenShake.intensity = 8;
-          state.screenShake.type = 'earth';
-          // Tạo một Fire Ring lan từ bán kính 10 ra 1000 px trong 120 frames
-          spawnHazard("fire_ring", boss.x, boss.y, 10, 120, 1.0, "boss", 1000);
+          const px = (i % 2 === 0) ? state.player.x + (Math.random() - 0.5) * 200 : boss.x + (Math.random() - 0.5) * 300;
+          const py = (i % 2 === 0) ? state.player.y + (Math.random() - 0.5) * 200 : boss.y + (Math.random() - 0.5) * 300;
+          // THAY ĐỔI: Dùng cảnh báo "geyser" (sủi bọt)
+          spawnWarning(px, py, 65, 60, "geyser");
+          state.delayedTasks.push({
+            delay: 60,
+            action: () => {
+              spawnHazard("fire", px, py, 10, 240, 0.5, "boss", 75);
+              state.screenShake.timer = 8;
+              state.screenShake.intensity = 6;
+              state.screenShake.type = 'earth';
+            }
+          });
         }
       });
     }
@@ -150,9 +148,10 @@ export const SPECIAL_SKILLS = {
     state.screenShake.type = 'wind';
     boss.ultimatePhase = true;
     state.globalHazard = { type: "fire", active: true, timer: 600, damage: 1.0 };
-    // Moving and Shrinking safe zones
-    spawnSafeZone(100, 100, 150, 600, { vx: 2, vy: 1, shrinking: true });
-    spawnSafeZone(700, 500, 150, 600, { vx: -2, vy: -1, shrinking: true });
+
+    // ĐÃ NERF: Vùng an toàn to hơn (250), đi chậm hơn và KHÔNG bị thu nhỏ nữa
+    spawnSafeZone(200, 200, 250, 600, { vx: 1.5, vy: 1, shrinking: false });
+    spawnSafeZone(600, 400, 250, 600, { vx: -1.5, vy: -1, shrinking: false });
   },
 
   // --- EARTH ---
@@ -173,18 +172,34 @@ export const SPECIAL_SKILLS = {
       });
     }
   },
-  "Rock Rain": (boss) => {
+  "Earth Spikes": (boss) => {
     activateShield(boss, 150);
-    for (let i = 0; i < 20; i++) {
-      const rx = Math.random() * 800, ry = Math.random() * 600;
-      spawnWarning(rx, ry, 50, 40 + i * 3);
+    for (let i = 0; i < 15; i++) {
       state.delayedTasks.push({
-        delay: 40 + i * 3,
+        delay: i * 12,
         action: () => {
-          spawnHazard("rock", rx, ry, 50, 300);
-          state.screenShake.timer = 10;
-          state.screenShake.intensity = 15;
-          state.screenShake.type = 'thunder';
+          // Đuổi theo vị trí người chơi
+          const px = state.player.x + (Math.random() - 0.5) * 40;
+          const py = state.player.y + (Math.random() - 0.5) * 40;
+
+          // Dùng loại cảnh báo "spike" (mặt đất nứt nẻ)
+          spawnWarning(px, py, 45, 50, "spike");
+
+          state.delayedTasks.push({
+            delay: 50,
+            action: () => {
+              // Trồi đá lên gây choáng nhẹ và thành vật cản
+              spawnHazard("rock", px, py, 45, 240);
+              state.screenShake.timer = 5;
+              state.screenShake.intensity = 8;
+              state.screenShake.type = 'earth';
+
+              // Sát thương trồi lên nếu player không né
+              if (dist(state.player.x, state.player.y, px, py) < 45 + state.player.radius) {
+                state.player.hp -= 1;
+              }
+            }
+          });
         }
       });
     }
@@ -279,7 +294,7 @@ export const BOSS_TYPES = {
     hp: 800, maxHp: 800, speed: 1.2, color: "#8b4513", originalColor: "#8b4513", elementColor: "#d2b48c", icon: "⛰️",
     phases: [
       { attackModes: [15, 16], special: "Seismic Rift", speedMult: 1.0 },
-      { attackModes: [17, 18], special: "Rock Rain", speedMult: 1.3 },
+      { attackModes: [17, 18], special: "Earth Spikes", speedMult: 1.3 },
       { ultimate: "EARTHQUAKE", speedMult: 1.5 }
     ]
   },
@@ -341,7 +356,8 @@ export function createBoss(type) {
     ...cfg,
     x: 400, y: 150, radius: 45, attackTimer: 0, moveTimer: 0, moveTargetX: 400, moveTargetY: 150,
     shield: 0, maxShield: 0, shieldActive: false, stunTimer: 0, ultimatePhase: false,
-    bossType: type, phaseCount: 3
+    bossType: type, phaseCount: 3,
+    skillCooldown: 180 // THÊM BIẾN NÀY: Chờ 3s trước khi xài chiêu đầu tiên
   };
 }
 
@@ -361,18 +377,33 @@ export function updateBoss(boss) {
   boss.x += (boss.moveTargetX - boss.x) * 0.02 * speed;
   boss.y += (boss.moveTargetY - boss.y) * 0.02 * speed;
 
-  // Skill Logic
+  // ==========================================
+  // LOGIC 1: XỬ LÝ KHI ĐANG GỒNG CHIÊU
+  // ==========================================
   if (state.bossSpecial.timer > 0) {
     state.bossSpecial.timer--;
+
+    // Khi hết thời gian gồng (thanh UI chạy hết) -> TUNG CHIÊU
     if (state.bossSpecial.timer === 0) {
+      boss.shieldActive = false; // TẮT KHIÊN ĐỂ NGƯỜI CHƠI BẮN MÁU THẬT LÚC NÉ CHIÊU
       if (SPECIAL_SKILLS[state.bossSpecial.name]) SPECIAL_SKILLS[state.bossSpecial.name](boss);
       state.bossSpecial.name = "";
+
+      // Set thời gian nghỉ (Cooldown) từ 5 - 7 giây trước khi được xài chiêu tiếp theo
+      boss.skillCooldown = 300 + Math.random() * 120;
     }
-    return;
+    return; // Đứng yên khi đang gồng
   }
 
-  // Check for next skill
-  if (state.frameCount % 240 === 0) {
+  // Đếm ngược thời gian hồi chiêu
+  if (boss.skillCooldown > 0) {
+    boss.skillCooldown--;
+  }
+
+  // ==========================================
+  // LOGIC 2: BẮT ĐẦU GỒNG CHIÊU MỚI
+  // ==========================================
+  if (boss.skillCooldown <= 0) {
     const phase = boss.phases[phaseIdx];
     let nextSkill = "";
     if (phase.ultimate && Math.random() < 0.4) nextSkill = phase.ultimate;
@@ -382,15 +413,22 @@ export function updateBoss(boss) {
       const isUlt = nextSkill === phase.ultimate;
       state.bossSpecial = {
         name: nextSkill,
-        timer: isUlt ? 180 : 90,
-        duration: isUlt ? 180 : 90,
+        timer: isUlt ? 180 : 120, // Thời gian gồng: 3s cho Ulti, 2s cho Đặc biệt
+        duration: isUlt ? 180 : 120,
         type: isUlt ? "ULTIMATE" : "SPECIAL",
         color: boss.color
       };
+
+      // BẬT KHIÊN NGAY LÚC BẮT ĐẦU GỒNG (SHIELD / STANCE)
+      boss.shield = isUlt ? 250 : 120; // Máu của khiên
+      boss.maxShield = boss.shield;
+      boss.shieldActive = true;
+
+      return;
     }
   }
 
-  // Attacks
+  // Normal Attacks (Chỉ bắn khi không gồng chiêu)
   if (boss.attackTimer % 60 === 0) {
     const modes = boss.phases[phaseIdx].attackModes || [0];
     const mode = modes[Math.floor(Math.random() * modes.length)];
@@ -406,23 +444,25 @@ function getBossPhase(boss) {
 }
 
 export const ATTACK_MODES = {
-  0: (b) => ring(b.x, b.y, 14, state.frameCount * 0.05, 1),
-  1: (b) => {
-    // FLAMETHROWER: Dense fan with high variability
+  0: (b) => {
     const a = aim(b);
-    for (let i = 0; i < 20; i++) {
-      const va = a + (Math.random() - 0.5) * 0.6; // Slightly narrower spread
-      const vs = 4 + Math.random() * 10;
+    for (let i = 0; i < 15; i++) {
+      const va = a + (Math.random() - 0.5) * 0.6; // Góc phun hình nón (cone)
+      const vs = 4 + Math.random() * 8;         // Tốc độ bay cuồn cuộn
       state.bullets.push({
-        x: b.x, y: b.y, vx: Math.cos(va) * vs, vy: Math.sin(va) * vs,
+        x: b.x, y: b.y,
+        vx: Math.cos(va) * vs, vy: Math.sin(va) * vs,
         isPlayer: false,
-        radius: 4 + Math.random() * 10, // Varied sizes
-        life: 40 + Math.random() * 30, // Shorter life for dense "stream"
+        radius: 8 + Math.random() * 15, // Cục lửa to nhỏ lộn xộn tạo cảm giác thật
+        life: 30 + Math.random() * 20,  // Tầm bay vừa phải (cháy ngắn)
         style: 1, damage: 1
       });
     }
   },
-  2: (b) => { for (let i = 0; i < 8; i++) fireAngle(b.x, b.y, Math.random() * TAU, 1); },
+  // Chiêu 1: CẦU LỬA TỐC ĐỘ CAO
+  1: (b) => fan(b.x, b.y, aim(b), 5, 0.2, 1),
+  // Chiêu 2: BÃO LỬA XOAY VÒNG
+  2: (b) => ring(b.x, b.y, 14, state.frameCount * 0.05, 1),
   3: (b) => ring(b.x, b.y, 8, -state.frameCount * 0.1, 1),
   4: (b) => fan(b.x, b.y, aim(b), 3, 0.4, 1),
   5: (b) => ring(b.x, b.y, 10, state.frameCount * 0.02, 2),

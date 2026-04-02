@@ -19,15 +19,18 @@ function preRenderFire() {
     const x = i * 100 + 50;
     const y = 50;
     const grad = fireCtx.createRadialGradient(x, y, 0, x, y, 50);
-    grad.addColorStop(0, "rgba(255, 255, 100, 0.8)");
-    grad.addColorStop(0.3, "rgba(255, 100, 0, 0.6)");
-    grad.addColorStop(1, "rgba(255, 0, 0, 0)");
+    // NÂNG CẤP MÀU LỬA LÕI TRẮNG, VIỀN CAM
+    grad.addColorStop(0, "rgba(255, 255, 255, 1)");
+    grad.addColorStop(0.2, "rgba(255, 255, 0, 0.9)");
+    grad.addColorStop(0.6, "rgba(255, 60, 0, 0.7)");
+    grad.addColorStop(1, "rgba(200, 0, 0, 0)");
     fireCtx.fillStyle = grad;
     fireCtx.beginPath();
     fireCtx.arc(x, y, 50, 0, Math.PI * 2);
     fireCtx.fill();
   }
 }
+
 preRenderFire();
 
 function getShakeOffset() {
@@ -125,16 +128,22 @@ export function draw(ctx, canvas) {
   state.hazards.forEach(h => {
     ctx.save();
     if (h.type === "fire") {
-      const spriteIdx = Math.floor(Date.now() / 100 + h.x) % 10;
-      const flicker = 0.9 + Math.random() * 0.2;
-      ctx.globalAlpha = 0.8;
-      ctx.drawImage(
-        fireCanvas,
-        spriteIdx * 100, 0, 100, 100,
-        h.x - h.radius * flicker, h.y - h.radius * flicker,
-        h.radius * 2 * flicker, h.radius * 2 * flicker
-      );
-      ctx.globalAlpha = 1.0;
+      // TẠO ĐỘ RỰC (BLOOM) NHƯ ĐÈN NEON BẰNG LIGHTER
+      ctx.globalCompositeOperation = "lighter";
+
+      const pulse = (Math.sin(state.frameCount * 0.2) + 1) * 0.5;
+      const grad = ctx.createRadialGradient(h.x, h.y, 0, h.x, h.y, h.radius);
+      grad.addColorStop(0, `rgba(255, 255, 100, ${0.8 + pulse * 0.2})`);
+      grad.addColorStop(0.5, "rgba(255, 60, 0, 0.6)");
+      grad.addColorStop(1, "rgba(255, 0, 0, 0)");
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(h.x, h.y, h.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // TRẢ LẠI TRẠNG THÁI VẼ BÌNH THƯỜNG
+      ctx.globalCompositeOperation = "source-over";
     } else if (h.type === "fire_ring") {
       // SỬA ĐỔI: Vẽ Sóng Lửa (Fire Ring) rỗng, đẹp mắt
       const lifeRatio = Math.max(0, h.life / h.maxLife);
@@ -1144,7 +1153,7 @@ export function draw(ctx, canvas) {
     // --- Meteor Styling ---
     if (b.isMeteor) {
       ctx.save();
-      // Smoke Particles
+      // 1. Khói và Lửa hạt
       if (state.frameCount % 2 === 0) {
         state.particles.push({
           x: b.x + (Math.random() - 0.5) * b.radius,
@@ -1154,7 +1163,18 @@ export function draw(ctx, canvas) {
         });
       }
 
-      // Rock Shape (Irregular Polygon)
+      // 2. Các mảnh đá vụn bay xung quanh
+      ctx.fillStyle = "#3a1c0d";
+      for (let j = 1; j <= 4; j++) {
+        let r = b.radius * 0.3;
+        let dx = Math.cos(state.frameCount * 0.2 * j) * (b.radius + 15); // Xoay quanh
+        let dy = -10 - j * 15; // Kéo dài ra phía sau
+        ctx.beginPath();
+        ctx.arc(b.x + dx, b.y + dy, r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 3. Đá chính (Khối đa giác)
       ctx.fillStyle = "#4a2c1d";
       ctx.beginPath();
       const sides = 7;
@@ -1168,7 +1188,7 @@ export function draw(ctx, canvas) {
       ctx.closePath();
       ctx.fill();
 
-      // Molten Glow
+      // Viền nham thạch
       ctx.strokeStyle = "#ff4400";
       ctx.lineWidth = 3;
       ctx.stroke();
@@ -1451,49 +1471,144 @@ export function draw(ctx, canvas) {
   // --- Ground Warnings (Energy Beams & Bloom) ---
   if (state.groundWarnings) {
     state.groundWarnings.forEach(w => {
-      const progress = 1 - (w.timer / (w.maxTimer || 60));
 
-      // 1. Vertical Indicator (2 Layers)
+      const progress = Math.max(0, 1 - (w.timer / (w.maxTimer || 60)));
       ctx.save();
-      // Layer 1: Dim background line
-      ctx.beginPath();
-      ctx.moveTo(w.x, 0);
-      ctx.lineTo(w.x, w.y);
-      ctx.strokeStyle = "rgba(100, 30, 0, 0.3)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
 
-      // Layer 2: Scrolling Dashed Neon Line
-      ctx.beginPath();
-      ctx.moveTo(w.x, 0);
-      ctx.lineTo(w.x, w.y);
-      ctx.setLineDash([5, 15]);
-      ctx.lineDashOffset = -state.frameCount * 15; // High speed downward
-      ctx.strokeStyle = "rgba(255, 100, 0, 0.8)";
-      ctx.lineWidth = 4;
-      ctx.shadowBlur = 15;
-      ctx.shadowColor = "orange";
-      ctx.stroke();
+      if (w.type === "meteor") {
+        // 1. Bóng đen to dần trên mặt đất
+        ctx.fillStyle = `rgba(15, 0, 0, ${progress * 0.6})`;
+        ctx.beginPath();
+        ctx.arc(w.x, w.y, w.radius * progress, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 2. Vòng xoay khóa mục tiêu (Target)
+        ctx.strokeStyle = `rgba(255, 50, 0, ${0.5 + progress * 0.5})`;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([15, 15]);
+        ctx.lineDashOffset = -state.frameCount * 5;
+        ctx.beginPath();
+        ctx.arc(w.x, w.y, w.radius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 3. Tâm chữ thập
+        ctx.strokeStyle = `rgba(255, 0, 0, ${0.8})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(w.x - 15, w.y); ctx.lineTo(w.x + 15, w.y);
+        ctx.moveTo(w.x, w.y - 15); ctx.lineTo(w.x, w.y + 15);
+        ctx.stroke();
+
+      } else if (w.type === "geyser") {
+        // Sủi bọt dung nham
+        ctx.beginPath();
+        ctx.arc(w.x, w.y, w.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 60, 0, ${0.1 + progress * 0.3})`;
+        ctx.fill();
+
+        // Vòng viền rung giật
+        ctx.strokeStyle = `rgba(255, 100, 0, 0.8)`;
+        ctx.lineWidth = 4 + Math.sin(state.frameCount * 0.5) * 3;
+        ctx.beginPath();
+        ctx.arc(w.x, w.y, w.radius * (0.4 + progress * 0.6), 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Hạt bọt khí bay lên
+        if (progress > 0.5 && state.frameCount % 3 === 0) {
+          state.particles.push({
+            x: w.x + (Math.random() - 0.5) * w.radius,
+            y: w.y + (Math.random() - 0.5) * w.radius,
+            vx: (Math.random() - 0.5) * 0.5, vy: -1 - Math.random(),
+            life: 20, color: "#ffaa00", size: 2 + Math.random() * 3
+          });
+        }
+      }
+
+      if (w.type === "spike") {
+        // ==========================================
+        // HIỆU ỨNG BOSS ĐẤT: MẶT ĐẤT RUNG CHUYỂN & NỨT
+        // ==========================================
+        const alpha = 0.2 + progress * 0.6;
+
+        // Vòng tròn rung động
+        ctx.beginPath();
+        ctx.arc(w.x + (Math.random() - 0.5) * 3, w.y + (Math.random() - 0.5) * 3, w.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(100, 50, 20, ${alpha * 0.3})`;
+        ctx.fill();
+        ctx.strokeStyle = `rgba(139, 69, 19, ${alpha})`;
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8, 8]);
+        ctx.stroke();
+
+        // Vẽ các vết nứt (Cracks)
+        ctx.setLineDash([]);
+        ctx.strokeStyle = `rgba(50, 20, 0, ${alpha})`;
+        ctx.lineWidth = 2;
+        for (let i = 0; i < 3; i++) {
+          let a = (i * Math.PI * 2 / 3) + progress;
+          ctx.beginPath();
+          ctx.moveTo(w.x, w.y);
+          ctx.lineTo(w.x + Math.cos(a) * w.radius * 0.8, w.y + Math.sin(a) * w.radius * 0.8);
+          ctx.stroke();
+        }
+
+        // Bụi bay lên khi sắp trồi đá
+        if (progress > 0.7 && state.frameCount % 2 === 0) {
+          state.particles.push({
+            x: w.x + (Math.random() - 0.5) * w.radius,
+            y: w.y + (Math.random() - 0.5) * w.radius,
+            vx: (Math.random() - 0.5), vy: -1 - Math.random(),
+            life: 20, color: "#8b4513", size: 2 + Math.random() * 3
+          });
+        }
+
+      } else {
+        // ==========================================
+        // HIỆU ỨNG BOSS LỬA: CỘT LASER TỪ TRÊN TRỜI
+        // ==========================================
+        ctx.fillStyle = `rgba(255, 0, 0, ${0.05 + progress * 0.15})`;
+        ctx.fillRect(w.x - w.radius, 0, w.radius * 2, w.y);
+
+        ctx.beginPath();
+        ctx.moveTo(w.x, 0);
+        ctx.lineTo(w.x, w.y);
+        ctx.strokeStyle = "rgba(255, 50, 0, 0.3)";
+        ctx.lineWidth = w.radius * 2;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(w.x, 0);
+        ctx.lineTo(w.x, w.y);
+        ctx.setLineDash([10, 20]);
+        ctx.lineDashOffset = -state.frameCount * 30;
+        ctx.strokeStyle = "rgba(255, 200, 0, 0.9)";
+        ctx.lineWidth = 6;
+        ctx.shadowBlur = 20;
+        ctx.shadowColor = "red";
+        ctx.stroke();
+
+        // SỬA LỖI CRASH Ở ĐÂY: Dùng Math.max để đảm bảo bán kính (bloomSize) không bao giờ bị âm
+        const bloomSize = Math.max(0.1, 40 + progress * 100);
+        const grad = ctx.createRadialGradient(w.x, w.y, 0, w.x, w.y, bloomSize);
+        grad.addColorStop(0, `rgba(255, 255, 255, ${0.5 * progress})`);
+        grad.addColorStop(0.3, `rgba(255, 50, 0, ${0.5 * progress})`);
+        grad.addColorStop(1, "rgba(255, 0, 0, 0)");
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(w.x, w.y, bloomSize, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(w.x, w.y, w.radius, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255, 0, 0, ${0.1 + progress * 0.4})`;
+        ctx.fill();
+        ctx.strokeStyle = `rgba(255, 50, 0, ${0.5 + progress * 0.5})`;
+        ctx.lineWidth = 4;
+        ctx.setLineDash([]);
+        ctx.stroke();
+      }
       ctx.restore();
-
-      // 2. Bloom Effect at source (Radial Gradient)
-      ctx.save();
-      const bloomSize = 40 + progress * 80;
-      const grad = ctx.createRadialGradient(w.x, 0, 0, w.x, 0, bloomSize);
-      grad.addColorStop(0, `rgba(255, 255, 255, ${0.4 * progress})`);
-      grad.addColorStop(0.4, `rgba(255, 150, 0, ${0.4 * progress})`);
-      grad.addColorStop(1, "rgba(255, 30, 0, 0)");
-      ctx.fillStyle = grad;
-      ctx.fillRect(w.x - 100, 0, 200, 200);
-
-      // 3. Ground Warning Circle
-      ctx.beginPath();
-      ctx.arc(w.x, w.y, w.radius, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(255, 68, 0, ${0.2 + progress * 0.8})`;
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      ctx.restore();
-
     });
   }
 

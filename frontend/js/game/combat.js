@@ -48,7 +48,7 @@ export function playerTakeDamage(ctx, canvas, changeStateFn, amount = 1) {
   } else {
     state.player.hp -= amount;
     playSound("damage");
-    
+
     // Rung màn hình khi bị sát thương lớn
     if (amount >= 2) {
       state.screenShake.timer = 15;
@@ -161,19 +161,19 @@ export function updateBullets(
       const py = player.y;
       const dx = beam.x2 - beam.x1;
       const dy = beam.y2 - beam.y1;
-      const l2 = dx*dx + dy*dy;
+      const l2 = dx * dx + dy * dy;
       if (l2 === 0) return;
-      
+
       let t = ((px - beam.x1) * dx + (py - beam.y1) * dy) / l2;
       t = Math.max(0, Math.min(1, t));
-      
+
       const closestX = beam.x1 + t * dx;
       const closestY = beam.y1 + t * dy;
       const d = dist(px, py, closestX, closestY);
-      
+
       if (d < player.radius + 15) { // 15 is beam width approx
-         playerTakeDamage(ctx, canvas, changeStateFn, 1);
-         state.playerStatus.stunTimer = 10;
+        playerTakeDamage(ctx, canvas, changeStateFn, 1);
+        state.playerStatus.stunTimer = 10;
       }
     }
   });
@@ -219,42 +219,39 @@ export function updateBullets(
 
       // --- Advanced Bullet Physics (Meteor & Vortex) ---
       if (b.isMeteor) {
-          const dxm = b.destX - b.x;
-          const dym = b.destY - b.y;
-          const dm = Math.sqrt(dxm*dxm + dym*dym);
-          
-          if (dm < 15) {
-              // --- IMPACT ---
-              const distToPlayer = dist(b.x, b.y, player.x, player.y);
-              // Proportional Shake formula: I = Imax / (1 + k*d)
-              const shakeIntensity = 20 / (1 + 0.005 * distToPlayer);
-              if (distToPlayer < 600) { // Clamp/Limit
-                  state.screenShake.timer = 15;
-                  state.screenShake.intensity = shakeIntensity;
-                  state.screenShake.type = 'earth';
-              }
-              
-              // Expanding Fire Pool (Target = 1.5x player width approx)
-              spawnHazard("fire", b.x, b.y, 10, 180, 0.5, "boss", player.radius * 3);
-              b.life = 0; // Destroy meteor
-          } else {
-              b.vx = 0; // Vertical falling (entities.js sets x == destX)
-              b.vy = 12; // High speed vertical
+        b.vx = 0;
+        b.vy = 18;
+
+        // NẾU CHẠM MẶT ĐẤT
+        if (b.y >= b.destY) {
+          const distToPlayer = dist(b.x, b.y, player.x, player.y);
+          if (distToPlayer < 600) {
+            state.screenShake.timer = 15;
+            state.screenShake.intensity = 25;
+            state.screenShake.type = 'earth';
           }
+
+          // TẠO HỐ DUNG NHAM KHỔNG LỒ (Bán kính 120, dame mạnh)
+          spawnHazard("fire", b.destX, b.destY, 120, 180, 1.0, "boss", 120);
+
+          // Xóa luôn viên đạn thiên thạch khỏi mảng
+          bullets.splice(i, 1);
+          continue;
+        }
       }
-      
+
       // Wind Vortex pulls Fire Bullets and Player Bullets
       if (b.isPlayer || b.style === 1) { // Player or Fire
-          state.hazards.forEach(h => {
-              if (h.type === "vortex") {
-                  const dxv = h.x - b.x, dyv = h.y - b.y;
-                  const dv = Math.sqrt(dxv*dxv + dyv*dyv);
-                  if (dv < h.radius * 2) {
-                      b.vx += (dxv/dv) * 0.4;
-                      b.vy += (dyv/dv) * 0.4;
-                  }
-              }
-          });
+        state.hazards.forEach(h => {
+          if (h.type === "vortex") {
+            const dxv = h.x - b.x, dyv = h.y - b.y;
+            const dv = Math.sqrt(dxv * dxv + dyv * dyv);
+            if (dv < h.radius * 2) {
+              b.vx += (dxv / dv) * 0.4;
+              b.vy += (dyv / dv) * 0.4;
+            }
+          }
+        });
       }
 
       b.x += b.vx * speedMult;
@@ -268,23 +265,26 @@ export function updateBullets(
     }
 
     let hitWall = false;
-    if (b.x < b.radius) {
-      b.x = b.radius;
-      b.vx *= -1;
-      hitWall = true;
-    } else if (b.x > canvas.width - b.radius) {
-      b.x = canvas.width - b.radius;
-      b.vx *= -1;
-      hitWall = true;
-    }
-    if (b.y < b.radius) {
-      b.y = b.radius;
-      b.vy *= -1;
-      hitWall = true;
-    } else if (b.y > canvas.height - b.radius) {
-      b.y = canvas.height - b.radius;
-      b.vy *= -1;
-      hitWall = true;
+
+    if (!b.isMeteor) {
+      if (b.x < b.radius) {
+        b.x = b.radius;
+        b.vx *= -1;
+        hitWall = true;
+      } else if (b.x > canvas.width - b.radius) {
+        b.x = canvas.width - b.radius;
+        b.vx *= -1;
+        hitWall = true;
+      }
+      if (b.y < b.radius) {
+        b.y = b.radius;
+        b.vy *= -1;
+        hitWall = true;
+      } else if (b.y > canvas.height - b.radius) {
+        b.y = canvas.height - b.radius;
+        b.vy *= -1;
+        hitWall = true;
+      }
     }
 
     if (hitWall) {
@@ -307,19 +307,19 @@ export function updateBullets(
         if (!b.hitList.includes("boss")) {
           b.hitList.push("boss");
           let finalDmg = b.damage || 1;
-          
+
           // --- Boss Shield/Stance Logic ---
           if (boss.shieldActive && boss.shield > 0) {
-              boss.shield -= finalDmg * 2; // Shield takes double dmg to encourage aggression
-              if (boss.shield <= 0) {
-                  boss.shieldActive = false; // SHIELD BROKEN
-                  boss.stunTimer = 180; // 3 seconds stun
-              }
-              // Don't damage HP while shield is up
-              finalDmg = 0;
+            boss.shield -= finalDmg * 2; // Shield takes double dmg to encourage aggression
+            if (boss.shield <= 0) {
+              boss.shieldActive = false; // SHIELD BROKEN
+              boss.stunTimer = 180; // 3 seconds stun
+            }
+            // Don't damage HP while shield is up
+            finalDmg = 0;
           } else {
-              boss.hp -= finalDmg;
-              boss.shieldActive = false; // Always ensure it's off if shield is 0
+            boss.hp -= finalDmg;
+            boss.shieldActive = false; // Always ensure it's off if shield is 0
           }
 
           if (
@@ -331,17 +331,17 @@ export function updateBullets(
             finalDmg *= 2;
             boss.hp -= finalDmg / 2; // Adjusted since we already subtracted finalDmg
           }
-          
+
           const hpPercent = Math.max(0, (boss.hp / boss.maxHp) * 100);
           UI.bossHp.style.width = hpPercent + "%";
-          
+
           // Phase 3 escalating color
           if (hpPercent < 33) {
-              UI.bossHp.style.backgroundColor = "#ff00ff"; // Purple peril
-              UI.bossHp.style.boxShadow = "0 0 20px #ff00ff";
+            UI.bossHp.style.backgroundColor = "#ff00ff"; // Purple peril
+            UI.bossHp.style.boxShadow = "0 0 20px #ff00ff";
           } else {
-              UI.bossHp.style.backgroundColor = "#ff4444";
-              UI.bossHp.style.boxShadow = "none";
+            UI.bossHp.style.backgroundColor = "#ff4444";
+            UI.bossHp.style.boxShadow = "none";
           }
 
           if (state.player.characterId === "scout" && buffs.r > 0) {
@@ -436,9 +436,14 @@ export function updateBullets(
         // Apply Element-Specific Debuffs
         if (b.style === 2 || b.style === 5) state.playerStatus.slowTimer = 90; // Ice Slow
         if (b.style === 3) state.playerStatus.stunTimer = 15; // Thunder Stun
-        
+
         playerTakeDamage(ctx, canvas, changeStateFn, b.damage || 1);
-        bullets.splice(i, 1);
+
+        // SỬA LỖI Ở ĐÂY: Nếu là Thiên Thạch (isMeteor), KHÔNG XÓA NÓ ĐI!
+        // Để nó tiếp tục rơi đè qua người và nổ tung trên mặt đất
+        if (!b.isMeteor) {
+          bullets.splice(i, 1);
+        }
         continue;
       }
     }
