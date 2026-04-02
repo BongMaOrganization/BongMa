@@ -91,6 +91,11 @@ export function update(ctx, canvas, changeStateFn) {
   if (player.gracePeriod > 0) player.gracePeriod--;
   if (player.dashCooldownTimer > 0) player.dashCooldownTimer--;
 
+  // Manage Screen Shake Timer
+  if (state.screenShake && state.screenShake.timer > 0) {
+    state.screenShake.timer--;
+  }
+
   if (player.shield < player.maxShield) {
     if (player.shieldRegenTimer > 0) player.shieldRegenTimer--;
     else {
@@ -445,11 +450,14 @@ export function update(ctx, canvas, changeStateFn) {
       }
     });
 
-    state.painterTrails.push(...newTrails);
+    if (state.painterTrails.length < 300) {
+        state.painterTrails.push(...newTrails);
+    }
   }
   state.painterTrails.forEach((t) => t.life--);
   state.painterTrails = state.painterTrails.filter((t) => t.life > 0);
-  if (state.painterTrails.length > 200) return;
+  // SỬA: Đưa giới hạn vào lúc tạo, không được return ở đây làm hỏng vòng lặp game!
+  // if (state.painterTrails.length > 200) return; 
   state.painterZones.forEach((z) => z.life--);
   state.painterZones = state.painterZones.filter((z) => z.life > 0);
   //Phoenix Q: Tạo vệt lửa sau lưng khi di chuyển

@@ -82,6 +82,11 @@ export const state = {
   phaseTransitionTimer: 0,
   currentPhaseName: "",
   lastBossPhase: -1,
+  
+  // ===== Boss Special System =====
+  screenShake: { x: 0, y: 0, timer: 0, intensity: 0 },
+  bossSpecial: { name: "", type: "NORMAL", timer: 0, duration: 0, color: "#fff" },
+  bossSpecialCD: 0,
 
   rerollCount: 0,
 

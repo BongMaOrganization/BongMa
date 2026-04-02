@@ -4,7 +4,7 @@ import { dist } from "../utils.js";
 import { UI, updateHealthUI, updateXPUI } from "../ui.js";
 import { playSound } from "./audio.js";
 
-export function playerTakeDamage(ctx, canvas, changeStateFn) {
+export function playerTakeDamage(ctx, canvas, changeStateFn, amount = 1) {
   let player = state.player;
   if (state.player.gracePeriod > 0 || state.player.dashTimeLeft > 0) return;
 
@@ -44,8 +44,14 @@ export function playerTakeDamage(ctx, canvas, changeStateFn) {
       state.activeBuffs.e = 0;
     }
   } else {
-    state.player.hp--;
+    state.player.hp -= amount;
     playSound("damage");
+    
+    // Rung màn hình khi bị sát thương lớn
+    if (amount >= 2) {
+      state.screenShake.timer = 15;
+      state.screenShake.intensity = amount * 5;
+    }
   }
 
   state.player.gracePeriod = 60;
@@ -316,7 +322,7 @@ export function updateBullets(
         !isInvulnerable &&
         dist(b.x, b.y, player.x, player.y) < player.radius + b.radius - 2
       ) {
-        playerTakeDamage(ctx, canvas, changeStateFn);
+        playerTakeDamage(ctx, canvas, changeStateFn, b.damage || 1);
         bullets.splice(i, 1);
         continue;
       }

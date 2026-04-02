@@ -4,6 +4,17 @@ import { dist } from "../utils.js";
 export function draw(ctx, canvas) {
   let { player, boss, bullets, ghosts, mouse, activeBuffs } = state;
   let buffs = activeBuffs || { q: 0, e: 0, r: 0 };
+  const char = player?.characterId;
+
+  ctx.save();
+  
+  // Apply Screen Shake
+  if (state.screenShake && state.screenShake.timer > 0) {
+    const intensity = state.screenShake.intensity || 5;
+    const sx = (Math.random() - 0.5) * intensity;
+    const sy = (Math.random() - 0.5) * intensity;
+    ctx.translate(sx, sy);
+  }
 
   ctx.fillStyle = "#0a0a0c";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -23,7 +34,7 @@ export function draw(ctx, canvas) {
     ctx.stroke();
   }
 
-  if (player.characterId === "timekeeper") {
+  if (char === "timekeeper") {
     if (buffs.e > 0) {
       ctx.fillStyle = "rgba(0, 255, 255, 0.1)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -39,7 +50,7 @@ export function draw(ctx, canvas) {
     }
   }
 
-  if (player.characterId === "void") {
+  if (char === "void") {
     if (state.voidBlackholes) {
       state.voidBlackholes.forEach((bh) => {
         ctx.beginPath();
@@ -75,7 +86,9 @@ export function draw(ctx, canvas) {
       ctx.lineWidth = 15;
       ctx.stroke();
     }
-  } else if (char === "destroyer") {
+  }
+
+  if (char === "destroyer") {
     // ===== Q: Laser Rifts =====
     if (state.destroyerRifts) {
       state.destroyerRifts.forEach((r) => {
@@ -121,7 +134,9 @@ export function draw(ctx, canvas) {
           ctx.stroke();
       }
     }
-  } else if (char === "creator") {
+  }
+
+  if (char === "storm") {
     if (state.stormLightnings) {
       for (let i = state.stormLightnings.length - 1; i >= 0; i--) {
         let l = state.stormLightnings[i];
@@ -155,7 +170,7 @@ export function draw(ctx, canvas) {
     }
   }
 
-  if (player.characterId === "reaper") {
+  if (char === "reaper") {
     if (buffs.q > 0 && state.reaperSlash) {
       let s = state.reaperSlash;
       ctx.beginPath();
@@ -175,7 +190,7 @@ export function draw(ctx, canvas) {
     }
   }
 
-  if (player.characterId === "oracle") {
+  if (char === "oracle") {
     if (buffs.q > 0) {
       ctx.fillStyle = "rgba(255, 200, 0, 0.08)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -208,14 +223,14 @@ export function draw(ctx, canvas) {
     });
   }
 
-  if (player.characterId === "tank" && buffs.r > 0) {
+  if (char === "tank" && buffs.r > 0) {
     ctx.beginPath();
     ctx.arc(player.x, player.y, 200 + (15 - buffs.r) * 5, 0, Math.PI * 2);
     ctx.strokeStyle = `rgba(0, 255, 204, ${buffs.r / 15})`;
     ctx.lineWidth = 10;
     ctx.stroke();
   }
-  if (player.characterId === "sharpshooter" && buffs.r > 0) {
+  if (char === "sharpshooter" && buffs.r > 0) {
     ctx.fillStyle = `rgba(255, 0, 0, ${buffs.r / 20})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
@@ -224,7 +239,7 @@ export function draw(ctx, canvas) {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
-  if (player.characterId === "berserker") {
+  if (char === "berserker") {
     if (buffs.r > 0) {
       ctx.fillStyle = `rgba(255, 0, 0, ${buffs.r / (5 * 60)})`;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -244,7 +259,7 @@ export function draw(ctx, canvas) {
     }
   }
 
-  if (player.characterId === "assassin" && buffs.e > 0) {
+  if (char === "assassin" && buffs.e > 0) {
     ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -252,7 +267,7 @@ export function draw(ctx, canvas) {
     ctx.stroke();
   }
 
-  if (player.characterId === "brawler") {
+  if (char === "brawler") {
     if (buffs.q > 0) {
       ctx.beginPath();
       ctx.arc(player.x, player.y, 120 - buffs.q * 8, 0, Math.PI * 2);
@@ -284,7 +299,7 @@ export function draw(ctx, canvas) {
     }
   }
 
-  if (player.characterId === "scout") {
+  if (char === "scout") {
     if (buffs.q > 0) {
       ctx.beginPath();
       ctx.arc(player.x, player.y, 100, 0, Math.PI * 2);
@@ -327,7 +342,7 @@ export function draw(ctx, canvas) {
     }
   }
 
-  if (player.characterId === "medic") {
+  if (char === "medic") {
     if (buffs.q > 0) {
       ctx.fillStyle = `rgba(0, 255, 100, ${buffs.q / 30})`;
       ctx.font = "bold 20px Arial";
@@ -358,7 +373,7 @@ export function draw(ctx, canvas) {
     }
   }
 
-  if (player.characterId === "summoner" && buffs.q > 0) {
+  if (char === "summoner" && buffs.q > 0) {
     let angle = (state.frameCount || 0) * 0.1;
     for (let i = 0; i < 2; i++) {
       let a = angle + i * Math.PI;
@@ -374,7 +389,7 @@ export function draw(ctx, canvas) {
     }
   }
 
-  if (player.characterId === "alchemist" && buffs.r > 0) {
+  if (char === "alchemist" && buffs.r > 0) {
     ctx.beginPath();
     ctx.arc(player.x, player.y, 250, 0, Math.PI * 2);
     ctx.strokeStyle = "rgba(0, 255, 128, 0.4)";
@@ -386,12 +401,12 @@ export function draw(ctx, canvas) {
     ctx.fill();
   }
 
-  if (player.characterId === "summoner" && buffs.r > 0) {
+  if (char === "summoner" && buffs.r > 0) {
     ctx.fillStyle = "rgba(180, 0, 255, 0.12)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
-  if (player.characterId === "warden" && buffs.r > 0) {
+  if (char === "warden" && buffs.r > 0) {
     ctx.beginPath();
     ctx.arc(player.x, player.y, 150, 0, Math.PI * 2);
     ctx.strokeStyle = "rgba(255, 215, 0, 0.5)";
@@ -404,22 +419,22 @@ export function draw(ctx, canvas) {
     ctx.fill();
   }
 
-  if (player.characterId === "void" && buffs.r > 0) {
+  if (char === "void" && buffs.r > 0) {
     ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
-  if (player.characterId === "storm" && buffs.r > 0) {
+  if (char === "storm" && buffs.r > 0) {
     ctx.fillStyle = "rgba(255, 255, 0, 0.12)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
-  if (player.characterId === "reaper" && buffs.r > 0) {
+  if (char === "reaper" && buffs.r > 0) {
     ctx.fillStyle = "rgba(255, 0, 0, 0.18)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
-  if (player.characterId === "engineer" && buffs.r > 0) {
+  if (char === "engineer" && buffs.r > 0) {
     ctx.beginPath();
     ctx.arc(player.x, player.y, 120, 0, Math.PI * 2);
     ctx.strokeStyle = "rgba(0, 200, 255, 0.6)";
@@ -428,14 +443,14 @@ export function draw(ctx, canvas) {
     ctx.stroke();
     ctx.setLineDash([]);
   }
-  if (player.characterId === "spirit" && buffs.q > 0) {
+  if (char === "spirit" && buffs.q > 0) {
     ctx.beginPath();
     ctx.arc(player.x, player.y, player.radius + 6, 0, Math.PI * 2);
     ctx.strokeStyle = "rgba(200, 200, 255, 0.8)";
     ctx.lineWidth = 2;
     ctx.stroke();
   }
-  if (player.characterId === "spirit" && buffs.e > 0) {
+  if (char === "spirit" && buffs.e > 0) {
     ctx.beginPath();
     ctx.arc(player.x, player.y, 200, 0, Math.PI * 2);
     ctx.strokeStyle = "rgba(150, 150, 255, 0.4)";
@@ -443,7 +458,7 @@ export function draw(ctx, canvas) {
     ctx.stroke();
     ctx.setLineDash([]);
   }
-  if (player.characterId === "spirit" && buffs.r > 0) {
+  if (char === "spirit" && buffs.r > 0) {
     for (let i = 0; i < 10; i++) {
       let x = Math.random() * canvas.width;
       ctx.beginPath();
@@ -454,11 +469,11 @@ export function draw(ctx, canvas) {
       ctx.stroke();
     }
   }
-  if (player.characterId === "druid" && buffs.r > 0) {
+  if (char === "druid" && buffs.r > 0) {
     ctx.fillStyle = "rgba(0,255,100,0.08)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
-  if (player.characterId === "druid" && buffs.e > 0) {
+  if (char === "druid" && buffs.e > 0) {
     ctx.beginPath();
     ctx.arc(player.x, player.y, player.radius + 4, 0, Math.PI * 2);
     ctx.strokeStyle = "rgba(0,255,100,0.6)";
@@ -466,7 +481,7 @@ export function draw(ctx, canvas) {
   }
 
   // ===== FROST, GUNNER, HUNTER VISUALS =====
-  if (player.characterId === "frost") {
+  if (char === "frost") {
     if (buffs.q > 0) {
       ctx.beginPath();
       ctx.arc(player.x, player.y, player.radius + 15, 0, Math.PI * 2);
@@ -494,7 +509,7 @@ export function draw(ctx, canvas) {
     }
   }
 
-  if (player.characterId === "gunner") {
+  if (char === "gunner") {
     if (buffs.q > 0 && state.gunnerLaser) {
       ctx.beginPath();
       ctx.moveTo(state.gunnerLaser.x, state.gunnerLaser.y);
@@ -552,7 +567,7 @@ export function draw(ctx, canvas) {
     }
   }
 
-  if (player.characterId === "hunter") {
+  if (char === "hunter") {
     if (buffs.e > 0) {
       ctx.beginPath();
       ctx.arc(player.x, player.y, 300, 0, Math.PI * 2);
@@ -584,7 +599,7 @@ export function draw(ctx, canvas) {
       ctx.fill();
     });
   }
-  if (player.characterId === "phoenix" && buffs.r > 0) {
+  if (char === "phoenix" && buffs.r > 0) {
     ctx.beginPath();
     ctx.arc(player.x, player.y, player.radius + 6, 0, Math.PI * 2);
     ctx.strokeStyle = "rgba(255,200,0,0.8)";
@@ -776,6 +791,42 @@ export function draw(ctx, canvas) {
     ctx.restore();
   }
 
+  // --- Boss Special Warnings & Darkening ---
+  if (state.bossSpecial && state.bossSpecial.timer > 0) {
+    const s = state.bossSpecial;
+    
+    // Ultimate Darkening
+    if (s.type === "ULTIMATE") {
+      ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // Warning UI
+    const centerX = canvas.width / 2;
+    const centerY = 150;
+    
+    ctx.font = "bold 36px Arial";
+    ctx.textAlign = "center";
+    
+    // Pulsing effect
+    const pulse = Math.sin(state.frameCount * 0.2) * 0.5 + 0.5;
+    ctx.fillStyle = s.type === "ULTIMATE" ? `rgba(255, 0, 0, ${0.5 + pulse * 0.5})` : s.color;
+    
+    ctx.fillText(s.type === "ULTIMATE" ? "!!! TẤT SÁT !!!" : "WARNING", centerX, centerY - 40);
+    
+    ctx.font = "bold 48px Arial";
+    ctx.fillStyle = "#fff";
+    ctx.fillText(s.name.toUpperCase(), centerX, centerY + 20);
+    
+    // Progress Bar
+    const barWidth = 400;
+    const progress = s.timer / s.duration;
+    ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
+    ctx.fillRect(centerX - barWidth / 2, centerY + 50, barWidth, 10);
+    ctx.fillStyle = s.color;
+    ctx.fillRect(centerX - barWidth / 2, centerY + 50, barWidth * progress, 10);
+  }
+
   // --- Ghosts ---
   for (let g of ghosts) {
     if (g.x < 0) continue;
@@ -806,7 +857,7 @@ export function draw(ctx, canvas) {
     ctx.arc(g.x, g.y, g.radius, 0, Math.PI * 2);
 
     // SỬA LỖI MÀU QUÁI: Nếu quái bị choáng/chậm, làm mờ đi thay vì sơn màu đen
-    if (player.characterId === "mage" && buffs.r > 0) {
+    if (char === "mage" && buffs.r > 0) {
       ctx.fillStyle = "#00aaff";
     } else {
       ctx.globalAlpha = g.isStunned > 0 ? 0.4 : 1.0;
@@ -824,8 +875,8 @@ export function draw(ctx, canvas) {
   }
 
   // --- Bullets ---
-  let isScoutQ = player.characterId === "scout" && buffs.q > 0;
-  let isFrostR = player.characterId === "frost" && buffs.r > 0;
+  let isScoutQ = char === "scout" && buffs.q > 0;
+  let isFrostR = char === "frost" && buffs.r > 0;
 
   for (let b of bullets) {
     if (b.isShuriken) {
@@ -869,7 +920,7 @@ export function draw(ctx, canvas) {
     }
   }
 
-  if (state.druidOrbs && player.characterId === "druid" && buffs.q > 0) {
+  if (state.druidOrbs && char === "druid" && buffs.q > 0) {
     state.druidOrbs.forEach((o) => {
       ctx.beginPath();
       ctx.arc(o.x, o.y, 6, 0, Math.PI * 2);
@@ -896,11 +947,11 @@ export function draw(ctx, canvas) {
   // --- Player ---
   let isInvulnSkill =
     (buffs.e > 0 &&
-      (player.characterId === "tank" ||
-        player.characterId === "ghost" ||
-        player.characterId === "reaper")) ||
+      (char === "tank" ||
+        char === "ghost" ||
+        char === "reaper")) ||
     (buffs.q > 0 &&
-      (player.characterId === "warden" || player.characterId === "frost"));
+      (char === "warden" || char === "frost"));
 
   if (player.dashTimeLeft > 0 || isInvulnSkill) {
     ctx.beginPath();
@@ -912,9 +963,9 @@ export function draw(ctx, canvas) {
       Math.PI * 2,
     );
     ctx.fillStyle =
-      player.characterId === "ghost" ? "rgba(100,100,255,0.5)" : "white";
+      char === "ghost" ? "rgba(100,100,255,0.5)" : "white";
 
-    if (player.characterId === "reaper" && buffs.e > 0) {
+    if (char === "reaper" && buffs.e > 0) {
       ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
       ctx.strokeStyle = "rgba(255, 0, 0, 0.8)";
       ctx.lineWidth = 2;
@@ -986,7 +1037,7 @@ export function draw(ctx, canvas) {
   }
 
   // --- Destroyer: E aura ---
-  if (player.characterId === "destroyer" && buffs.e > 0) {
+  if (char === "destroyer" && buffs.e > 0) {
     ctx.beginPath();
     ctx.arc(player.x, player.y, player.radius + 10, 0, Math.PI * 2);
     ctx.strokeStyle = "rgba(255, 0, 80, 0.5)";
@@ -1121,4 +1172,6 @@ export function draw(ctx, canvas) {
   ctx.arc(mouse.x, mouse.y, 5, 0, Math.PI * 2);
   ctx.strokeStyle = "rgba(0, 255, 204, 0.5)";
   ctx.stroke();
+
+  ctx.restore();
 }

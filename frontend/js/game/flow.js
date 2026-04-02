@@ -10,8 +10,7 @@ import {
 import { syncRemoteState, persistState } from "../auth.js";
 import { initSkills } from "./skills.js";
 import { playBGM, stopAllBGM, playSound } from "./audio.js";
-import { BOSS_TYPES } from "../entities.js";
-import { createBoss } from "../entities.js";
+import { createBoss, bossSummonGhosts } from "../entities.js";
 
 export function initGame(isNextLevel = false) {
   let saved = JSON.parse(localStorage.getItem(GHOST_DATA_KEY) || "{}");
@@ -151,7 +150,8 @@ export function initGame(isNextLevel = false) {
     UI.bossHp.style.width = "100%";
     state.ghosts = [];
   }
-  if (state.isBossLevel && state.boss) {
+  // SỬA: Không gọi bossSummonGhosts trong initGame vì nó được quản lý ở update.js
+  /* if (state.isBossLevel && state.boss) {
     if (!state.boss.ghostsActive) {
       if (state.boss.summonCooldown > 0) {
         state.boss.summonCooldown--;
@@ -165,7 +165,7 @@ export function initGame(isNextLevel = false) {
         state.boss.summonCooldown = 10 * FPS; // Reset cooldown
       }
     }
-  }
+  } */
   updateHealthUI();
   updateXPUI();
   UI.timer.innerText = state.isBossLevel ? "BOSS" : "00:00";

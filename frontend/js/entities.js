@@ -2,32 +2,24 @@ import { state } from "./state.js";
 import { FPS } from "./config.js";
 
 // =======================
-// ATTACK MODES (0 → 24)
+// UTILITIES & HELPER FUNCTIONS
 // =======================
 const TAU = Math.PI * 2;
 
-function fireAngle(sx, sy, angle, style = 0, source = "boss") {
-  spawnBullet(
-    sx,
-    sy,
-    sx + Math.cos(angle),
-    sy + Math.sin(angle),
-    false,
-    style,
-    source,
-  );
+function fireAngle(sx, sy, angle, style = 0, source = "boss", damage = 1) {
+  spawnBullet(sx, sy, sx + Math.cos(angle), sy + Math.sin(angle), false, style, source, damage);
 }
 
-function ring(sx, sy, count, offset = 0, style = 0, source = "boss") {
+function ring(sx, sy, count, offset = 0, style = 0, source = "boss", damage = 1) {
   for (let i = 0; i < count; i++) {
-    fireAngle(sx, sy, offset + (i * TAU) / count, style, source);
+    fireAngle(sx, sy, offset + (i * TAU) / count, style, source, damage);
   }
 }
 
-function fan(sx, sy, baseAngle, count, spread, style = 0, source = "boss") {
+function fan(sx, sy, baseAngle, count, spread, style = 0, source = "boss", damage = 1) {
   const start = baseAngle - (spread * (count - 1)) / 2;
   for (let i = 0; i < count; i++) {
-    fireAngle(sx, sy, start + i * spread, style, source);
+    fireAngle(sx, sy, start + i * spread, style, source, damage);
   }
 }
 
@@ -37,303 +29,234 @@ function aim(boss, extraAngle = 0) {
   );
 }
 
-function rainCurtain(xStart, xEnd, step, yStart, txBias, style = 0, source = "boss") {
-  for (let x = xStart; x <= xEnd; x += step) {
-    spawnBullet(
-      x,
-      yStart,
-      x + txBias,
-      600,
-      false,
-      style,
-      source,
-    );
-  }
-}
-
 export const ATTACK_MODES = {
-  0: (boss) => {
-    // Dense radial burst + inner ring
-    const phase = boss.hp < boss.maxHp * 0.5 ? 1 : 0;
-    ring(boss.x, boss.y, phase ? 28 : 22, boss.attackTimer * 0.04, 1);
-    ring(boss.x, boss.y, phase ? 14 : 10, -boss.attackTimer * 0.06, 2);
+  0: (boss) => { // Radial Fire
+    ring(boss.x, boss.y, 24, boss.attackTimer * 0.05, 1);
   },
-
-  1: (boss) => {
-    // Multi-layer aimed fan
+  1: (boss) => { // Aimed Fire
     const base = aim(boss);
-    fan(boss.x, boss.y, base, 11, 0.06, 2);
-    fan(boss.x, boss.y, base + 0.14, 7, 0.035, 1);
+    fan(boss.x, boss.y, base, 9, 0.08, 1);
   },
-
-  2: (boss) => {
-    // Chaos burst with targeted follow-up
-    for (let i = 0; i < 18; i++) {
-      fireAngle(boss.x, boss.y, Math.random() * TAU, i % 2 ? 1 : 0);
-    }
-    const base = aim(boss);
-    fan(boss.x, boss.y, base, 8, 0.05, 3);
+  2: (boss) => { // Chaos Fire
+    for (let i = 0; i < 15; i++) fireAngle(boss.x, boss.y, Math.random() * TAU, 1);
   },
-
-  3: (boss) => {
-    // Double spiral
-    const t = boss.attackTimer * 0.14;
-    for (let i = 0; i < 18; i++) {
-      fireAngle(boss.x, boss.y, t + i * 0.33, 1);
-      fireAngle(boss.x, boss.y, -t - i * 0.33, 1);
-    }
-  },
-
-  4: (boss) => {
-    // Aimed crossfire with spread
-    const base = aim(boss);
-    for (let i = -4; i <= 4; i++) {
-      fireAngle(boss.x, boss.y, base + i * 0.08, 2);
-      if (i % 2 === 0) fireAngle(boss.x, boss.y, base + Math.PI / 2 + i * 0.04, 1);
-    }
-  },
-
-  5: (boss) => {
-    // Rotating hex ring + inner spin
-    ring(boss.x, boss.y, 30, boss.attackTimer * 0.05, 1);
-    ring(boss.x, boss.y, 12, -boss.attackTimer * 0.08, 2);
-  },
-
-  6: (boss) => {
-    // Four-way cross plus player fan
-    const base = aim(boss);
-    fireAngle(boss.x, boss.y, 0, 1);
-    fireAngle(boss.x, boss.y, Math.PI / 2, 1);
-    fireAngle(boss.x, boss.y, Math.PI, 1);
-    fireAngle(boss.x, boss.y, (Math.PI * 3) / 2, 1);
-    fan(boss.x, boss.y, base, 9, 0.07, 2);
-  },
-
-  7: (boss) => {
-    // Moving sniper + orbiting bullets
-    const base = aim(boss, Math.sin(boss.attackTimer * 0.05) * 0.25);
-    fireAngle(boss.x, boss.y, base, 3);
-    fireAngle(boss.x, boss.y, base + 0.03, 2);
-    fireAngle(boss.x, boss.y, base - 0.03, 2);
-    ring(boss.x, boss.y, 8, boss.attackTimer * 0.1, 1);
-  },
-
-  8: (boss) => {
-    // Expanding dual rings
-    const phase = boss.attackTimer % 60;
-    const offset = phase * 0.12;
-    ring(boss.x, boss.y, 24, offset, 1);
-    ring(boss.x, boss.y, 12, -offset * 1.35, 2);
-  },
-
-  9: (boss) => {
-    // Dense aimed ring
-    const base = aim(boss);
-    ring(boss.x, boss.y, 18, base, 2);
-    fan(boss.x, boss.y, base, 7, 0.045, 3);
-  },
-
-  10: (boss) => {
-    // Heavy sniper burst
-    const base = aim(boss);
-    fan(boss.x, boss.y, base, 7, 0.025, 3);
-  },
-
-  11: (boss) => {
-    // Random rain + diagonal pressure
-    for (let i = 0; i < 20; i++) {
-      fireAngle(boss.x, boss.y, Math.random() * TAU, 0);
-    }
-    for (let x = 40; x <= 760; x += 120) {
-      spawnBullet(x, 0, x + (Math.random() > 0.5 ? 60 : -60), 600, false, 1, "boss");
-    }
-  },
-
-  12: (boss) => {
-    // Rotating bullet cage
-    const t = boss.attackTimer * 0.08;
-    ring(boss.x, boss.y, 36, t, 1);
-    ring(boss.x, boss.y, 18, -t * 1.5, 2);
-  },
-
-  13: (boss) => {
-    // Sweeping curtain
-    const sweep = Math.sin(boss.attackTimer * 0.05) * 180;
-    for (let x = 0; x <= 800; x += 40) {
-      spawnBullet(
-        x,
-        -10,
-        x + sweep,
-        620,
-        false,
-        1,
-        "boss",
-      );
-    }
-  },
-
-  14: (boss) => {
-    // Twin spiral shots
-    const t = boss.attackTimer * 0.12;
-    for (let i = 0; i < 14; i++) {
-      fireAngle(boss.x, boss.y, t + i * 0.48, 1);
-      fireAngle(boss.x, boss.y, t + Math.PI + i * 0.48, 1);
-    }
-    fan(boss.x, boss.y, aim(boss), 5, 0.04, 3);
-  },
-
-  15: (boss) => {
-    // Reverse spiral, denser
-    const t = -boss.attackTimer * 0.11;
-    for (let i = 0; i < 24; i++) {
-      fireAngle(boss.x, boss.y, t + i * 0.28, 1);
-    }
-  },
-
-  16: (boss) => {
-    // Triple shotgun burst
-    const base = aim(boss);
-    fan(boss.x, boss.y, base, 15, 0.035, 2);
-    fan(boss.x, boss.y, base + 0.12, 9, 0.025, 1);
-  },
-
-  17: (boss) => {
-    // Cross walls from top/side
-    for (let x = 20; x <= 780; x += 35) {
-      spawnBullet(x, 0, x + 20 * Math.sin(boss.attackTimer * 0.08), 600, false, 1, "boss");
-    }
-    for (let y = 40; y <= 560; y += 60) {
-      spawnBullet(0, y, 800, y + 30 * Math.cos(boss.attackTimer * 0.06), false, 2, "boss");
-    }
-  },
-
-  18: (boss) => {
-    // Flower burst with inner petals
-    ring(boss.x, boss.y, 32, boss.attackTimer * 0.04, 1);
-    ring(boss.x, boss.y, 16, boss.attackTimer * 0.04 + Math.PI / 32, 2);
-  },
-
-  19: (boss) => {
-    // Double spiral with offset layers
+  3: (boss) => { // Spiral
     const t = boss.attackTimer * 0.1;
-    for (let i = 0; i < 12; i++) {
-      fireAngle(boss.x, boss.y, t + i * 0.55, 1);
-      fireAngle(boss.x, boss.y, -t + i * 0.55 + Math.PI / 6, 1);
-    }
+    ring(boss.x, boss.y, 12, t, 1);
+    ring(boss.x, boss.y, 12, -t, 1);
   },
-
-  20: (boss) => {
-    // Fake aim then perpendicular burst
+  4: (boss) => { // Cross
     const base = aim(boss);
-    fan(boss.x, boss.y, base, 7, 0.055, 2);
-    fan(boss.x, boss.y, base + Math.PI / 2, 7, 0.055, 1);
+    for (let i = 0; i < 4; i++) fireAngle(boss.x, boss.y, base + i * Math.PI / 2, 1);
   },
-
-  21: (boss) => {
-    // Sine wave pattern
-    for (let i = 0; i < 18; i++) {
-      const angle = Math.sin(boss.attackTimer * 0.09 + i * 0.55) * 1.1;
-      fireAngle(boss.x, boss.y, angle, i % 2 ? 1 : 0);
-    }
+  5: (boss) => { // Ice Ring
+    ring(boss.x, boss.y, 30, boss.attackTimer * 0.04, 2);
   },
-
-  22: (boss) => {
-    // Multi-ring expansion
-    const t = (boss.attackTimer % 45) * 0.16;
-    ring(boss.x, boss.y, 16, t, 1);
-    ring(boss.x, boss.y, 24, -t * 1.2, 2);
-    ring(boss.x, boss.y, 32, t * 0.6, 0);
+  6: (boss) => { // Ice Fan
+    fan(boss.x, boss.y, aim(boss), 15, 0.05, 2);
   },
-
-  23: (boss) => {
-    // Targeted rain from above
-    const px = state.player.x;
-    for (let i = -4; i <= 4; i++) {
-      const x = px + i * 55 + Math.sin(boss.attackTimer * 0.04 + i) * 25;
-      spawnBullet(x, -20, x + i * 10, 620, false, 1, "boss");
-    }
-    rainCurtain(60, 740, 80, -30, 0, 0);
+  7: (boss) => { // Slow Shot
+    fireAngle(boss.x, boss.y, aim(boss), 2);
   },
-
-  24: (boss) => {
-    // Smart tracking burst + outer ring
-    const base = aim(boss);
-    fan(boss.x, boss.y, base, 11, 0.03, 3);
-    ring(boss.x, boss.y, 12, boss.attackTimer * 0.12, 2);
+  8: (boss) => { // Ice Spiral
+    ring(boss.x, boss.y, 16, boss.attackTimer * 0.08, 2);
   },
-
-  // ===== NEW ATTACK MODES =====
-  25: (boss) => {
-    // Fullscreen rain - đạn rơi từ trên xuống toàn màn hình
-    for (let x = 20; x <= 780; x += 30) {
-      spawnBullet(x, -20, x + (Math.random() - 0.5) * 60, 620, false, 1, "boss");
-    }
+  9: (boss) => { // Frost Burst
+    for (let i = 0; i < 20; i++) fireAngle(boss.x, boss.y, Math.random() * TAU, 2);
   },
-
-  26: (boss) => {
-    // Cross Laser - 4 tia laser xoay từ boss
-    const t = boss.attackTimer * 0.06;
-    for (let arm = 0; arm < 4; arm++) {
-      const baseAngle = t + arm * (Math.PI / 2);
-      for (let i = 0; i < 8; i++) {
-        fireAngle(boss.x, boss.y, baseAngle + i * 0.08, 2);
-      }
-    }
+  10: (boss) => { // Thunder Bolt (Fake)
+    fireAngle(boss.x, boss.y, aim(boss), 3);
   },
-
-  27: (boss) => {
-    // Diamond Cage - đạn bay hình thoi khép vào player
+  11: (boss) => { // Spark Ring
+    ring(boss.x, boss.y, 18, Math.random() * TAU, 3);
+  },
+  12: (boss) => { // Chain Lightning (Fake)
+    fan(boss.x, boss.y, aim(boss), 7, 0.2, 3);
+  },
+  13: (boss) => { // Thunder Rain
+    const rx = Math.random() * 800;
+    spawnBullet(rx, -50, rx, 650, false, 3);
+  },
+  14: (boss) => { // Electric Spiral
+    ring(boss.x, boss.y, 22, boss.attackTimer * 0.15, 3);
+  },
+  15: (boss) => { // Rock Shot
+    fireAngle(boss.x, boss.y, aim(boss), 0);
+  },
+  16: (boss) => { // Earth Ring
+    ring(boss.x, boss.y, 14, 0, 0);
+  },
+  17: (boss) => { // Boulder Fall
+    for(let i=0; i<3; i++) spawnBullet(Math.random()*800, -50, Math.random()*800, 650, false, 0);
+  },
+  18: (boss) => { // Rock Spiral
+    ring(boss.x, boss.y, 12, boss.attackTimer * 0.05, 0);
+  },
+  19: (boss) => { // Ground Wave
+    fan(boss.x, boss.y, aim(boss), 21, 0.03, 0);
+  },
+  20: (boss) => { // Wind Gust
+    fan(boss.x, boss.y, aim(boss), 11, 0.1, 1);
+  },
+  21: (boss) => { // Tornado (Small)
+    ring(boss.x, boss.y, 8, boss.attackTimer * 0.2, 1);
+  },
+  22: (boss) => { // Slicing Wind
+    for(let i=0; i<10; i++) fireAngle(boss.x, boss.y, Math.random() * TAU, 1);
+  },
+  23: (boss) => { // Wind Fan
+    fan(boss.x, boss.y, aim(boss), 25, 0.04, 1);
+  },
+  24: (boss) => { // Cyclon
+    ring(boss.x, boss.y, 36, boss.attackTimer * 0.05, 1);
+  },
+  25: (boss) => { // Global Rain
+    for (let x = 0; x < 800; x += 100) spawnBullet(x + Math.random()*50, -50, x, 650, false, 1);
+  },
+  26: (boss) => { // Expanding Cross
+    const b = aim(boss);
+    for(let i=0; i<8; i++) fireAngle(boss.x, boss.y, b + i * Math.PI / 4, 1);
+  },
+  27: (boss) => { // Target Grid
     const px = state.player.x, py = state.player.y;
-    const r = 250;
-    const points = [
-      { x: px, y: py - r },
-      { x: px + r, y: py },
-      { x: px, y: py + r },
-      { x: px - r, y: py },
-    ];
-    points.forEach(p => {
-      for (let i = -2; i <= 2; i++) {
-        spawnBullet(p.x + i * 20, p.y, px, py, false, 1, "boss");
-      }
-    });
+    spawnBullet(px - 100, -50, px, py, false, 2);
+    spawnBullet(px + 100, -50, px, py, false, 2);
   },
+  28: (boss) => { // Hellfire
+    ring(boss.x, boss.y, 40, boss.attackTimer * 0.02, 1);
+  },
+  29: (boss) => { // Final Wave
+    ring(boss.x, boss.y, 60, boss.attackTimer * 0.01, 3);
+  }
+};
 
-  28: (boss) => {
-    // Spiral Inferno - 3 lớp xoáy ốc
-    const t = boss.attackTimer * 0.15;
-    for (let layer = 0; layer < 3; layer++) {
-      for (let i = 0; i < 10; i++) {
-        fireAngle(boss.x, boss.y, t * (1 + layer * 0.3) + i * 0.65 + layer * (TAU / 3), layer);
-      }
+const SPECIAL_SKILLS = {
+  // --- FIRE ---
+  "Inferno Ring": (boss) => {
+    state.screenShake.timer = 20;
+    state.screenShake.intensity = 8;
+    for (let i = 0; i < 40; i++) {
+        spawnBullet(boss.x, boss.y, boss.x + Math.cos(i * 0.16), boss.y + Math.sin(i * 0.16), false, 1, "boss", 2);
+    }
+  },
+  "Meteor Rain": (boss) => {
+    state.screenShake.timer = 40;
+    state.screenShake.intensity = 10;
+    for (let i = 0; i < 15; i++) {
+      const rx = Math.random() * 800;
+      spawnBullet(rx, -50, rx + (Math.random() - 0.5) * 100, 650, false, 1, "boss", 2);
+    }
+  },
+  "SUPERNOVA": (boss) => {
+    state.screenShake.timer = 60;
+    state.screenShake.intensity = 20;
+    for (let i = 0; i < 100; i++) {
+      const a = (i / 100) * TAU;
+      spawnBullet(boss.x, boss.y, boss.x + Math.cos(a), boss.y + Math.sin(a), false, 1, "boss", 3);
     }
   },
 
-  29: (boss) => {
-    // Death Wave - sóng đạn sin tỏa ra
-    const base = boss.attackTimer * 0.03;
-    for (let i = 0; i < 30; i++) {
-      const angle = (i / 30) * TAU + Math.sin(boss.attackTimer * 0.1 + i * 0.5) * 0.3;
-      fireAngle(boss.x, boss.y, base + angle, i % 3);
+  // --- ICE ---
+  "Frost Nova": (boss) => {
+    ring(boss.x, boss.y, 40, 0, 2, "boss", 2);
+  },
+  "Ice Spike Fan": (boss) => {
+    const b = aim(boss);
+    fan(boss.x, boss.y, b, 25, 0.04, 2, "boss", 2);
+  },
+  "ABSOLUTE ZERO": (boss) => {
+    state.screenShake.timer = 40;
+    state.screenShake.intensity = 5;
+    for (let i = 0; i < 120; i++) {
+        const a = (i / 120) * TAU;
+        spawnBullet(boss.x, boss.y, boss.x + Math.cos(a), boss.y + Math.sin(a), false, 2, "boss", 3);
     }
   },
+
+  // --- THUNDER ---
+  "Tesla Coil": (boss) => {
+    for (let i = 0; i < 8; i++) {
+      const tx = Math.random() * 800;
+      const ty = Math.random() * 600;
+      spawnBullet(tx, -100, tx, ty, false, 3, "boss", 2);
+      state.screenShake.timer = 10;
+    }
+  },
+  "Volt Beam": (boss) => {
+    const b = aim(boss);
+    for(let i=0; i<15; i++) {
+        fireAngle(boss.x, boss.y, b + (i-7)*0.05, 3, "boss", 2);
+    }
+  },
+  "GOD'S JUDGMENT": (boss) => {
+    state.screenShake.timer = 60;
+    state.screenShake.intensity = 15;
+    for(let i=0; i<50; i++) {
+        const rx = Math.random() * 800;
+        const ry = Math.random() * 600;
+        spawnBullet(rx, -200, rx, ry, false, 3, "boss", 3);
+    }
+  },
+
+  // --- EARTH ---
+  "Shockwave": (boss) => {
+    state.screenShake.timer = 30;
+    state.screenShake.intensity = 12;
+    ring(boss.x, boss.y, 36, 0, 0, "boss", 2);
+  },
+  "Rock Fall": (boss) => {
+    state.screenShake.timer = 40;
+    state.screenShake.intensity = 15;
+    for(let i=0; i<20; i++) {
+        const rx = Math.random() * 800;
+        spawnBullet(rx, -100, rx, 700, false, 0, "boss", 2);
+    }
+  },
+  "THE GREAT QUAKE": (boss) => {
+    state.screenShake.timer = 100;
+    state.screenShake.intensity = 25;
+    for(let i=0; i<80; i++) {
+        const rx = Math.random() * 800;
+        spawnBullet(rx, 650, rx, -100, false, 0, "boss", 3);
+    }
+  },
+
+  // --- WIND ---
+  "Gust Force": (boss) => {
+    const b = aim(boss);
+    fan(boss.x, boss.y, b, 30, 0.1, 1, "boss", 2);
+  },
+  "Razor Wind": (boss) => {
+    for(let i=0; i<50; i++) {
+        fireAngle(boss.x, boss.y, Math.random() * TAU, 1, "boss", 2);
+    }
+  },
+  "CATACLYSMIC VORTEX": (boss) => {
+    state.screenShake.timer = 50;
+    state.screenShake.intensity = 10;
+    for (let i = 0; i < 150; i++) {
+        const a = (i / 150) * TAU;
+        spawnBullet(boss.x, boss.y, boss.x + Math.cos(a), boss.y + Math.sin(a), false, 1, "boss", 3);
+    }
+  }
 };
 
 // =======================
-// BOSSES (FIXED)
+// BOSSES
 // =======================
 export const BOSS_TYPES = {
   fireBoss: {
     name: "Fire Lord",
-    hp: 200,
+    hp: 400,
     speed: 2,
     color: "#ff4500",
     shape: "circle",
     icon: "🔥",
     phaseCount: 3,
     phases: [
-      { attackModes: [0, 1, 2], speedMult: 1.0 },
-      { attackModes: [3, 4, 25], speedMult: 1.3 },
-      { attackModes: [28, 27, 1], speedMult: 1.6, rageFireRate: 0.7 },
+      { attackModes: [0, 1, 2], special: "Inferno Ring", speedMult: 1.0 },
+      { attackModes: [3, 4, 28], special: "Meteor Rain", speedMult: 1.3 },
+      { attackModes: [28, 27, 26], ultimate: "SUPERNOVA", speedMult: 1.6, rageFireRate: 0.7 },
     ],
     phaseColors: [
       { start: "#ff4500", end: "#ff0000" },
@@ -343,15 +266,15 @@ export const BOSS_TYPES = {
   },
   iceBoss: {
     name: "Ice Queen",
-    hp: 180,
+    hp: 350,
     speed: 1.5,
     color: "#00ffff",
     shape: "hexagon",
     icon: "❄️",
     phaseCount: 2,
     phases: [
-      { attackModes: [5, 6, 7], speedMult: 1.0 },
-      { attackModes: [8, 9, 26], speedMult: 1.4, rageFireRate: 0.75 },
+      { attackModes: [5, 6, 7], special: "Frost Nova", speedMult: 1.0 },
+      { attackModes: [8, 9, 26], ultimate: "ABSOLUTE ZERO", speedMult: 1.4, rageFireRate: 0.75 },
     ],
     phaseColors: [
       { start: "#00ffff", end: "#0099ff" },
@@ -360,16 +283,16 @@ export const BOSS_TYPES = {
   },
   thunderBoss: {
     name: "Thunder King",
-    hp: 220,
+    hp: 450,
     speed: 2.5,
     color: "#ffff00",
     shape: "triangle",
     icon: "⚡",
     phaseCount: 3,
     phases: [
-      { attackModes: [10, 11, 12], speedMult: 1.0 },
-      { attackModes: [13, 14, 29], speedMult: 1.4 },
-      { attackModes: [25, 26, 28], speedMult: 1.8, rageFireRate: 0.6 },
+      { attackModes: [10, 11, 12], special: "Tesla Coil", speedMult: 1.0 },
+      { attackModes: [13, 14, 29], special: "Volt Beam", speedMult: 1.4 },
+      { attackModes: [25, 26, 28], ultimate: "GOD'S JUDGMENT", speedMult: 1.8, rageFireRate: 0.6 },
     ],
     phaseColors: [
       { start: "#ffff00", end: "#ffcc00" },
@@ -379,15 +302,15 @@ export const BOSS_TYPES = {
   },
   earthBoss: {
     name: "Earth Titan",
-    hp: 250,
+    hp: 550,
     speed: 1,
     color: "#8b4513",
     shape: "square",
     icon: "🪨",
     phaseCount: 2,
     phases: [
-      { attackModes: [15, 16, 17], speedMult: 1.0 },
-      { attackModes: [18, 19, 27], speedMult: 1.5, rageFireRate: 0.7 },
+      { attackModes: [15, 16, 17], special: "Shockwave", speedMult: 1.0 },
+      { attackModes: [18, 19, 27], ultimate: "THE GREAT QUAKE", speedMult: 1.5, rageFireRate: 0.7 },
     ],
     phaseColors: [
       { start: "#8b4513", end: "#5a3310" },
@@ -396,16 +319,16 @@ export const BOSS_TYPES = {
   },
   windBoss: {
     name: "Wind Spirit",
-    hp: 190,
+    hp: 380,
     speed: 3,
     color: "#00ffcc",
     shape: "star",
     icon: "🌪️",
     phaseCount: 3,
     phases: [
-      { attackModes: [20, 21, 22], speedMult: 1.0 },
-      { attackModes: [23, 24, 29], speedMult: 1.5 },
-      { attackModes: [25, 26, 28], speedMult: 2.0, rageFireRate: 0.5 },
+      { attackModes: [20, 21, 22], special: "Gust Force", speedMult: 1.0 },
+      { attackModes: [23, 24, 29], special: "Razor Wind", speedMult: 1.5 },
+      { attackModes: [25, 26, 28], ultimate: "CATACLYSMIC VORTEX", speedMult: 2.0, rageFireRate: 0.5 },
     ],
     phaseColors: [
       { start: "#00ffcc", end: "#00cc99" },
@@ -451,6 +374,7 @@ export function getInitialPlayerState() {
 // DUMMY (FIX LAG)
 // =======================
 export function generateDummy(targetFrames = 600) {
+  targetFrames = Math.min(targetFrames, 5000);
   let dummy = [];
   let speedMult =
     state.currentLevel <= 2
@@ -468,7 +392,7 @@ export function generateDummy(targetFrames = 600) {
 // =======================
 // BULLET
 // =======================
-export function spawnBullet(sx, sy, tx, ty, isPlayer, style = 0, source = "enemy") {
+export function spawnBullet(sx, sy, tx, ty, isPlayer, style = 0, source = "enemy", damage = 1) {
   let angle = Math.atan2(ty - sy, tx - sx);
   let speed = isPlayer
     ? 10
@@ -497,59 +421,91 @@ export function spawnBullet(sx, sy, tx, ty, isPlayer, style = 0, source = "enemy
       vx: Math.cos(a) * speed,
       vy: Math.sin(a) * speed,
       isPlayer,
-      radius: state.isBossLevel && !isPlayer ? 6 : 4,
-      life: 180,
+      radius: state.isBossLevel && !isPlayer ? 8 : 4,
+      life: 240,
       bounces: baseBounce,
       style,
+      damage
     });
   }
 }
 
 // =======================
-// BOSS ATTACK (FIXED)
+// BOSS ATTACK (SYSTEM OVERHAUL)
 // =======================
 export function spawnBossAttack() {
   const boss = state.boss;
+  if (!boss) return;
+
   boss.attackTimer++;
+  if (state.bossSpecialCD > 0) state.bossSpecialCD--;
 
   // --- Boss Movement ---
   boss.moveTimer++;
   if (boss.moveTimer % 120 === 0) {
-    // Pick new target position
     const padding = 80;
     boss.moveTargetX = padding + Math.random() * (800 - padding * 2);
     boss.moveTargetY = padding + Math.random() * (300 - padding);
   }
-  // Smooth movement towards target
   const currentPhaseIdx = getBossPhase(boss);
   const phaseSpeedMult = boss.phases[currentPhaseIdx]?.speedMult || 1.0;
-  const moveSpeed = boss.speed * phaseSpeedMult * 0.02;
-  boss.x += (boss.moveTargetX - boss.x) * moveSpeed;
-  boss.y += (boss.moveTargetY - boss.y) * moveSpeed;
+  boss.x += (boss.moveTargetX - boss.x) * (boss.speed * phaseSpeedMult * 0.02);
+  boss.y += (boss.moveTargetY - boss.y) * (boss.speed * phaseSpeedMult * 0.02);
 
-  if (boss.isCharging) {
-    if (boss.chargeTimer > 0) {
-      boss.chargeTimer--;
-    } else {
-      boss.isCharging = false;
-      spawnMode(boss.chargeAttack || 0);
+  // --- Skill System Logic ---
+  if (state.bossSpecial.timer > 0) {
+    state.bossSpecial.timer--;
+    if (state.bossSpecial.timer === 0) {
+      // Execute the prepared skill
+      if (SPECIAL_SKILLS[state.bossSpecial.name]) {
+        SPECIAL_SKILLS[state.bossSpecial.name](boss);
+      }
     }
-    return;
+    return; // Don't perform other attacks while charging
   }
 
+  // Check for Special/Ultimate Skills
+  if (state.bossSpecialCD <= 0) {
+    const phase = boss.phases[currentPhaseIdx];
+    let skillName = "";
+    let skillType = "SPECIAL";
+    let duration = 90; // 1.5s
+
+    // Pool skills from current and previous phases
+    let availableSpecials = [];
+    for(let i=0; i <= currentPhaseIdx; i++) {
+        if (boss.phases[i].special) availableSpecials.push(boss.phases[i].special);
+    }
+
+    if (phase.ultimate && Math.random() < 0.3) {
+      skillName = phase.ultimate;
+      skillType = "ULTIMATE";
+      duration = 180; // 3s
+    } else if (availableSpecials.length > 0) {
+      skillName = availableSpecials[Math.floor(Math.random() * availableSpecials.length)];
+    }
+
+    if (skillName) {
+      state.bossSpecial = {
+        name: skillName,
+        type: skillType,
+        timer: duration,
+        duration: duration,
+        color: boss.color
+      };
+      state.bossSpecialCD = (skillType === "ULTIMATE" ? 25 : 10) * FPS;
+      return;
+    }
+  }
+
+  // Regular Attack
   const phaseModes = boss.phases[currentPhaseIdx].attackModes;
   const rageRate = boss.phases[currentPhaseIdx].rageFireRate || 1.0;
-  const attackInterval = Math.max(30, Math.floor(60 * rageRate));
+  const attackInterval = Math.max(25, Math.floor(50 * rageRate));
 
   if (boss.attackTimer % attackInterval === 0) {
-    const index = Math.floor(boss.attackTimer / attackInterval) % phaseModes.length;
-    spawnMode(phaseModes[index]);
-  }
-
-  if (boss.attackTimer % 300 === 0) {
-    boss.isCharging = true;
-    boss.chargeTimer = 60;
-    boss.chargeAttack = phaseModes[Math.floor(Math.random() * phaseModes.length)];
+    const mode = phaseModes[Math.floor(Math.random() * phaseModes.length)];
+    spawnMode(mode);
   }
 }
 
@@ -560,12 +516,11 @@ function getBossPhase(boss) {
     if (ratio > 0.33) return 1;
     return 2;
   }
-  // 2 phases
   return ratio > 0.5 ? 0 : 1;
 }
 
 // =======================
-// CREATE BOSS (FIX PHASE)
+// CREATE BOSS
 // =======================
 export function createBoss(type) {
   const cfg = BOSS_TYPES[type];
@@ -589,7 +544,6 @@ export function createBoss(type) {
     moveTimer: 0,
     moveTargetX: 400,
     moveTargetY: 150,
-
     phases: cfg.phases.map(p => ({ ...p })),
   };
 }
@@ -600,8 +554,6 @@ export function createBoss(type) {
 function spawnMode(mode) {
   if (ATTACK_MODES[mode]) {
     ATTACK_MODES[mode](state.boss);
-  } else {
-    console.warn(`Attack mode ${mode} is not defined.`);
   }
 }
 
@@ -610,29 +562,15 @@ export function bossSummonGhosts() {
   let ghostLimit = Math.min(state.currentLevel, 10);
   let runsToUse = [];
 
-
   if (state.pastRuns.length > 0) {
-    let summonCount = Math.min(ghostLimit, state.pastRuns.length);
     let shuffled = [...state.pastRuns].sort(() => 0.5 - Math.random());
-    runsToUse = shuffled.slice(0, summonCount);
+    runsToUse = shuffled.slice(0, Math.min(ghostLimit, shuffled.length));
   }
 
-
-
-
-
-
-
-
-  runsToUse.push(generateDummy(999999));
-  let currentSpeedRate =
-    state.currentLevel <= 2
-      ? 0.5
-      : Math.min(1.0, 0.5 + (state.currentLevel - 2) * 0.1);
-
+  runsToUse.push(generateDummy(5000));
+  let currentSpeedRate = state.currentLevel <= 2 ? 0.5 : Math.min(1.0, 0.5 + (state.currentLevel - 2) * 0.1);
 
   runsToUse.forEach((runData, idx) => {
-    let isDummy = idx === runsToUse.length - 1;
     state.ghosts.push({
       record: runData,
       speedRate: currentSpeedRate,
@@ -643,7 +581,7 @@ export function bossSummonGhosts() {
       radius: 12,
       isStunned: 0,
       historyPath: [],
-      isDummy: isDummy,
+      isDummy: idx === runsToUse.length - 1,
     });
   });
 }
