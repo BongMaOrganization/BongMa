@@ -6,7 +6,16 @@ import { spawnBullet, updateBoss, bossSummonGhosts } from "../entities.js";
 import { updateBullets, playerTakeDamage } from "./combat.js";
 
 export function update(ctx, canvas, changeStateFn) {
-  let { player, boss, bullets, ghosts, keys, mouse, activeBuffs, delayedTasks } = state;
+  let {
+    player,
+    boss,
+    bullets,
+    ghosts,
+    keys,
+    mouse,
+    activeBuffs,
+    delayedTasks,
+  } = state;
 
   // Xử lý các tác vụ trì hoãn (thay thế setTimeout)
   if (delayedTasks && delayedTasks.length > 0) {
@@ -78,9 +87,15 @@ export function update(ctx, canvas, changeStateFn) {
     s.burnTimer--;
 
     // Check xem có đang trong trạng thái bất tử không
-    let isInvincible = player.dashTimeLeft > 0 || player.gracePeriod > 0 ||
-      (buffs.e > 0 && ["tank", "knight", "reaper"].includes(player.characterId)) ||
-      (buffs.q > 0 && ["warden", "ghost", "assassin", "spirit", "frost"].includes(player.characterId));
+    let isInvincible =
+      player.dashTimeLeft > 0 ||
+      player.gracePeriod > 0 ||
+      (buffs.e > 0 &&
+        ["tank", "knight", "reaper"].includes(player.characterId)) ||
+      (buffs.q > 0 &&
+        ["warden", "ghost", "assassin", "spirit", "frost"].includes(
+          player.characterId,
+        ));
 
     if (state.frameCount % 30 === 0 && !isInvincible) {
       player.hp -= 0.2; // Chỉ trừ máu khi KHÔNG bất tử
@@ -184,12 +199,13 @@ export function update(ctx, canvas, changeStateFn) {
 
     if (sz.shrinking) {
       sz.radius = Math.max(20, sz.radius - 0.05);
-      if (sz.radius < 50) sz.pulse = (Math.sin(state.frameCount * 0.2) + 1) * 0.5;
+      if (sz.radius < 50)
+        sz.pulse = (Math.sin(state.frameCount * 0.2) + 1) * 0.5;
     }
   }
 
   // --- Elemental interactions & Hazards ---
-  state.hazards.forEach(h => {
+  state.hazards.forEach((h) => {
     // Terrain Collision (Earth Spikes/Barriers)
     if (h.type === "rock" && h.active) {
       const dxh = player.x - h.x;
@@ -203,7 +219,10 @@ export function update(ctx, canvas, changeStateFn) {
       }
     }
     // Fire melts Ice
-    if (h.type === "fire" && dist(player.x, player.y, h.x, h.y) < h.radius + player.radius) {
+    if (
+      h.type === "fire" &&
+      dist(player.x, player.y, h.x, h.y) < h.radius + player.radius
+    ) {
       if (state.playerStatus && state.playerStatus.freezeTimer > 0) {
         state.playerStatus.freezeTimer = 0;
       }
@@ -220,7 +239,7 @@ export function update(ctx, canvas, changeStateFn) {
   );
 
   // --- Terrain Collision (Earth Spikes/Barriers) ---
-  state.hazards.forEach(h => {
+  state.hazards.forEach((h) => {
     if (h.type === "rock" && h.active) {
       const dxh = player.x - h.x;
       const dyh = player.y - h.y;
@@ -378,7 +397,7 @@ export function update(ctx, canvas, changeStateFn) {
 
     state.screenShake.timer = 30;
     state.screenShake.intensity = 15;
-    state.screenShake.type = 'thunder'; // Hiệu ứng vỡ giáp
+    state.screenShake.type = "thunder"; // Hiệu ứng vỡ giáp
 
     // Dọn dẹp các mìn/bẫy đang cast dở
     state.bossBeams = [];
@@ -506,13 +525,18 @@ export function update(ctx, canvas, changeStateFn) {
 
     if (!inSafeZone) {
       if (state.frameCount % 20 === 0) {
-        playerTakeDamage(ctx, canvas, changeStateFn, state.globalHazard.damage || 0.5);
+        playerTakeDamage(
+          ctx,
+          canvas,
+          changeStateFn,
+          state.globalHazard.damage || 0.5,
+        );
       }
 
       // NÂNG CẤP: Khi người chơi đứng ngoài vòng an toàn của Boss Băng
       if (state.globalHazard.type === "ice") {
         state.playerStatus.slowTimer = 5; // Làm chậm di chuyển liên tục
-        player.cooldown += 0.5;           // Súng bị đóng băng, tốc độ bắn giảm cực mạnh
+        player.cooldown += 0.5; // Súng bị đóng băng, tốc độ bắn giảm cực mạnh
       } else if (state.globalHazard.type === "wind") {
         // Gió xoáy đùn người chơi văng lạng lách quanh màn hình
         const windAngle = state.frameCount * 0.05;
@@ -537,7 +561,7 @@ export function update(ctx, canvas, changeStateFn) {
             vy: (Math.random() - 0.5) * 2,
             life: 20,
             color: "#00ffff",
-            size: 1 + Math.random() * 2
+            size: 1 + Math.random() * 2,
           });
         }
       }
@@ -642,11 +666,11 @@ export function update(ctx, canvas, changeStateFn) {
       if (t.generation === undefined) t.generation = 0;
 
       // ❗ giới hạn depth (QUAN TRỌNG NHẤT)
-      if (t.generation >= 3) return;
+      if (t.generation >= 2) return;
 
       // ❗ giới hạn số lần spawn mỗi trail
       if (!t.spawnCount) t.spawnCount = 0;
-      if (t.spawnCount >= 3) return;
+      if (t.spawnCount >= 2) return;
 
       if (!t.points || t.points.length === 0) return;
 
@@ -666,6 +690,7 @@ export function update(ctx, canvas, changeStateFn) {
 
           // ❗ reset count cho nhánh
           spawnCount: 0,
+          damageScale: 0.5 * (1 / (t.generation + 2)),
         };
 
         for (let j = 1; j <= 5; j++) {
@@ -686,7 +711,7 @@ export function update(ctx, canvas, changeStateFn) {
   state.painterTrails.forEach((t) => t.life--);
   state.painterTrails = state.painterTrails.filter((t) => t.life > 0);
   // SỬA: Đưa giới hạn vào lúc tạo, không được return ở đây làm hỏng vòng lặp game!
-  // if (state.painterTrails.length > 200) return; 
+  // if (state.painterTrails.length > 200) return;
   state.painterZones.forEach((z) => z.life--);
   state.painterZones = state.painterZones.filter((z) => z.life > 0);
   //Phoenix Q: Tạo vệt lửa sau lưng khi di chuyển
@@ -1202,20 +1227,31 @@ export function update(ctx, canvas, changeStateFn) {
   // ===== 🎨 PAINTER DAMAGE =====
   if (player.characterId === "painter" && state.painterTrails) {
     state.painterTrails.forEach((t) => {
-      t.points.forEach((p) => {
-        state.ghosts.forEach((g) => {
-          if (dist(p.x, p.y, g.x, g.y) < g.radius + 4) {
-            g.hp -= 0.05;
+      let hitOnce = false;
 
-            // ⚠️ tránh stun vô hạn
+      for (let i = 0; i < t.points.length; i += 3) {
+        // giảm density
+        let p = t.points[i];
+
+        if (hitOnce) break; // 🔥 chỉ hit 1 lần / trail
+
+        state.ghosts.forEach((g) => {
+          if (!hitOnce && dist(p.x, p.y, g.x, g.y) < g.radius + 4) {
+            g.hp -= 0.1; // 👉 tăng lại damage vì đã fix spam
             g.isStunned = Math.max(g.isStunned, 60);
+            hitOnce = true;
           }
         });
 
-        if (boss && dist(p.x, p.y, boss.x, boss.y) < boss.radius + 4) {
-          boss.hp -= 0.03;
+        if (
+          boss &&
+          !hitOnce &&
+          dist(p.x, p.y, boss.x, boss.y) < boss.radius + 4
+        ) {
+          boss.hp -= 0.05;
+          hitOnce = true;
         }
-      });
+      }
     });
   }
   if (boss && boss.hp <= 0 && !state._bossKilled) {
@@ -1256,7 +1292,8 @@ export function update(ctx, canvas, changeStateFn) {
       g.timer++;
 
       // Cho ma xuất hiện lại ở vị trí bản ghi trước khi thực sự hồi sinh để "cảnh báo"
-      if (g.respawnTimer < 1 * FPS) { // 1 giây cuối
+      if (g.respawnTimer < 1 * FPS) {
+        // 1 giây cuối
         let exactIndex = g.timer * g.speedRate;
         let idx = Math.floor(exactIndex);
         if (idx < g.record.length) {
@@ -1354,15 +1391,17 @@ export function update(ctx, canvas, changeStateFn) {
 
   // --- Destroyer: Rift lingering damage ---
   if (state.destroyerRifts) {
-    state.destroyerRifts = state.destroyerRifts.filter(r => {
+    state.destroyerRifts = state.destroyerRifts.filter((r) => {
       r.life--;
       // Lingering damage to boss
       if (boss && r.life % 30 === 0) {
-        const bx = boss.x, by = boss.y;
-        const dx = bx - r.x, dy = by - r.y;
+        const bx = boss.x,
+          by = boss.y;
+        const dx = bx - r.x,
+          dy = by - r.y;
         const angle = r.angle;
         const len = dist(r.x, r.y, r.endX, r.endY);
-        const proj = (dx * Math.cos(angle) + dy * Math.sin(angle));
+        const proj = dx * Math.cos(angle) + dy * Math.sin(angle);
         const perpDist = Math.abs(-dx * Math.sin(angle) + dy * Math.cos(angle));
         if (proj > 0 && proj < len && perpDist < 50) {
           boss.hp -= 2;
@@ -1387,7 +1426,7 @@ export function update(ctx, canvas, changeStateFn) {
     const radius = state.destroyerUlt.radius;
 
     // Convert enemy bullets to player bullets
-    state.bullets.forEach(b => {
+    state.bullets.forEach((b) => {
       if (!b.isPlayer && dist(b.x, b.y, player.x, player.y) < radius) {
         b.isPlayer = true;
         b.vx *= -1;
@@ -1407,7 +1446,7 @@ export function update(ctx, canvas, changeStateFn) {
 
   // --- Creator: Turrets ---
   if (state.creatorTurrets) {
-    state.creatorTurrets = state.creatorTurrets.filter(t => {
+    state.creatorTurrets = state.creatorTurrets.filter((t) => {
       t.life--;
       t.fireCD--;
       if (t.fireCD <= 0) {
@@ -1419,9 +1458,12 @@ export function update(ctx, canvas, changeStateFn) {
         if (!boss && ghosts.length > 0) {
           let nearest = ghosts[0];
           let nd = Infinity;
-          ghosts.forEach(g => {
+          ghosts.forEach((g) => {
             let d = dist(t.x, t.y, g.x, g.y);
-            if (d < nd) { nd = d; nearest = g; }
+            if (d < nd) {
+              nd = d;
+              nearest = g;
+            }
           });
           targetX = nearest.x;
           targetY = nearest.y;
@@ -1440,7 +1482,7 @@ export function update(ctx, canvas, changeStateFn) {
     const zone = state.creatorHolyZone;
 
     // Slow enemy bullets in zone
-    state.bullets.forEach(b => {
+    state.bullets.forEach((b) => {
       if (!b.isPlayer && dist(b.x, b.y, zone.x, zone.y) < zone.radius) {
         b.vx *= 0.3;
         b.vy *= 0.3;
@@ -1452,7 +1494,7 @@ export function update(ctx, canvas, changeStateFn) {
 
   // --- Creator: Orbs ---
   if (state.creatorOrbs) {
-    state.creatorOrbs = state.creatorOrbs.filter(orb => {
+    state.creatorOrbs = state.creatorOrbs.filter((orb) => {
       orb.life--;
       orb.angle += 0.03;
       orb.fireCD--;
@@ -1461,9 +1503,12 @@ export function update(ctx, canvas, changeStateFn) {
         let target = boss;
         if (!target || target.hp <= 0) {
           let nd = Infinity;
-          ghosts.forEach(g => {
+          ghosts.forEach((g) => {
             let d = dist(player.x, player.y, g.x, g.y);
-            if (d < nd) { nd = d; target = g; }
+            if (d < nd) {
+              nd = d;
+              target = g;
+            }
           });
         }
 
@@ -1491,7 +1536,11 @@ export function update(ctx, canvas, changeStateFn) {
     player.y = Math.max(player.radius, Math.min(600 - player.radius, player.y));
 
     // Damage boss on impact
-    if (boss && dist(player.x, player.y, boss.x, boss.y) < boss.radius + player.radius + 20) {
+    if (
+      boss &&
+      dist(player.x, player.y, boss.x, boss.y) <
+        boss.radius + player.radius + 20
+    ) {
       boss.hp -= 3;
     }
 
@@ -1502,7 +1551,7 @@ export function update(ctx, canvas, changeStateFn) {
   if (state.knightShield) {
     state.knightShield.life--;
     // Block bullets and count them
-    state.bullets = state.bullets.filter(b => {
+    state.bullets = state.bullets.filter((b) => {
       if (!b.isPlayer && dist(b.x, b.y, player.x, player.y) < 40) {
         state.knightShield.blockedCount++;
         return false;
@@ -1514,10 +1563,15 @@ export function update(ctx, canvas, changeStateFn) {
       // Counter-attack: 8 bullets in all directions
       for (let i = 0; i < 8; i++) {
         const angle = (i / 8) * Math.PI * 2;
-        spawnBullet(player.x, player.y,
+        spawnBullet(
+          player.x,
+          player.y,
           player.x + Math.cos(angle) * 100,
           player.y + Math.sin(angle) * 100,
-          true, 2, "player");
+          true,
+          2,
+          "player",
+        );
       }
       // --- Ground Warnings (Energy Beams & Bloom) ---
       state.knightShield = null;
@@ -1532,27 +1586,39 @@ export function update(ctx, canvas, changeStateFn) {
 
   // --- Ground Warning Interaction ---
   if (state.groundWarnings) {
-    state.groundWarnings = state.groundWarnings.filter(w => {
+    state.groundWarnings = state.groundWarnings.filter((w) => {
       w.timer--;
       const distToCenter = dist(player.x, player.y, w.x, w.y);
 
       // Geyser sủi bọt gây bỏng nếu đứng trên nó
       if (w.type === "geyser" || w.type === "laser") {
-        const inVerticalBeam = Math.abs(player.x - w.x) < w.radius && player.y <= w.y;
+        const inVerticalBeam =
+          Math.abs(player.x - w.x) < w.radius && player.y <= w.y;
         if (distToCenter < w.radius || inVerticalBeam) {
-          state.playerStatus.burnTimer = Math.max(state.playerStatus.burnTimer, 15);
-          if (state.frameCount % 30 === 0) playerTakeDamage(ctx, canvas, changeStateFn, 0.5);
+          state.playerStatus.burnTimer = Math.max(
+            state.playerStatus.burnTimer,
+            15,
+          );
+          if (state.frameCount % 30 === 0)
+            playerTakeDamage(ctx, canvas, changeStateFn, 0.5);
         }
       }
       // Bóng thiên thạch chỉ làm chậm (khóa mục tiêu), KHÔNG gây bỏng trước khi đá rơi
       else if (w.type === "meteor") {
         if (distToCenter < w.radius) {
-          state.playerStatus.slowTimer = Math.max(state.playerStatus.slowTimer, 2);
+          state.playerStatus.slowTimer = Math.max(
+            state.playerStatus.slowTimer,
+            2,
+          );
         }
       }
       // Gai đất (spike)
       else if (w.type === "spike") {
-        if (distToCenter < w.radius) state.playerStatus.slowTimer = Math.max(state.playerStatus.slowTimer, 2);
+        if (distToCenter < w.radius)
+          state.playerStatus.slowTimer = Math.max(
+            state.playerStatus.slowTimer,
+            2,
+          );
       }
 
       return w.timer > 0;
@@ -1565,7 +1631,7 @@ export function update(ctx, canvas, changeStateFn) {
 
   // --- Hazard Processing ---
   if (state.hazards) {
-    state.hazards = state.hazards.filter(h => {
+    state.hazards = state.hazards.filter((h) => {
       h.life--;
 
       // SỬA ĐỔI: Tốc độ bung (nở) nhanh hơn đối với Sóng Lửa (fire_ring)
@@ -1592,9 +1658,15 @@ export function update(ctx, canvas, changeStateFn) {
 
         if (isColliding) {
           // Hazard Status Effects
-          let isInvincible = player.dashTimeLeft > 0 || player.gracePeriod > 0 ||
-            (buffs.e > 0 && ["tank", "knight", "reaper"].includes(player.characterId)) ||
-            (buffs.q > 0 && ["warden", "ghost", "assassin", "spirit", "frost"].includes(player.characterId));
+          let isInvincible =
+            player.dashTimeLeft > 0 ||
+            player.gracePeriod > 0 ||
+            (buffs.e > 0 &&
+              ["tank", "knight", "reaper"].includes(player.characterId)) ||
+            (buffs.q > 0 &&
+              ["warden", "ghost", "assassin", "spirit", "frost"].includes(
+                player.characterId,
+              ));
 
           // Kéo người chơi (Lốc xoáy) thì vẫn hoạt động, nhưng miễn nhiễm debuff và damage
           if (h.type === "vortex") {
@@ -1605,7 +1677,8 @@ export function update(ctx, canvas, changeStateFn) {
 
           if (!isInvincible) {
             // Hazard Status Effects
-            if (h.type === "fire" || h.type === "fire_ring") state.playerStatus.burnTimer = 30;
+            if (h.type === "fire" || h.type === "fire_ring")
+              state.playerStatus.burnTimer = 30;
             if (h.type === "frost") state.playerStatus.slowTimer = 30;
             if (h.type === "static") state.playerStatus.stunTimer = 10;
           }
@@ -1616,8 +1689,10 @@ export function update(ctx, canvas, changeStateFn) {
           }
 
           const stayDuration = state.frameCount - h.firstEnterTime;
-          if (stayDuration >= 6) { // 100ms grace
-            if (state.frameCount - (player.lastHazardDamageTime || 0) >= 30) { // 0.5s tick
+          if (stayDuration >= 6) {
+            // 100ms grace
+            if (state.frameCount - (player.lastHazardDamageTime || 0) >= 30) {
+              // 0.5s tick
               playerTakeDamage(ctx, canvas, changeStateFn, h.damage || 0.5);
               player.lastHazardDamageTime = state.frameCount;
             }
@@ -1632,7 +1707,7 @@ export function update(ctx, canvas, changeStateFn) {
 
   // --- Particle Updates ---
   if (state.particles) {
-    state.particles = state.particles.filter(p => {
+    state.particles = state.particles.filter((p) => {
       p.x += p.vx || 0;
       p.y += p.vy || 0;
       p.life--;

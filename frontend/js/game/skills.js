@@ -169,7 +169,7 @@ function triggerSkill(key, canvas, changeStateFn) {
     }
     if (key === "e") state.activeBuffs.e = 5 * FPS;
     if (key === "r") {
-      state.player.hp = state.player.maxHp;
+      state.player.hp = Math.min(state.player.hp + 5, state.player.maxHp);
       state.player.gracePeriod = 120;
       updateHealthUI();
       state.activeBuffs.r = 60;
@@ -698,7 +698,7 @@ function triggerSkill(key, canvas, changeStateFn) {
     if (key === "q") {
       state.activeBuffs.q = 15;
       state.isScoutQ = true; // Flag for drawing
-      
+
       const dmg = 10; // Tăng sát thương để chém chết quái
       const radius = 150; // Tăng tầm chém
 
@@ -711,14 +711,17 @@ function triggerSkill(key, canvas, changeStateFn) {
       });
       if (
         state.boss &&
-        dist(state.player.x, state.player.y, state.boss.x, state.boss.y) < radius + state.boss.radius
+        dist(state.player.x, state.player.y, state.boss.x, state.boss.y) <
+          radius + state.boss.radius
       )
         state.boss.hp -= dmg;
 
       // Reset visual after 15 frames
       state.delayedTasks.push({
         delay: 15,
-        action: () => { state.isScoutQ = false; }
+        action: () => {
+          state.isScoutQ = false;
+        },
       });
     }
 
@@ -736,7 +739,7 @@ function triggerSkill(key, canvas, changeStateFn) {
       // Đu móc mượt hơn, tốc độ 3.5x normal
       state.player.dashTimeLeft = Math.min(
         25,
-        Math.floor(len / (state.player.speed * 3.5))
+        Math.floor(len / (state.player.speed * 3.5)),
       );
       state.player.dashDx = dx;
       state.player.dashDy = dy;
@@ -868,7 +871,7 @@ function triggerSkill(key, canvas, changeStateFn) {
       state.activeBuffs.r = 6 * FPS;
     }
 
-  // ===== DESTROYER (Thần Hủy Diệt) =====
+    // ===== DESTROYER (Thần Hủy Diệt) =====
   } else if (char === "destroyer") {
     // ===== Q: Vết Nứt Không Gian =====
     if (key === "q") {
@@ -890,9 +893,11 @@ function triggerSkill(key, canvas, changeStateFn) {
 
       // Instant damage on path
       if (state.boss) {
-        const bx = state.boss.x, by = state.boss.y;
-        const dx = bx - state.player.x, dy = by - state.player.y;
-        const proj = (dx * Math.cos(angle) + dy * Math.sin(angle));
+        const bx = state.boss.x,
+          by = state.boss.y;
+        const dx = bx - state.player.x,
+          dy = by - state.player.y;
+        const proj = dx * Math.cos(angle) + dy * Math.sin(angle);
         const perpDist = Math.abs(-dx * Math.sin(angle) + dy * Math.cos(angle));
         if (proj > 0 && proj < len && perpDist < 50) {
           state.boss.hp -= 8;
@@ -915,8 +920,11 @@ function triggerSkill(key, canvas, changeStateFn) {
 
       // Absorb enemy bullets
       let absorbed = 0;
-      state.bullets = state.bullets.filter(b => {
-        if (!b.isPlayer && dist(b.x, b.y, state.player.x, state.player.y) < 150) {
+      state.bullets = state.bullets.filter((b) => {
+        if (
+          !b.isPlayer &&
+          dist(b.x, b.y, state.player.x, state.player.y) < 150
+        ) {
           absorbed++;
           return false;
         }
@@ -944,7 +952,7 @@ function triggerSkill(key, canvas, changeStateFn) {
       state.skillsCD.r = getCooldown(char, 2).cd * FPS;
     }
 
-  // ===== CREATOR (Thần Sáng Thế) =====
+    // ===== CREATOR (Thần Sáng Thế) =====
   } else if (char === "creator") {
     // ===== Q: Sáng Tạo - 4 tháp canh =====
     if (key === "q") {
@@ -955,7 +963,7 @@ function triggerSkill(key, canvas, changeStateFn) {
         { dx: -80, dy: 80 },
         { dx: 80, dy: 80 },
       ];
-      offsets.forEach(off => {
+      offsets.forEach((off) => {
         state.creatorTurrets.push({
           x: state.player.x + off.dx,
           y: state.player.y + off.dy,
@@ -998,7 +1006,7 @@ function triggerSkill(key, canvas, changeStateFn) {
       state.skillsCD.r = getCooldown(char, 2).cd * FPS;
     }
 
-  // ===== KNIGHT (Kỵ Sĩ) =====
+    // ===== KNIGHT (Kỵ Sĩ) =====
   } else if (char === "knight") {
     // ===== Q: Xung Phong =====
     if (key === "q") {
@@ -1015,7 +1023,12 @@ function triggerSkill(key, canvas, changeStateFn) {
 
       // Damage boss if close
       if (state.boss) {
-        const d = dist(state.player.x, state.player.y, state.boss.x, state.boss.y);
+        const d = dist(
+          state.player.x,
+          state.player.y,
+          state.boss.x,
+          state.boss.y,
+        );
         if (d < 100) {
           state.boss.hp -= 5;
         }

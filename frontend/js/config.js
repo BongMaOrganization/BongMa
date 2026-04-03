@@ -611,9 +611,9 @@ export const CHARACTERS = [
       {
         key: "r",
         name: "Cứu Sinh",
-        desc: "Hồi full HP.",
-        cooldown: 60,
-        initialCooldown: 30,
+        desc: "Hồi 5 HP.",
+        cooldown: 30,
+        initialCooldown: 15,
       },
     ],
   },
