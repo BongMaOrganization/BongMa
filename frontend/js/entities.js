@@ -393,135 +393,253 @@ export const SPECIAL_SKILLS = {
       });
     }
   },
+  // --- OMNI EXCLUSIVE SKILLS (CƠ CHẾ MỚI HOÀN TOÀN) ---
 
-  // --- OMNI EXCLUSIVE SKILLS (ĐA NGUYÊN TỐ) ---
-  "Omni_FlameCleave": (boss) => {
+  // Phase 1: Ma Trận Nguyên Tố (Elemental Grid)
+  // Cơ chế: Vẽ một lưới Laser caro ngang dọc trên toàn màn hình. 
+  // Tại các giao điểm của Laser sẽ phát nổ ra đạn lửa. Người chơi phải tìm đúng ô trống để đứng.
+  "Omni_ElementalGrid": (boss) => {
     activateShield(boss, 150);
-    if (!state.bossSlashes) state.bossSlashes = [];
+    boss.moveTargetX = 400; boss.moveTargetY = 300; // Nhảy ra giữa
 
-    const targetAngle = aim(boss);
+    for (let i = 1; i <= 5; i++) {
+      let lx = i * 133; // Trục dọc
+      let ly = i * 100; // Trục ngang
 
-    // Gồng chiêu hiện cảnh báo hình quạt đỏ (Giả lập bằng bóng mờ)
-    state.delayedTasks.push({
-      delay: 30,
-      action: () => {
-        // Tung nhát chém ngang 180 độ
-        state.bossSlashes.push({
-          x: boss.x, y: boss.y,
-          angle: targetAngle,
-          radius: 300,        // Tầm chém cực rộng
-          arc: Math.PI,       // Quét 180 độ
-          life: 20,
-          damageFrame: 15,    // Frame gây sát thương
-          damage: 2,
-          element: "fire"
-        });
-        state.screenShake.timer = 10;
-        state.screenShake.intensity = 8;
-        state.screenShake.type = 'earth';
-
-        // Kiếm khí văng ra
-        fan(boss.x, boss.y, targetAngle, 5, 0.3, 1, "boss", 1);
-      }
-    });
-  },
-
-  "Omni_GlacialThrust": (boss) => {
-    activateShield(boss, 150);
-    // Băng Kiếm: Chém dọc tạo ra tia laser xuyên thấu và để lại bãi băng
-    const targetAngle = aim(boss);
-
-    state.delayedTasks.push({
-      delay: 40,
-      action: () => {
-        let tx = boss.x + Math.cos(targetAngle) * 800;
-        let ty = boss.y + Math.sin(targetAngle) * 800;
-
-        spawnBeam(boss.x, boss.y, tx, ty, 10, 20); // Laser chém
-
-        // Dọc theo đường chém trồi lên các bãi băng
-        for (let i = 1; i <= 5; i++) {
-          let bx = boss.x + Math.cos(targetAngle) * (i * 120);
-          let by = boss.y + Math.sin(targetAngle) * (i * 120);
-          spawnHazard("frost", bx, by, 60, 240);
-        }
-      }
-    });
-  },
-
-  "Omni_ThunderCross": (boss) => {
-    activateShield(boss, 180);
-    if (!state.bossSlashes) state.bossSlashes = [];
-
-    // Dịch chuyển ngẫu nhiên rồi chém chữ X bằng Lôi Kiếm
-    state.delayedTasks.push({
-      delay: 20,
-      action: () => {
-        boss.x = state.player.x + (Math.random() > 0.5 ? 150 : -150);
-        boss.y = state.player.y + (Math.random() > 0.5 ? 150 : -150);
-
-        const angle = aim(boss);
-
-        // Chém chéo 1
-        state.bossSlashes.push({ x: boss.x, y: boss.y, angle: angle - 0.5, radius: 250, arc: Math.PI / 2, life: 15, damageFrame: 10, damage: 1, element: "thunder" });
-        // Chém chéo 2
-        state.bossSlashes.push({ x: boss.x, y: boss.y, angle: angle + 0.5, radius: 250, arc: Math.PI / 2, life: 15, damageFrame: 10, damage: 1, element: "thunder" });
-
-        state.screenShake.timer = 15;
-        state.screenShake.intensity = 12;
-        state.screenShake.type = 'thunder';
-      }
-    });
-  },
-
-  "Omni_WindDance": (boss) => {
-    activateShield(boss, 200);
-    // Vũ điệu Phong Kiếm: Xoay vòng liên tục xả kiếm khí
-    state.globalHazard = { type: "wind", active: true, timer: 240, damage: 0.5 };
-
-    for (let i = 0; i < 15; i++) {
       state.delayedTasks.push({
-        delay: i * 15,
+        delay: 20,
         action: () => {
-          // Bắn đạn gió tỏa tròn xoáy ốc
-          ring(boss.x, boss.y, 8, i * 0.4, 4, "boss", 1);
+          // Hiện cảnh báo dọc và ngang
+          spawnWarning(lx, 300, 20, 60, "laser");
+          spawnWarning(400, ly, 20, 60, "laser");
+        }
+      });
+
+      state.delayedTasks.push({
+        delay: 80,
+        action: () => {
+          // Bắn laser quét màn hình
+          spawnBeam(lx, 0, lx, 600, 10, 25);
+          spawnBeam(0, ly, 800, ly, 10, 25);
+
+          // Ngay tại giao điểm, nổ đạn tứ phía
+          ring(lx, ly, 6, Math.PI / 4, 1, "boss", 1); // Lửa
+          state.screenShake.timer = 5;
+          state.screenShake.intensity = 5;
         }
       });
     }
   },
 
-  "OMNI_BLADE_OF_CREATION": (boss) => {
+  // Phase 2: Trận Đồ Băng Phong (Frost-Wind Matrix) - ĐÃ LÀM LẠI HOÀN TOÀN
+  // CƠ CHẾ:
+  // - BĂNG: Gây hiệu ứng "Bão Tuyết" làm chậm người chơi trên toàn bản đồ. Bắn ra một vòng đạn Băng và "đóng băng" chúng lại giữa không trung.
+  // - GIÓ: Tạo một Lốc Xoáy Khổng Lồ ở giữa bản đồ để hút người chơi vào. Các viên đạn băng hóa thành cuồng phong, xoáy thành vòng tròn (Hurricane) và siết chặt dần vào tâm!
+  "Omni_FrostWindMatrix": (boss) => {
+    activateShield(boss, 150);
+    boss.moveTargetX = 400; boss.moveTargetY = 300; // Khóa Boss ở giữa bản đồ
+
+    // 1. HIỆU ỨNG BĂNG: Bão tuyết toàn bản đồ làm chậm người chơi (Kéo dài 1 giây)
+    for (let i = 0; i < 60; i++) {
+      state.delayedTasks.push({
+        delay: i,
+        action: () => {
+          // Ép người chơi dính trạng thái Slow liên tục trong 1 giây
+          if (state.playerStatus) state.playerStatus.slowTimer = 10;
+
+          // Sinh ra hạt tuyết rơi khắp màn hình để tạo cảm giác lạnh giá
+          if (Math.random() < 0.4 && state.particles) {
+            state.particles.push({
+              x: Math.random() * 800, y: 0,
+              vx: (Math.random() - 0.5) * 5, vy: 5 + Math.random() * 5,
+              life: 60, color: "#ccffff", size: 2 + Math.random() * 3
+            });
+          }
+        }
+      });
+    }
+
+    // Bắn 24 viên đạn Băng siêu to tỏa ra xung quanh
+    for (let i = 0; i < 24; i++) {
+      let angle = (i / 24) * Math.PI * 2;
+      let speed = 8; // Bắn rất nhanh lúc đầu
+      state.bullets.push({
+        x: boss.x, y: boss.y,
+        vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+        isPlayer: false, radius: 12, life: 400, style: 2, damage: 1, // Style 2 = Băng
+        isOmniTrick: true
+      });
+    }
+
+    // 2. ĐÓNG BĂNG: Toàn bộ đạn khựng lại giữa không trung sau 0.5 giây
+    state.delayedTasks.push({
+      delay: 30,
+      action: () => {
+        state.bullets.forEach(b => {
+          if (b.isOmniTrick) {
+            b.vx = 0; b.vy = 0;
+          }
+        });
+      }
+    });
+
+    // 3. HIỆU ỨNG GIÓ: Sinh Lốc Xoáy (Hút) và Biến đạn thành Cuồng Phong
+    state.delayedTasks.push({
+      delay: 60, // Delay 1 giây sau khi cast chiêu
+      action: () => {
+        // Sinh Lốc Xoáy tàng hình khổng lồ che phủ map, lực hút cực mạnh kéo dài 3 giây
+        spawnHazard("vortex", boss.x, boss.y, 800, 180, 0, "boss");
+
+        state.bullets.forEach(b => {
+          if (b.isOmniTrick) {
+            b.style = 4; // Đổi sang Style 4 = Gió
+            b.isHurricane = true; // Gắn cờ để kích hoạt quỹ đạo lốc xoáy
+            b.isOmniTrick = false;
+          }
+        });
+      }
+    });
+
+    // 4. QUỸ ĐẠO BÃO (Hurricane Logic): Liên tục bẻ lái đạn theo vòng tròn
+    for (let t = 60; t < 240; t++) {
+      state.delayedTasks.push({
+        delay: t,
+        action: () => {
+          state.bullets.forEach(b => {
+            if (b.isHurricane) {
+              // Tính góc từ viên đạn hướng về Boss
+              let angleToCenter = Math.atan2(boss.y - b.y, boss.x - b.x);
+
+              // Vector di chuyển: Xoay vòng (Góc vuông) + Khép góc từ từ (Hướng tâm)
+              let spinSpeed = 6; // Tốc độ bay xoay vòng (chóng mặt)
+              let inwardSpeed = 1.2; // Tốc độ siết dần vào tâm
+
+              b.vx = Math.cos(angleToCenter + Math.PI / 2) * spinSpeed + Math.cos(angleToCenter) * inwardSpeed;
+              b.vy = Math.sin(angleToCenter + Math.PI / 2) * spinSpeed + Math.sin(angleToCenter) * inwardSpeed;
+            }
+          });
+        }
+      });
+    }
+  },
+
+  // Phase 3: Hội Tụ Hỗn Mang (Chaos Convergence)
+  // Cơ chế: Thay vì bắn từ Boss ra, đạn xuất hiện từ 4 mép ngoài cùng của màn hình 
+  // và bay ngược vào vị trí của Boss. Người chơi phải né đạn từ ngoài ập vào.
+  "Omni_ChaosConvergence": (boss) => {
+    activateShield(boss, 180);
+
+    for (let i = 0; i < 50; i++) {
+      state.delayedTasks.push({
+        delay: i * 3, // Bắn liên tục
+        action: () => {
+          let edge = Math.floor(Math.random() * 4);
+          let sx, sy;
+          // SỬA LỖI Ở ĐÂY: Sinh đạn ngay bên trong mép màn hình (15 đến 785) để không bị viền màn hình xóa mất
+          if (edge === 0) { sx = 15 + Math.random() * 770; sy = 15; }        // Trên
+          else if (edge === 1) { sx = 785; sy = 15 + Math.random() * 570; }  // Phải
+          else if (edge === 2) { sx = 15 + Math.random() * 770; sy = 585; }  // Dưới
+          else { sx = 15; sy = 15 + Math.random() * 570; }                   // Trái
+
+          let style = Math.floor(Math.random() * 4) + 1; // Ngẫu nhiên Lửa/Băng/Sấm/Gió
+          let angle = Math.atan2(boss.y - sy, boss.x - sx); // Bay ngược vào tâm
+          let speed = 4 + Math.random() * 2;
+
+          // Hiện đốm sáng cảnh báo nhỏ trước khi bắn
+          spawnWarning(sx, sy, 20, 10, "laser");
+
+          state.delayedTasks.push({
+            delay: 10,
+            action: () => {
+              state.bullets.push({
+                x: sx, y: sy,
+                vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+                isPlayer: false, radius: 10, life: 400, style: style, damage: 1
+              });
+            }
+          });
+        }
+      });
+    }
+  },
+
+  // Phase 4: Phân Thân Ảo Ảnh (Phantom Dance)
+  // Cơ chế: Boss dịch chuyển chớp nhoáng 4 lần liên tiếp, mỗi lần để lại 1 bẫy Điện.
+  // Ngay sau đó, cả 4 bẫy Điện đồng loạt phát nổ thành sóng Lửa.
+  "Omni_PhantomDance": (boss) => {
+    activateShield(boss, 200);
+    let points = [];
+
+    for (let i = 0; i < 4; i++) {
+      state.delayedTasks.push({
+        delay: i * 20,
+        action: () => {
+          // Dịch chuyển
+          boss.x = 100 + Math.random() * 600;
+          boss.y = 100 + Math.random() * 400;
+          points.push({ x: boss.x, y: boss.y });
+
+          // Để lại bẫy Điện và xả 1 nhịp đạn Sấm
+          spawnHazard("static", boss.x, boss.y, 45, 120, 0.5, "boss");
+          ring(boss.x, boss.y, 10, 0, 3, "boss", 1);
+        }
+      });
+    }
+
+    // Nổ đồng loạt Sóng Lửa từ 4 vị trí
+    state.delayedTasks.push({
+      delay: 110,
+      action: () => {
+        points.forEach(p => {
+          ring(p.x, p.y, 16, 0, 1, "boss", 1);
+          state.screenShake.timer = 8;
+          state.screenShake.intensity = 6;
+        });
+      }
+    });
+  },
+
+  // Phase 5 (Ultimate): Kỷ Nguyên Tịch Diệt (Absolute Dominion)
+  // Cơ chế: Boss đứng giữa, phun ra 2 vòi đạn xoắn ốc ngược chiều nhau.
+  // ĐỒNG THỜI tạo ra các viên đạn "Nảy" (Bouncing Bullets) dội vào tường như chơi bi-a.
+  "OMNI_ABSOLUTE_DOMINION": (boss) => {
     boss.ultimatePhase = true;
+    boss.x = 400; boss.y = 300; // Khóa vị trí giữa map
     state.screenShake.timer = 60;
     state.screenShake.intensity = 15;
-    state.globalHazard = { type: "electric", active: true, timer: 9999, damage: 1.0 };
-    if (!state.bossSlashes) state.bossSlashes = [];
 
-    // Giai đoạn hủy diệt: Boss đứng giữa bản đồ, gọi tứ kiếm chém sập màn hình
-    boss.x = 400;
-    boss.y = 300;
-
-    for (let i = 0; i < 5; i++) {
+    // 1. Tạo đạn Nảy (Bouncing) dội vào tường để ép góc người chơi
+    for (let i = 0; i < 20; i++) {
       state.delayedTasks.push({
-        delay: i * 60, // Mỗi giây chém 1 phát toàn màn hình
+        delay: 20 + i * 10,
         action: () => {
           let angle = Math.random() * Math.PI * 2;
-          // Nhát chém mỏng nhưng tầm cực xa
-          state.bossSlashes.push({
+          let speed = 4;
+          state.bullets.push({
             x: boss.x, y: boss.y,
-            angle: angle,
-            radius: 800,
-            arc: Math.PI / 4,   // Góc chém hẹp nhưng xa
-            life: 25,
-            damageFrame: 20,
-            damage: 3,
-            element: "omni"
+            vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+            isPlayer: false, radius: 12, life: 600, style: (i % 4) + 1, damage: 1,
+            bounces: 3 // Kích hoạt thuộc tính nảy tường 3 lần!
           });
+        }
+      });
+    }
 
-          // Nổ pháo hoa nguyên tố theo hướng chém
-          fan(boss.x, boss.y, angle, 9, 0.2, Math.floor(Math.random() * 4) + 1, "boss", 1);
-          state.screenShake.timer = 10;
-          state.screenShake.intensity = 10;
+    // 2. Hai luồng đạn xoắn ốc tuyệt đẹp ngược chiều nhau
+    for (let i = 0; i < 150; i++) {
+      state.delayedTasks.push({
+        delay: i * 2,
+        action: () => {
+          let angle1 = i * 0.15;
+          let angle2 = -i * 0.15 + Math.PI;
+
+          // Xoắn ốc chiều kim đồng hồ
+          fireAngle(boss.x, boss.y, angle1, 1);
+          fireAngle(boss.x, boss.y, angle1 + Math.PI, 2);
+
+          // Xoắn ốc ngược chiều
+          fireAngle(boss.x, boss.y, angle2, 3);
+          fireAngle(boss.x, boss.y, angle2 + Math.PI, 4);
         }
       });
     }
@@ -584,11 +702,25 @@ export const BOSS_TYPES = {
     hp: 500, maxHp: 500, speed: 2.5, color: "#ffffff", originalColor: "#ffffff", elementColor: "#ff00ff", icon: "👑",
     phaseCount: 5,
     phases: [
-      { attackModes: [1, 21], special: "Omni_FlameCleave", speedMult: 1.0 },       // Phase 1: Hỏa Kiếm
-      { attackModes: [6, 16], special: "Omni_GlacialThrust", speedMult: 1.2 },     // Phase 2: Băng Kiếm
-      { attackModes: [11, 20], special: "Omni_ThunderCross", speedMult: 1.4 },     // Phase 3: Lôi Kiếm
-      { attackModes: [8, 13, 23], special: "Omni_WindDance", speedMult: 1.6 },     // Phase 4: Phong Kiếm
-      { attackModes: [30, 31, 32], ultimate: "OMNI_BLADE_OF_CREATION", speedMult: 2.0 } // Phase 5: Kiếm Sáng Thế
+      // Phase 1: Chỉ dùng skill 1
+      { attackModes: [1, 21], special: ["Omni_ElementalGrid"], speedMult: 1.0 },
+
+      // Phase 2: Random giữa skill 1 và skill 2
+      { attackModes: [6, 16], special: ["Omni_ElementalGrid", "Omni_FrostWindMatrix"], speedMult: 1.2 },
+
+      // Phase 3: Random giữa 3 skill đầu
+      { attackModes: [11, 20], special: ["Omni_ElementalGrid", "Omni_FrostWindMatrix", "Omni_ChaosConvergence"], speedMult: 1.4 },
+
+      // Phase 4: Random giữa 4 skill đầu
+      { attackModes: [8, 13, 23], special: ["Omni_ElementalGrid", "Omni_FrostWindMatrix", "Omni_ChaosConvergence", "Omni_PhantomDance"], speedMult: 1.6 },
+
+      // Phase 5 (Căng nhất): Random TOÀN BỘ 5 CHIÊU THỨC
+      {
+        attackModes: [30, 31, 32],
+        special: ["Omni_ElementalGrid", "Omni_FrostWindMatrix", "Omni_ChaosConvergence", "Omni_PhantomDance", "OMNI_ABSOLUTE_DOMINION"],
+        ultimate: "OMNI_ABSOLUTE_DOMINION", // Có 40% ưu tiên ra chiêu cuối kích hoạt trạng thái "TẤT SÁT" đỏ lòm
+        speedMult: 2.0
+      }
     ]
   }
 };
@@ -611,7 +743,10 @@ export function spawnBullet(sx, sy, tx, ty, isPlayer, style = 0, source = "enemy
   const speed = isPlayer ? 10 : 4.5;
   state.bullets.push({
     x: sx, y: sy, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
-    isPlayer, radius: isPlayer ? 4 : 8, life: 240, style, damage
+    isPlayer, radius: isPlayer ? 4 : 8, life: 240, style, damage,
+    // SỬA LỖI Ở ĐÂY: Truyền chỉ số nảy và xuyên từ người chơi vào viên đạn
+    bounces: isPlayer ? (state.player.bounces || 0) : 0,
+    pierce: isPlayer ? (state.player.pierce || false) : false
   });
 }
 
@@ -622,8 +757,10 @@ export function createBoss(type) {
     ...cfg,
     x: 400, y: 150, radius: 45, attackTimer: 0, moveTimer: 0, moveTargetX: 400, moveTargetY: 150,
     shield: 0, maxShield: 0, shieldActive: false, stunTimer: 0, ultimatePhase: false,
-    bossType: type, phaseCount: 3,
-    skillCooldown: 180 // THÊM BIẾN NÀY: Chờ 3s trước khi xài chiêu đầu tiên
+    bossType: type,
+    // SỬA LỖI Ở ĐÂY: Lấy số phase từ cấu hình (cfg.phaseCount), nếu không có mới mặc định là 3
+    phaseCount: cfg.phaseCount || 3,
+    skillCooldown: 180
   };
 }
 
@@ -672,8 +809,12 @@ export function updateBoss(boss) {
   if (boss.skillCooldown <= 0) {
     const phase = boss.phases[phaseIdx];
     let nextSkill = "";
-    if (phase.ultimate && Math.random() < 0.4) nextSkill = phase.ultimate;
-    else if (phase.special) nextSkill = phase.special;
+
+    if (phase.ultimate && Math.random() < 0.4) {
+      nextSkill = Array.isArray(phase.ultimate) ? phase.ultimate[Math.floor(Math.random() * phase.ultimate.length)] : phase.ultimate;
+    } else if (phase.special) {
+      nextSkill = Array.isArray(phase.special) ? phase.special[Math.floor(Math.random() * phase.special.length)] : phase.special;
+    }
 
     if (nextSkill) {
       const isUlt = nextSkill === phase.ultimate;

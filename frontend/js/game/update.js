@@ -206,41 +206,6 @@ export function update(ctx, canvas, changeStateFn) {
 
   // --- Elemental interactions & Hazards ---
   state.hazards.forEach((h) => {
-    // ===== BOSS SWORD SLASH MANAGEMENT =====
-    if (state.bossSlashes) {
-      state.bossSlashes = state.bossSlashes.filter((slash) => {
-        slash.life--;
-
-        // Xử lý sát thương khi người chơi nằm trong tầm chém
-        if (slash.life === slash.damageFrame) {
-          let dx = player.x - slash.x;
-          let dy = player.y - slash.y;
-          let distToPlayer = Math.sqrt(dx * dx + dy * dy);
-          let angleToPlayer = Math.atan2(dy, dx);
-
-          // Tính góc lệch giữa nhát chém và người chơi
-          let angleDiff = Math.abs(angleToPlayer - slash.angle);
-          if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
-
-          // Nếu người chơi nằm trong bán kính và góc quét của thanh kiếm
-          if (distToPlayer <= slash.radius && angleDiff <= slash.arc / 2) {
-            let isInvincible = player.dashTimeLeft > 0 || player.gracePeriod > 0 ||
-              (buffs.e > 0 && ["tank", "knight", "reaper"].includes(player.characterId)) ||
-              (buffs.q > 0 && ["warden", "ghost", "assassin", "spirit", "frost"].includes(player.characterId));
-
-            if (!isInvincible) {
-              import("./combat.js").then(m => m.playerTakeDamage(ctx, canvas, changeStateFn, slash.damage));
-
-              // Debuff theo nguyên tố của kiếm
-              if (slash.element === "fire") state.playerStatus.burnTimer = 60;
-              if (slash.element === "ice") state.playerStatus.slowTimer = 60;
-              if (slash.element === "thunder") state.playerStatus.stunTimer = 15;
-            }
-          }
-        }
-        return slash.life > 0;
-      });
-    }
 
     // Terrain Collision (Earth Spikes/Barriers)
     if (h.type === "rock" && h.active) {
@@ -328,6 +293,9 @@ export function update(ctx, canvas, changeStateFn) {
     state.player.bounces = currentBounces;
     let isDruidR = player.characterId === "druid" && buffs.r > 0;
 
+    let count = state.player.multiShot || 1;
+    let spread = 0.15; // Khoảng cách góc giữa các viên đạn
+
     if (isAssassinE) {
       state.activeBuffs.e = 0;
       let nearestDist = Infinity;
@@ -346,15 +314,23 @@ export function update(ctx, canvas, changeStateFn) {
         }
       });
 
-      let tx = mouse.x,
-        ty = mouse.y;
+      let tx = mouse.x, ty = mouse.y;
       if (targetObj) {
         tx = targetObj.x;
         ty = targetObj.y;
       }
 
       let oldLen = state.bullets.length;
-      spawnBullet(player.x, player.y, tx, ty, true);
+
+      // SỬA LỖI ĐẠN KÉP CHO ASSASSIN: Xòe đạn hình quạt
+      let baseAngle = Math.atan2(ty - player.y, tx - player.x);
+      let startAngle = baseAngle - (spread * (count - 1)) / 2;
+
+      for (let i = 0; i < count; i++) {
+        let a = startAngle + i * spread;
+        spawnBullet(player.x, player.y, player.x + Math.cos(a) * 10, player.y + Math.sin(a) * 10, true);
+      }
+
       for (let i = oldLen; i < state.bullets.length; i++) {
         let b = state.bullets[i];
         b.damage = 2;
@@ -362,7 +338,16 @@ export function update(ctx, canvas, changeStateFn) {
       }
     } else {
       let oldLen = state.bullets.length;
-      spawnBullet(player.x, player.y, mouse.x, mouse.y, true);
+
+      // SỬA LỖI ĐẠN KÉP CHO BẮN THƯỜNG: Xòe đạn hình quạt về hướng chuột
+      let baseAngle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+      let startAngle = baseAngle - (spread * (count - 1)) / 2;
+
+      for (let i = 0; i < count; i++) {
+        let a = startAngle + i * spread;
+        spawnBullet(player.x, player.y, player.x + Math.cos(a) * 10, player.y + Math.sin(a) * 10, true);
+      }
+
       if (isSniperQ) {
         for (let i = oldLen; i < state.bullets.length; i++) {
           state.bullets[i].damage = 3;
