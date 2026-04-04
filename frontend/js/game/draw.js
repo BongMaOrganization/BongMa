@@ -379,8 +379,8 @@ export function draw(ctx, canvas) {
     ctx.restore();
   });
 
-  // --- Draw Boss Beams (Lightning) ---
-  state.bossBeams.forEach((beam) => {
+  // --- Draw Boss Beams (Lightning) TỐI ƯU ---
+  state.bossBeams.forEach(beam => {
     ctx.save();
     if (beam.state === "charge") {
       ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
@@ -391,24 +391,17 @@ export function draw(ctx, canvas) {
       ctx.stroke();
     } else {
       ctx.strokeStyle = "#fff";
-      ctx.lineWidth = 4;
-      ctx.shadowBlur = 20;
+      ctx.lineWidth = 8 + Math.random() * 4; // Vẽ 1 đường thẳng có độ dày nhấp nháy thay vì tính toán ziczac
+      ctx.shadowBlur = 15;
       ctx.shadowColor = "#00ffff";
-
       ctx.beginPath();
       ctx.moveTo(beam.x1, beam.y1);
-      let dx = beam.x2 - beam.x1;
-      let dy = beam.y2 - beam.y1;
-      let distVal = Math.sqrt(dx * dx + dy * dy);
-      let steps = Math.floor(distVal / 20);
-
-      for (let i = 1; i < steps; i++) {
-        let t = i / steps;
-        let px = beam.x1 + dx * t + (Math.random() - 0.5) * 30;
-        let py = beam.y1 + dy * t + (Math.random() - 0.5) * 30;
-        ctx.lineTo(px, py);
-      }
       ctx.lineTo(beam.x2, beam.y2);
+      ctx.stroke();
+
+      // Lõi tia sét
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = "#ffffff";
       ctx.stroke();
     }
     ctx.restore();

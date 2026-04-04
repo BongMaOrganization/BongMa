@@ -50,6 +50,7 @@ export const BOSS_ARENA_REWARDS = {
   thunderBoss: { coins: 180, rareTicket: 0.18 },
   earthBoss: { coins: 200, rareTicket: 0.2 },
   windBoss: { coins: 160, rareTicket: 0.15 },
+  omni: { coins: 1000, rareTicket: 0.80 },
 };
 
 export const UPGRADES = [

@@ -39,9 +39,8 @@ export function updateUpgradeUI() {
 
     const isEvolved = state.evolutions[upgrade];
 
-    upgradeDiv.innerText = `${upgrade}: ${
-      state.upgrades[upgrade]
-    } / 5 ${isEvolved ? "(Evolved)" : ""}`;
+    upgradeDiv.innerText = `${upgrade}: ${state.upgrades[upgrade]
+      } / 5 ${isEvolved ? "(Evolved)" : ""}`;
 
     upgradeContainer.appendChild(upgradeDiv);
   });
@@ -130,9 +129,8 @@ export function generateCards(pool, container, isGold, onSelectCallback) {
     const isEvolutionCard = upg.isEvolution;
     const isEvolved = state.evolutions[upg.id];
 
-    div.className = `card ${
-      isEvolutionCard ? "gold evolution-card" : ""
-    } ${isEvolved ? "evolved-card" : ""}`;
+    div.className = `card ${isEvolutionCard ? "gold evolution-card" : ""
+      } ${isEvolved ? "evolved-card" : ""}`;
 
     div.innerHTML = `<h3>${upg.name}</h3><p>${upg.desc}</p>`;
 
@@ -230,8 +228,11 @@ export function updateBossUI() {
   if (!boss || !boss.phaseColors) return;
 
   const ratio = boss.hp / boss.maxHp;
+
   let phase;
-  if (boss.phaseCount === 3) {
+  if (boss.phaseCount === 5) {
+    phase = ratio > 0.8 ? 0 : ratio > 0.6 ? 1 : ratio > 0.4 ? 2 : ratio > 0.2 ? 3 : 4;
+  } else if (boss.phaseCount === 3) {
     phase = ratio > 0.66 ? 0 : ratio > 0.33 ? 1 : 2;
   } else {
     phase = ratio > 0.5 ? 0 : 1;

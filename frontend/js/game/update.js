@@ -206,6 +206,7 @@ export function update(ctx, canvas, changeStateFn) {
 
   // --- Elemental interactions & Hazards ---
   state.hazards.forEach((h) => {
+
     // Terrain Collision (Earth Spikes/Barriers)
     if (h.type === "rock" && h.active) {
       const dxh = player.x - h.x;
@@ -292,6 +293,9 @@ export function update(ctx, canvas, changeStateFn) {
     state.player.bounces = currentBounces;
     let isDruidR = player.characterId === "druid" && buffs.r > 0;
 
+    let count = state.player.multiShot || 1;
+    let spread = 0.15; // Khoảng cách góc giữa các viên đạn
+
     if (isAssassinE) {
       state.activeBuffs.e = 0;
       let nearestDist = Infinity;
@@ -310,15 +314,23 @@ export function update(ctx, canvas, changeStateFn) {
         }
       });
 
-      let tx = mouse.x,
-        ty = mouse.y;
+      let tx = mouse.x, ty = mouse.y;
       if (targetObj) {
         tx = targetObj.x;
         ty = targetObj.y;
       }
 
       let oldLen = state.bullets.length;
-      spawnBullet(player.x, player.y, tx, ty, true);
+
+      // SỬA LỖI ĐẠN KÉP CHO ASSASSIN: Xòe đạn hình quạt
+      let baseAngle = Math.atan2(ty - player.y, tx - player.x);
+      let startAngle = baseAngle - (spread * (count - 1)) / 2;
+
+      for (let i = 0; i < count; i++) {
+        let a = startAngle + i * spread;
+        spawnBullet(player.x, player.y, player.x + Math.cos(a) * 10, player.y + Math.sin(a) * 10, true);
+      }
+
       for (let i = oldLen; i < state.bullets.length; i++) {
         let b = state.bullets[i];
         b.damage = 2;
@@ -326,7 +338,16 @@ export function update(ctx, canvas, changeStateFn) {
       }
     } else {
       let oldLen = state.bullets.length;
-      spawnBullet(player.x, player.y, mouse.x, mouse.y, true);
+
+      // SỬA LỖI ĐẠN KÉP CHO BẮN THƯỜNG: Xòe đạn hình quạt về hướng chuột
+      let baseAngle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
+      let startAngle = baseAngle - (spread * (count - 1)) / 2;
+
+      for (let i = 0; i < count; i++) {
+        let a = startAngle + i * spread;
+        spawnBullet(player.x, player.y, player.x + Math.cos(a) * 10, player.y + Math.sin(a) * 10, true);
+      }
+
       if (isSniperQ) {
         for (let i = oldLen; i < state.bullets.length; i++) {
           state.bullets[i].damage = 3;
@@ -442,8 +463,11 @@ export function update(ctx, canvas, changeStateFn) {
 
       // Detect Phase Transition logic for visuals
       const ratio = boss.hp / boss.maxHp;
+
       let phase = 0;
-      if (boss.phaseCount === 3) {
+      if (boss.phaseCount === 5) {
+        phase = ratio > 0.8 ? 0 : ratio > 0.6 ? 1 : ratio > 0.4 ? 2 : ratio > 0.2 ? 3 : 4;
+      } else if (boss.phaseCount === 3) {
         phase = ratio > 0.66 ? 0 : ratio > 0.33 ? 1 : 2;
       } else {
         phase = ratio > 0.5 ? 0 : 1;
@@ -1672,6 +1696,33 @@ export function update(ctx, canvas, changeStateFn) {
       }
     } else {
       if (g.x > 0) activeGhosts++;
+    }
+
+    if (g.isSubBoss) {
+      activeGhosts++;
+      if (g.isStunned > 0) {
+        g.isStunned--;
+      } else {
+        // AI: Từ từ áp sát người chơi
+        let angle = Math.atan2(player.y - g.y, player.x - g.x);
+        g.x += Math.cos(angle) * g.speedRate;
+        g.y += Math.sin(angle) * g.speedRate;
+
+        // Lưu vết để vẽ (chống lỗi crash)
+        g.historyPath.push({ x: g.x, y: g.y });
+        if (g.historyPath.length > 8) g.historyPath.shift();
+
+        // AI: Xả đạn mỗi giây
+        if (state.frameCount % 60 === 0) {
+          spawnBullet(g.x, g.y, player.x, player.y, false, g.color === "#ff4400" ? 1 : 2, "ghost", 1.5);
+        }
+
+        // Gây sát thương nếu chạm vào người chơi
+        if (!isInvulnerable && dist(g.x, g.y, player.x, player.y) < player.radius + g.radius - 2) {
+          import("./combat.js").then(m => m.playerTakeDamage(ctx, canvas, changeStateFn));
+        }
+      }
+      continue; // Bỏ qua logic đọc Record của ghost thường
     }
   }
 
