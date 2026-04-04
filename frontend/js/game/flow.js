@@ -514,6 +514,9 @@ export function resetSkillsState() {
   state.groundWarnings = [];
   state.safeZones = [];
   state.globalHazard = { type: null, active: false, timer: 0, damage: 0 };
+
+  state.screenShake = { timer: 0, intensity: 0, type: 'earth' };
+
   state.cinematicEffects = {
     fogAlpha: 0,
     distortion: 0,

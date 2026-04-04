@@ -250,7 +250,8 @@ export function updateBullets(
           if (h.type === "vortex") {
             const dxv = h.x - b.x, dyv = h.y - b.y;
             const dv = Math.sqrt(dxv * dxv + dyv * dyv);
-            if (dv < h.radius * 2) {
+
+            if (dv > 0 && dv < h.radius * 2) {
               b.vx += (dxv / dv) * 0.4;
               b.vy += (dyv / dv) * 0.4;
             }
