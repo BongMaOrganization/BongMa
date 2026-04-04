@@ -48,7 +48,7 @@ export const BOSS_ARENA_REWARDS = {
   fireBoss: { coins: 150, rareTicket: 0.15 },
   iceBoss: { coins: 130, rareTicket: 0.12 },
   thunderBoss: { coins: 180, rareTicket: 0.18 },
-  earthBoss: { coins: 200, rareTicket: 0.20 },
+  earthBoss: { coins: 200, rareTicket: 0.2 },
   windBoss: { coins: 160, rareTicket: 0.15 },
   omni: { coins: 1000, rareTicket: 0.80 },
 };
@@ -863,7 +863,7 @@ export const CHARACTERS = [
         key: "e",
         name: "Hiến Tế",
         desc: "Nổ toàn bộ minion gây sát thương lớn.",
-        cooldown: 5,
+        cooldown: 0,
         initialCooldown: 0,
       },
       {
@@ -995,6 +995,33 @@ export const CHARACTERS = [
       },
     ],
   },
+  {
+    id: "elementalist",
+    name: "Nguyên Tố Sư",
+    price: 900,
+    rarity: "mythical",
+    baseStats: { hp: 4, speed: 5, fireRate: 15, multiShot: 1, bounces: 1 },
+    skills: [
+      {
+        key: "q",
+        name: "Chuyển Hệ",
+        desc: "Đổi giữa 5 nguyên tố",
+        cooldown: 0,
+      },
+      {
+        key: "e",
+        name: "Kỹ Năng Nguyên Tố",
+        desc: "Theo hệ",
+        cooldown: 0,
+      },
+      {
+        key: "r",
+        name: "Bùng Nổ Nguyên Tố",
+        cooldown: 0,
+        initialCooldown: 0,
+      },
+    ],
+  },
 ];
 
 export const BOSS_REWARDS = [
@@ -1033,9 +1060,9 @@ export const SCROLLS = [
     rarity: "common",
     desc: "Quay ngẫu nhiên. Trùng nhân vật → +1 NL Common. 5 NL Common = 1 Vòng Quay Rare.",
     probabilities: {
-      common: 0.7,
-      rare: 0.2,
-      legendary: 0.1,
+      common: 1,
+      rare: 0,
+      legendary: 0,
     },
   },
   {

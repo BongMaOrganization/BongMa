@@ -1053,6 +1053,133 @@ function triggerSkill(key, canvas, changeStateFn) {
       state.activeBuffs.r = 6 * FPS;
       state.skillsCD.r = getCooldown(char, 2).cd * FPS;
     }
+  } else if (char === "elementalist") {
+    // ===== Q: ĐỔI HỆ =====
+    if (key === "q") {
+      const elements = ["fire", "ice", "lightning", "earth", "wind"];
+      let idx = elements.indexOf(state.element);
+      state.element = elements[(idx + 1) % elements.length];
+
+      state.skillsCD.q = getCooldown(char, 0).cd * FPS;
+    }
+
+    // ===== E: SKILL THEO ELEMENT =====
+    if (key === "e") {
+      let el = state.element;
+
+      // 🔥 FIRE
+      if (el === "fire") {
+        state.hazards.push({
+          x: state.mouse.x,
+          y: state.mouse.y,
+          radius: 80,
+          type: "fire",
+          life: 120,
+          damage: 0.5,
+          owner: "player",
+        });
+      }
+
+      // ❄️ ICE
+      if (el === "ice") {
+        state.hazards.push({
+          x: state.mouse.x,
+          y: state.mouse.y,
+          radius: 100,
+          type: "frost",
+          life: 120,
+          slow: 0.5,
+          owner: "player",
+        });
+      }
+
+      // ⚡ LIGHTNING
+      if (el === "lightning") {
+        state.hazards.push({
+          x: state.mouse.x,
+          y: state.mouse.y,
+          radius: 120,
+          type: "static",
+          life: 15,
+          owner: "player",
+        });
+        state.ghosts.forEach((g) => {
+          if (dist(state.mouse.x, state.mouse.y, g.x, g.y) < 200) {
+            g.hp -= 2;
+            g.isStunned = 40;
+          }
+        });
+
+        if (
+          state.boss &&
+          dist(state.mouse.x, state.mouse.y, state.boss.x, state.boss.y) < 200
+        ) {
+          state.boss.hp -= 3;
+        }
+      }
+
+      // 🪨 EARTH
+      if (el === "earth") {
+        state.hazards.push({
+          x: state.mouse.x,
+          y: state.mouse.y,
+          radius: 60,
+          type: "rock",
+          life: 180,
+          owner: "player",
+        });
+      }
+
+      // 🌪 WIND
+      if (el === "wind") {
+        if (!state.windTornadoes) state.windTornadoes = [];
+
+        state.windTornadoes.push({
+          x: state.mouse.x,
+          y: state.mouse.y,
+          radius: 140,
+          life: 120,
+        });
+      }
+
+      state.skillsCD.e = getCooldown(char, 1).cd * FPS;
+    }
+
+    // ===== R: ULTIMATE =====
+    if (key === "r") {
+      let el = state.element;
+
+      state.activeBuffs.r = 5 * FPS;
+
+      // 🔥 FIRE RAIN
+      if (el === "fire") {
+        state.elementR = { type: "fire", life: 5 * FPS };
+      }
+
+      // ❄️ FREEZE ALL
+      if (el === "ice") {
+        state.elementR = {
+          type: "ice_rain",
+          life: 5 * FPS,
+        };
+      }
+
+      // ⚡ STORM
+      if (el === "lightning") {
+        state.elementR = { type: "lightning", life: 5 * FPS };
+      }
+
+      // 🪨 EARTH SHOCK
+      if (el === "earth") {
+        state.elementR = { type: "earth", life: 5 * FPS };
+      }
+      // 🌪 VORTEX
+      if (el === "wind") {
+        state.elementR = { type: "wind", life: 5 * FPS };
+      }
+
+      state.skillsCD.r = getCooldown(char, 2).cd * FPS;
+    }
   }
 }
 

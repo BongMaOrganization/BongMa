@@ -18,7 +18,7 @@ export function playerTakeDamage(ctx, canvas, changeStateFn, amount = 1) {
         state.player.characterId === "reaper")) ||
     (buffs.q > 0 &&
       (state.player.characterId === "warden" ||
-        state.player.characterId === "ghost" ||  // ĐÃ CHUYỂN BÓNG MA VỀ Q
+        state.player.characterId === "ghost" || // ĐÃ CHUYỂN BÓNG MA VỀ Q
         state.player.characterId === "assassin" ||
         state.player.characterId === "spirit" ||
         state.player.characterId === "frost"));
@@ -60,8 +60,9 @@ export function playerTakeDamage(ctx, canvas, changeStateFn, amount = 1) {
   updateHealthUI();
 
   // SỬA LỖI CRASH: Không bao giờ được phép dùng ctx khi nó null hoặc undefined
-  const safeCtx = (typeof ctx !== "undefined" && ctx !== null) ? ctx : null;
-  const safeCanvas = (typeof canvas !== "undefined" && canvas !== null) ? canvas : null;
+  const safeCtx = typeof ctx !== "undefined" && ctx !== null ? ctx : null;
+  const safeCanvas =
+    typeof canvas !== "undefined" && canvas !== null ? canvas : null;
 
   if (safeCtx && safeCanvas) {
     safeCtx.fillStyle = "rgba(255,0,0,0.5)";
@@ -134,7 +135,7 @@ export function updateBullets(
         state.player.characterId === "reaper")) ||
     (buffs.q > 0 &&
       (state.player.characterId === "warden" ||
-        state.player.characterId === "ghost" ||  // ĐÃ CHUYỂN BÓNG MA VỀ Q
+        state.player.characterId === "ghost" || // ĐÃ CHUYỂN BÓNG MA VỀ Q
         state.player.characterId === "assassin" ||
         state.player.characterId === "spirit" ||
         state.player.characterId === "frost"));
@@ -158,7 +159,7 @@ export function updateBullets(
   }
 
   // --- Boss Beam Collision ---
-  state.bossBeams.forEach(beam => {
+  state.bossBeams.forEach((beam) => {
     if (beam.state === "fire") {
       // Find closest point on line segment (x1,y1) to (x2,y2) to player (px,py)
       const px = player.x;
@@ -175,7 +176,8 @@ export function updateBullets(
       const closestY = beam.y1 + t * dy;
       const d = dist(px, py, closestX, closestY);
 
-      if (d < player.radius + 15) { // 15 is beam width approx
+      if (d < player.radius + 15) {
+        // 15 is beam width approx
         playerTakeDamage(ctx, canvas, changeStateFn, 1);
         state.playerStatus.stunTimer = 10;
       }
@@ -232,7 +234,7 @@ export function updateBullets(
           if (distToPlayer < 600) {
             state.screenShake.timer = 15;
             state.screenShake.intensity = 25;
-            state.screenShake.type = 'earth';
+            state.screenShake.type = "earth";
           }
 
           // TẠO HỐ DUNG NHAM KHỔNG LỒ (Bán kính 120, dame mạnh)
@@ -245,10 +247,12 @@ export function updateBullets(
       }
 
       // Wind Vortex pulls Fire Bullets and Player Bullets
-      if (b.isPlayer || b.style === 1) { // Player or Fire
-        state.hazards.forEach(h => {
+      if (b.isPlayer || b.style === 1) {
+        // Player or Fire
+        state.hazards.forEach((h) => {
           if (h.type === "vortex") {
-            const dxv = h.x - b.x, dyv = h.y - b.y;
+            const dxv = h.x - b.x,
+              dyv = h.y - b.y;
             const dv = Math.sqrt(dxv * dxv + dyv * dyv);
 
             if (dv > 0 && dv < h.radius * 2) {
@@ -312,7 +316,29 @@ export function updateBullets(
         if (!b.hitList.includes("boss")) {
           b.hitList.push("boss");
           let finalDmg = b.damage || 1;
+          // 🔥 ELEMENT EFFECT (CHÈN Ở ĐÂY)
+          if (b.element === "fire") {
+            finalDmg *= 1.5;
+          }
 
+          if (b.element === "ice") {
+            boss.slowTimer = 20; // bạn phải có xử lý slow trong boss
+          }
+
+          if (b.element === "lightning") {
+            boss.stunTimer = Math.max(boss.stunTimer || 0, 15);
+          }
+
+          if (b.element === "wind") {
+            let dx = boss.x - b.x;
+            let dy = boss.y - b.y;
+            let len = Math.hypot(dx, dy) || 1;
+
+            boss.x += (dx / len) * 5;
+            boss.y += (dy / len) * 5;
+          }
+
+          // 🪨 earth = default
           // --- Boss Shield/Stance Logic ---
           if (boss.shieldActive && boss.shield > 0) {
             boss.shield -= finalDmg * 2; // Shield takes double dmg to encourage aggression
@@ -384,6 +410,32 @@ export function updateBullets(
             state.player.coins = (state.player.coins || 0) + 10;
           } else {
             let finalDmg = b.damage || 1;
+
+            // 🔥 ELEMENT EFFECT
+            if (b.element === "fire") {
+              finalDmg *= 1.5;
+            }
+
+            if (b.element === "ice") {
+              g.isStunned = Math.max(g.isStunned, 20);
+            }
+
+            if (b.element === "lightning") {
+              g.isStunned = Math.max(g.isStunned, 40);
+            }
+
+            if (b.element === "wind") {
+              let dx = g.x - b.x;
+              let dy = g.y - b.y;
+              let len = Math.hypot(dx, dy) || 1;
+
+              g.x += (dx / len) * 10;
+              g.y += (dy / len) * 10;
+            }
+
+            // earth = default (không cần code)
+
+            // ⚠️ giữ nguyên logic cũ của bạn
             if (
               state.player.characterId === "hunter" &&
               state.activeBuffs.e > 0 &&
@@ -391,6 +443,7 @@ export function updateBullets(
             ) {
               finalDmg *= 2;
             }
+
             g.isStunned = finalDmg >= 2 ? 600 : 300;
             g.hp = (g.hp || 1) - finalDmg;
             addExperience(6, changeStateFn);
@@ -435,7 +488,7 @@ export function updateBullets(
       }
       // --- Collision with Player ---
       const d = dist(b.x, b.y, player.x, player.y);
-      const hitRadius = (b.style === 5) ? 25 : b.radius + player.radius; // Larger hit for spears
+      const hitRadius = b.style === 5 ? 25 : b.radius + player.radius; // Larger hit for spears
 
       if (d < hitRadius) {
         // Apply Element-Specific Debuffs

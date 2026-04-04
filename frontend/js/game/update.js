@@ -588,7 +588,7 @@ export function update(ctx, canvas, changeStateFn) {
             vy: (Math.random() - 0.5) * 2,
             life: 20,
             color: "#00ffff",
-            size: 1 + Math.random() * 2
+            size: 1 + Math.random() * 2,
           });
         }
       }
@@ -1225,7 +1225,303 @@ export function update(ctx, canvas, changeStateFn) {
     });
     state.engineerTurrets = state.engineerTurrets.filter((t) => t.life > 0);
   }
+  //Elementalist: Thay đổi nguyên tố liên tục khi Q hoạt động
+  if (player.characterId === "elementalist" && buffs.q > 0) {
+    const elements = ["fire", "ice", "lightning", "earth", "wind"];
 
+    let idx = elements.indexOf(state.element);
+    state.element = elements[(idx + 1) % elements.length];
+
+    player.color = state.elementColors[state.element];
+  }
+  if (player.characterId === "elementalist" && buffs.e > 0) {
+    let el = state.element;
+
+    // 🔥 FIRE
+    if (el === "fire") {
+      state.hazards.push({
+        type: "fire",
+        x: mouse.x,
+        y: mouse.y,
+        radius: 80,
+        life: 120,
+      });
+    }
+
+    // ❄️ ICE
+    if (el === "ice") {
+      state.hazards.push({
+        type: "frost",
+        x: mouse.x,
+        y: mouse.y,
+        radius: 100,
+        life: 120,
+      });
+    }
+
+    // ⚡ LIGHTNING
+    if (el === "lightning") {
+      state.ghosts.forEach((g) => {
+        if (dist(mouse.x, mouse.y, g.x, g.y) < 200) {
+          g.hp -= 2;
+          g.isStunned = 40;
+        }
+      });
+    }
+
+    // 🪨 EARTH
+    if (el === "earth") {
+      state.hazards.push({
+        type: "rock",
+        x: mouse.x,
+        y: mouse.y,
+        radius: 60,
+        life: 180,
+        active: true,
+      });
+    }
+
+    // 🌪 WIND
+    if (el === "wind") {
+      if (!state.windTornadoes) state.windTornadoes = [];
+
+      state.windTornadoes.push({
+        x: mouse.x,
+        y: mouse.y,
+        radius: 150,
+        life: 120,
+      });
+    }
+    buffs.e = 0;
+  }
+  if (state.elementR) {
+    state.elementR.life--;
+
+    let el = state.elementR.type;
+
+    // 🔥 FIRE RAIN
+    if (el === "fire" && state.frameCount % 10 === 0) {
+      let x = Math.random() * 800;
+      let y = Math.random() * 600;
+
+      state.hazards.push({
+        type: "fire",
+        x,
+        y,
+        radius: 60,
+        life: 60,
+        owner: "player", // ❗ QUAN TRỌNG
+      });
+    }
+
+    // ⚡ LIGHTNING STORM
+    if (el === "lightning" && state.frameCount % 8 === 0) {
+      let x = Math.random() * 800;
+      let y = Math.random() * 600;
+
+      // ⚡ visual tia sét
+      if (!state.stormLightnings) state.stormLightnings = [];
+      state.stormLightnings.push({
+        x,
+        y,
+        life: 12,
+      });
+
+      // ⚡ damage vùng
+      state.ghosts.forEach((g) => {
+        if (dist(x, y, g.x, g.y) < 100) {
+          g.hp -= 4;
+          g.isStunned = 50;
+        }
+      });
+
+      // ⚡ boss
+      if (
+        state.boss &&
+        dist(x, y, state.boss.x, state.boss.y) < 100 + state.boss.radius
+      ) {
+        state.boss.hp -= 3;
+      }
+
+      // 🎥 screen flash nhẹ
+      state.screenShake = {
+        timer: 4,
+        intensity: 3,
+      };
+    }
+
+    // 🌪 WIND VORTEX
+    if (el === "wind") {
+      if (!state.windParticles) state.windParticles = [];
+
+      for (let i = 0; i < 5; i++) {
+        state.windParticles.push({
+          angle: Math.random() * Math.PI * 2,
+          radius: Math.random() * 150,
+          life: 30,
+        });
+      }
+      state.ghosts.forEach((g) => {
+        let dx = state.player.x - g.x;
+        let dy = state.player.y - g.y;
+        let d = Math.hypot(dx, dy);
+
+        if (d < 300) {
+          let len = d || 1;
+
+          // 💥 lực hút
+          let pull = (300 - d) * 0.04;
+
+          // 🌪 xoáy quanh player
+          let angle = Math.atan2(dy, dx) + 0.6;
+
+          g.x += Math.cos(angle) * pull;
+          g.y += Math.sin(angle) * pull;
+
+          // ❗ giữ hiệu ứng (không phải stun thật)
+          g.isStunned = Math.max(g.isStunned, 5);
+        }
+      });
+
+      // 🌪 visual vortex
+      state.cinematicEffects.vortexPower = 1;
+      state.cinematicEffects.vortexCenter = {
+        x: state.player.x,
+        y: state.player.y,
+      };
+    }
+
+    //Frost
+    // ❄️ ICICLE RAIN
+    if (el === "ice_rain" && state.frameCount % 6 === 0) {
+      if (!state.icicles) state.icicles = [];
+
+      let x = Math.random() * 800;
+
+      state.icicles.push({
+        x,
+        y: -20,
+        vy: 12,
+        radius: 12,
+        life: 60,
+      });
+    }
+
+    //Earth
+    if (el === "earth" && state.frameCount % 6 === 0) {
+      // 💥 shockwave visual
+      if (!state.explosions) state.explosions = [];
+      state.explosions.push({
+        x: state.player.x,
+        y: state.player.y,
+        radius: 180,
+        life: 8,
+        color: "rgba(150,100,50,0.4)",
+      });
+
+      // ===== 🧟 PUSH GHOST =====
+      state.ghosts.forEach((g) => {
+        let dx = g.x - state.player.x;
+        let dy = g.y - state.player.y;
+        let d = Math.hypot(dx, dy);
+
+        if (d < 200) {
+          let len = d || 1;
+
+          // 💥 force mạnh hơn gần tâm
+          let force = (200 - d) * 0.8;
+
+          g.x += (dx / len) * force;
+          g.y += (dy / len) * force;
+
+          // ❗ QUAN TRỌNG: giữ knockback
+          g.isStunned = Math.max(g.isStunned, 10);
+        }
+      });
+
+      // ===== 💣 DEFLECT BULLETS =====
+      state.bullets.forEach((b) => {
+        if (!b.isPlayer) {
+          let dx = b.x - state.player.x;
+          let dy = b.y - state.player.y;
+          let d = Math.hypot(dx, dy);
+
+          if (d < 200) {
+            let len = d || 1;
+
+            // 💥 đẩy bullet ra ngoài
+            b.vx = (dx / len) * 8;
+            b.vy = (dy / len) * 8;
+
+            // 💥 convert thành đạn player luôn (optional, rất mạnh)
+            b.isPlayer = true;
+          }
+        }
+      });
+
+      // 🎥 screen shake nhẹ
+      state.screenShake = {
+        timer: 6,
+        intensity: 4,
+      };
+    }
+    if (state.elementR.life <= 0) {
+      state.elementR = null;
+    }
+  }
+  if (state.windTornadoes) {
+    state.windTornadoes = state.windTornadoes.filter((t) => {
+      t.life--;
+
+      state.ghosts.forEach((g) => {
+        let dx = t.x - g.x;
+        let dy = t.y - g.y;
+        let d = Math.hypot(dx, dy);
+
+        if (d < t.radius) {
+          let len = d || 1;
+
+          let pull = Math.min(3, (t.radius - d) * 0.05);
+
+          // 🌪 xoáy giống R
+          let angle = Math.atan2(dy, dx) + 0.8;
+
+          g.x += Math.cos(angle) * pull;
+          g.y += Math.sin(angle) * pull;
+
+          // ❗ QUAN TRỌNG NHẤT
+          g.isStunned = Math.max(g.isStunned, 5);
+        }
+      });
+
+      return t.life > 0;
+    });
+  }
+  if (state.icicles) {
+    state.icicles = state.icicles.filter((ic) => {
+      ic.y += ic.vy;
+      ic.life--;
+
+      // 🎯 HIT GHOST
+      state.ghosts.forEach((g) => {
+        if (dist(ic.x, ic.y, g.x, g.y) < g.radius + ic.radius) {
+          g.hp -= 3;
+          g.isStunned = 40;
+        }
+      });
+
+      // 🎯 HIT BOSS
+      if (
+        state.boss &&
+        dist(ic.x, ic.y, state.boss.x, state.boss.y) <
+          state.boss.radius + ic.radius
+      ) {
+        state.boss.hp -= 2;
+      }
+
+      return ic.life > 0 && ic.y < 650;
+    });
+  }
   // SỬA LỖI UI MÁU BOSS: Đồng bộ máu boss liên tục để chiêu R Storm, Reaper... hiển thị đúng
   if (boss && boss.hp !== boss.prevHp) {
     if (UI.bossHp)
@@ -1593,7 +1889,7 @@ export function update(ctx, canvas, changeStateFn) {
     if (
       boss &&
       dist(player.x, player.y, boss.x, boss.y) <
-      boss.radius + player.radius + 20
+        boss.radius + player.radius + 20
     ) {
       boss.hp -= 3;
     }
@@ -1753,6 +2049,40 @@ export function update(ctx, canvas, changeStateFn) {
           }
         } else {
           h.firstEnterTime = 0; // Reset if they leave
+        }
+      }
+      if (h.owner === "player") {
+        // 🎯 GHOST
+        state.ghosts.forEach((g) => {
+          if (dist(h.x, h.y, g.x, g.y) < h.radius) {
+            if (h.type === "fire") {
+              g.hp -= 0.05;
+              g.isStunned = Math.max(g.isStunned, 60);
+            }
+            if (h.type === "frost") {
+              g.isStunned = Math.max(g.isStunned, 60);
+            }
+
+            if (h.type === "rock") {
+              g.hp -= 0.03;
+              g.isStunned = 20;
+            }
+
+            if (h.type === "static") {
+              g.hp -= 0.1;
+              g.isStunned = 20;
+            }
+          }
+        });
+
+        // 🎯 BOSS
+        if (
+          state.boss &&
+          dist(h.x, h.y, state.boss.x, state.boss.y) < h.radius
+        ) {
+          if (h.type === "fire") state.boss.hp -= 0.03;
+          if (h.type === "rock") state.boss.hp -= 0.02;
+          if (h.type === "static") state.boss.hp -= 0.05;
         }
       }
       return h.life > 0;

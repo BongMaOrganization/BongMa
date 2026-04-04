@@ -2,15 +2,24 @@ import { state } from "../state.js";
 import { dist } from "../utils.js";
 
 const SCREEN_SHAKE_TYPES = {
-  earth: () => ({ x: 0, y: (Math.random() - 0.5) * state.screenShake.intensity }),
-  wind: () => ({ x: (Math.random() - 0.5) * state.screenShake.intensity * 0.5, y: (Math.random() - 0.5) * state.screenShake.intensity * 0.5 }),
+  earth: () => ({
+    x: 0,
+    y: (Math.random() - 0.5) * state.screenShake.intensity,
+  }),
+  wind: () => ({
+    x: (Math.random() - 0.5) * state.screenShake.intensity * 0.5,
+    y: (Math.random() - 0.5) * state.screenShake.intensity * 0.5,
+  }),
   thunder: () => {
-    return { x: (Math.random() - 0.5) * state.screenShake.intensity * 1.5, y: (Math.random() - 0.5) * state.screenShake.intensity * 1.5 };
-  }
+    return {
+      x: (Math.random() - 0.5) * state.screenShake.intensity * 1.5,
+      y: (Math.random() - 0.5) * state.screenShake.intensity * 1.5,
+    };
+  },
 };
 
-const fireCanvas = document.createElement('canvas');
-const fireCtx = fireCanvas.getContext('2d');
+const fireCanvas = document.createElement("canvas");
+const fireCtx = fireCanvas.getContext("2d");
 fireCanvas.width = 100 * 10;
 fireCanvas.height = 100;
 
@@ -35,7 +44,7 @@ preRenderFire();
 
 function getShakeOffset() {
   if (!state.screenShake || state.screenShake.timer <= 0) return { x: 0, y: 0 };
-  const type = state.screenShake.type || 'earth';
+  const type = state.screenShake.type || "earth";
   return (SCREEN_SHAKE_TYPES[type] || SCREEN_SHAKE_TYPES.earth)();
 }
 
@@ -90,8 +99,12 @@ function drawLavaFloor(ctx, canvas) {
 function drawBurnVignette(ctx, canvas) {
   const pulse = (Math.sin(state.frameCount * 0.1) + 1) * 0.5;
   const grad = ctx.createRadialGradient(
-    canvas.width / 2, canvas.height / 2, canvas.width * 0.3,
-    canvas.width / 2, canvas.height / 2, canvas.width * 0.8
+    canvas.width / 2,
+    canvas.height / 2,
+    canvas.width * 0.3,
+    canvas.width / 2,
+    canvas.height / 2,
+    canvas.width * 0.8,
   );
   grad.addColorStop(0, "rgba(0, 0, 0, 0)");
   // Chỉ đỏ mờ ở ngoài viền
@@ -112,7 +125,11 @@ export function draw(ctx, canvas) {
 
   // --- Background & Global Hazards ---
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  if (state.globalHazard && state.globalHazard.active && state.globalHazard.type === "fire") {
+  if (
+    state.globalHazard &&
+    state.globalHazard.active &&
+    state.globalHazard.type === "fire"
+  ) {
     drawLavaFloor(ctx, canvas);
   } else {
     drawGrid(ctx, canvas);
@@ -125,12 +142,16 @@ export function draw(ctx, canvas) {
     ctx.translate(shake.x, shake.y);
   }
 
-  if (state.globalHazard && state.globalHazard.active && state.globalHazard.type === "fire") {
+  if (
+    state.globalHazard &&
+    state.globalHazard.active &&
+    state.globalHazard.type === "fire"
+  ) {
     drawBurnVignette(ctx, canvas);
   }
 
   // --- Draw Hazards (Under entities) ---
-  state.hazards.forEach(h => {
+  state.hazards.forEach((h) => {
     ctx.save();
     if (h.type === "fire") {
       // TẠO ĐỘ RỰC (BLOOM) NHƯ ĐÈN NEON BẰNG LIGHTER
@@ -198,8 +219,14 @@ export function draw(ctx, canvas) {
       ctx.fill();
       for (let i = 0; i < 5; i++) {
         ctx.beginPath();
-        ctx.moveTo(h.x + (Math.random() - 0.5) * 70, h.y + (Math.random() - 0.5) * 70);
-        ctx.lineTo(h.x + (Math.random() - 0.5) * 70, h.y + (Math.random() - 0.5) * 70);
+        ctx.moveTo(
+          h.x + (Math.random() - 0.5) * 70,
+          h.y + (Math.random() - 0.5) * 70,
+        );
+        ctx.lineTo(
+          h.x + (Math.random() - 0.5) * 70,
+          h.y + (Math.random() - 0.5) * 70,
+        );
         ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
         ctx.stroke();
       }
@@ -210,7 +237,10 @@ export function draw(ctx, canvas) {
       for (let i = 0; i < 12; i++) {
         ctx.beginPath();
         ctx.moveTo(h.x, h.y);
-        ctx.lineTo(h.x + (Math.random() - 0.5) * h.radius * 2, h.y + (Math.random() - 0.5) * h.radius * 2);
+        ctx.lineTo(
+          h.x + (Math.random() - 0.5) * h.radius * 2,
+          h.y + (Math.random() - 0.5) * h.radius * 2,
+        );
         ctx.stroke();
       }
     } else if (h.type === "vortex") {
@@ -224,7 +254,13 @@ export function draw(ctx, canvas) {
       for (let i = 0; i < 5; i++) {
         ctx.beginPath();
         // Vẽ các dải gió cuộn vào trong
-        ctx.arc(0, 0, (h.radius / 5) * (i + 1), 0, Math.PI * (1 + Math.random() * 0.5));
+        ctx.arc(
+          0,
+          0,
+          (h.radius / 5) * (i + 1),
+          0,
+          Math.PI * (1 + Math.random() * 0.5),
+        );
         ctx.stroke();
       }
       ctx.restore();
@@ -246,7 +282,7 @@ export function draw(ctx, canvas) {
           vy: -2 - Math.random() * 3,
           life: 60,
           color: Math.random() > 0.5 ? "#ffaa00" : "#ff4400",
-          size: 2 + Math.random() * 3
+          size: 2 + Math.random() * 3,
         });
       }
     } else if (state.globalHazard.type === "electric") {
@@ -257,7 +293,8 @@ export function draw(ctx, canvas) {
       }
 
       // 2. Vẽ các tia sét đánh xuống ngẫu nhiên toàn bản đồ
-      if (state.frameCount % 8 === 0) { // Tần suất xuất hiện tia sét
+      if (state.frameCount % 8 === 0) {
+        // Tần suất xuất hiện tia sét
         ctx.save();
         ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
         ctx.lineWidth = 2 + Math.random() * 2;
@@ -272,7 +309,7 @@ export function draw(ctx, canvas) {
         // Vẽ đường ziczac của tia sét
         while (curY < canvas.height) {
           startX += (Math.random() - 0.5) * 80; // Độ lệch ngang
-          curY += 30 + Math.random() * 40;     // Độ dài mỗi đoạn ziczac
+          curY += 30 + Math.random() * 40; // Độ dài mỗi đoạn ziczac
           ctx.lineTo(startX, curY);
         }
         ctx.stroke();
@@ -288,10 +325,10 @@ export function draw(ctx, canvas) {
           x: Math.random() * canvas.width,
           y: -10, // Tuyết rơi từ trên xuống
           vx: (Math.random() - 0.5) * 4, // Gió thổi ngang mạnh
-          vy: 2 + Math.random() * 4,     // Tốc độ rơi
+          vy: 2 + Math.random() * 4, // Tốc độ rơi
           life: 240,
           color: "#ffffff",
-          size: 2 + Math.random() * 3
+          size: 2 + Math.random() * 3,
         });
       }
     } else if (state.globalHazard.type === "wind") {
@@ -300,7 +337,8 @@ export function draw(ctx, canvas) {
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Phóng các hạt bụi với tốc độ cực kì xé gió (đảo chiều liên tục)
-      if (state.frameCount % 1 === 0) { // Mỗi frame đẻ ra 1 hạt
+      if (state.frameCount % 1 === 0) {
+        // Mỗi frame đẻ ra 1 hạt
         state.particles.push({
           x: Math.random() * canvas.width,
           y: Math.random() * canvas.height,
@@ -308,7 +346,7 @@ export function draw(ctx, canvas) {
           vy: Math.sin(state.frameCount * 0.05) * 20,
           life: 20,
           color: "#ccffff",
-          size: 1 + Math.random() * 3
+          size: 1 + Math.random() * 3,
         });
       }
     }
@@ -316,10 +354,17 @@ export function draw(ctx, canvas) {
   }
 
   // --- Draw Safe Zones ---
-  state.safeZones.forEach(sz => {
+  state.safeZones.forEach((sz) => {
     ctx.save();
     const pulse = 0.8 + Math.sin(state.frameCount * 0.1) * 0.2;
-    const gradient = ctx.createRadialGradient(sz.x, sz.y, 0, sz.x, sz.y, sz.radius);
+    const gradient = ctx.createRadialGradient(
+      sz.x,
+      sz.y,
+      0,
+      sz.x,
+      sz.y,
+      sz.radius,
+    );
     gradient.addColorStop(0, "rgba(0, 255, 255, 0.4)");
     gradient.addColorStop(1, "rgba(0, 255, 255, 0)");
     ctx.fillStyle = gradient;
@@ -449,7 +494,7 @@ export function draw(ctx, canvas) {
       ctx.fill();
 
       for (let i = 0; i < 4; i++) {
-        let a = (state.frameCount * 0.05 + i * (Math.PI / 2));
+        let a = state.frameCount * 0.05 + i * (Math.PI / 2);
         ctx.beginPath();
         ctx.arc(player.x, player.y, field.radius + pulse - 5, a, a + 0.8);
         ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
@@ -1024,6 +1069,74 @@ export function draw(ctx, canvas) {
     ctx.fillStyle = "pink";
     ctx.fill();
   }
+  if (player.characterId === "elementalist" && buffs.e > 0) {
+    let el = state.element;
+
+    if (el === "fire") {
+      ctx.fillStyle = "rgba(255,80,0,0.1)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    if (el === "ice") {
+      ctx.fillStyle = "rgba(0,200,255,0.1)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    if (el === "lightning") {
+      if (state.frameCount % 10 < 5) {
+        ctx.fillStyle = "rgba(255,255,200,0.1)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+
+    if (el === "earth") {
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, 120, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(150,100,50,0.6)";
+      ctx.lineWidth = 5;
+      ctx.stroke();
+    }
+
+    if (el === "wind") {
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, 100, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(200,255,255,0.6)";
+      ctx.setLineDash([5, 10]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  }
+  if (player.characterId === "elementalist" && buffs.r > 0) {
+    let el = state.element;
+
+    if (el === "fire") {
+      ctx.fillStyle = "rgba(255,50,0,0.2)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    if (el === "ice") {
+      ctx.fillStyle = "rgba(0,200,255,0.2)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    if (el === "lightning") {
+      ctx.fillStyle = "rgba(255,255,0,0.15)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    if (el === "earth") {
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, 250, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(150,100,50,0.5)";
+      ctx.lineWidth = 10;
+      ctx.stroke();
+    }
+
+    if (el === "wind") {
+      ctx.fillStyle = "rgba(200,255,255,0.1)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+  }
   if (boss) {
     let phase;
     const ratio = boss.hp / boss.maxHp;
@@ -1120,7 +1233,7 @@ export function draw(ctx, canvas) {
         g.historyPath[g.historyPath.length - 2].x,
         g.historyPath[g.historyPath.length - 2].y,
       ) >
-      8 * g.speedRate;
+        8 * g.speedRate;
 
     if (g.historyPath && g.historyPath.length > 0 && g.isStunned <= 0) {
       ctx.beginPath();
@@ -1141,8 +1254,13 @@ export function draw(ctx, canvas) {
       // Simple sparks
       if (state.frameCount % 2 === 0) {
         state.particles.push({
-          x: g.x, y: g.y, vx: (Math.random() - 0.5) * 2, vy: (Math.random() - 0.5) * 2,
-          life: 20, color: "#ffaa00", size: 2 + Math.random() * 3
+          x: g.x,
+          y: g.y,
+          vx: (Math.random() - 0.5) * 2,
+          vy: (Math.random() - 0.5) * 2,
+          life: 20,
+          color: "#ffaa00",
+          size: 2 + Math.random() * 3,
         });
       }
     }
@@ -1152,7 +1270,13 @@ export function draw(ctx, canvas) {
       ctx.strokeStyle = "rgba(200, 255, 255, 0.8)";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(g.x, g.y, g.radius + Math.sin(state.frameCount * 0.2) * 3, 0, Math.PI * 2);
+      ctx.arc(
+        g.x,
+        g.y,
+        g.radius + Math.sin(state.frameCount * 0.2) * 3,
+        0,
+        Math.PI * 2,
+      );
       ctx.stroke();
     }
 
@@ -1190,9 +1314,13 @@ export function draw(ctx, canvas) {
       // Dynamic Flame Trail
       if (state.frameCount % 2 === 0) {
         state.particles.push({
-          x: b.x, y: b.y, vx: (Math.random() - 0.5), vy: (Math.random() - 0.5),
-          life: 30, color: Math.random() > 0.5 ? "#ffaa00" : "#ff4400",
-          size: 3 + Math.random() * b.radius
+          x: b.x,
+          y: b.y,
+          vx: Math.random() - 0.5,
+          vy: Math.random() - 0.5,
+          life: 30,
+          color: Math.random() > 0.5 ? "#ffaa00" : "#ff4400",
+          size: 3 + Math.random() * b.radius,
         });
       }
 
@@ -1216,8 +1344,11 @@ export function draw(ctx, canvas) {
         state.particles.push({
           x: b.x + (Math.random() - 0.5) * b.radius,
           y: b.y + (Math.random() - 0.5) * b.radius,
-          vx: (Math.random() - 0.5) * 0.5, vy: -Math.random() * 1,
-          life: 40, color: "#222222", size: 5 + Math.random() * 10
+          vx: (Math.random() - 0.5) * 0.5,
+          vy: -Math.random() * 1,
+          life: 40,
+          color: "#222222",
+          size: 5 + Math.random() * 10,
         });
       }
 
@@ -1241,7 +1372,8 @@ export function draw(ctx, canvas) {
         const r = b.radius * (0.8 + Math.random() * 0.4);
         const px = b.x + Math.cos(angle) * r;
         const py = b.y + Math.sin(angle) * r;
-        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
       }
       ctx.closePath();
       ctx.fill();
@@ -1262,7 +1394,13 @@ export function draw(ctx, canvas) {
       ctx.strokeStyle = "rgba(200, 255, 255, 0.9)";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(b.x, b.y, b.radius + Math.sin(state.frameCount * 0.2) * 3, 0, Math.PI * 2);
+      ctx.arc(
+        b.x,
+        b.y,
+        b.radius + Math.sin(state.frameCount * 0.2) * 3,
+        0,
+        Math.PI * 2,
+      );
       ctx.stroke();
     }
     if (b.isShuriken) {
@@ -1299,7 +1437,12 @@ export function draw(ctx, canvas) {
 
       ctx.arc(b.x, b.y, drawRadius, 0, Math.PI * 2);
       if (b.isPlayer) {
-        ctx.fillStyle = "#00ffcc";
+        // 🔥 PLAYER BULLET → dùng element
+        if (player.characterId === "elementalist") {
+          ctx.fillStyle = state.elementColors[b.element] || "#00ffcc";
+        } else {
+          ctx.fillStyle = "#00ffcc";
+        }
       } else {
         // Color based on style
         ctx.fillStyle = "#ff4444";
@@ -1307,7 +1450,7 @@ export function draw(ctx, canvas) {
         if (b.style === 2) ctx.fillStyle = "#00ffff"; // Ice
         if (b.style === 3) ctx.fillStyle = "#ffff00"; // Thunder
         if (b.style === 0) ctx.fillStyle = "#8b4513"; // Earth
-        if (b.style === 4) ctx.fillStyle = "rgba(180, 255, 255, 0.6)";
+        if (b.style === 4) ctx.fillStyle = "rgba(180, 255, 255, 0.6)"; //Wind
 
         if (isFrostR && dist(b.x, b.y, player.x, player.y) < 200) {
           ctx.fillStyle = "#00ffff";
@@ -1353,11 +1496,8 @@ export function draw(ctx, canvas) {
   // --- Player ---
   let isInvulnSkill =
     (buffs.e > 0 &&
-      (char === "tank" ||
-        char === "ghost" ||
-        char === "reaper")) ||
-    (buffs.q > 0 &&
-      (char === "warden" || char === "frost"));
+      (char === "tank" || char === "ghost" || char === "reaper")) ||
+    (buffs.q > 0 && (char === "warden" || char === "frost"));
 
   if (player.dashTimeLeft > 0 || isInvulnSkill) {
     ctx.beginPath();
@@ -1368,8 +1508,7 @@ export function draw(ctx, canvas) {
       0,
       Math.PI * 2,
     );
-    ctx.fillStyle =
-      char === "ghost" ? "rgba(100,100,255,0.5)" : "white";
+    ctx.fillStyle = char === "ghost" ? "rgba(100,100,255,0.5)" : "white";
 
     if (char === "reaper" && buffs.e > 0) {
       ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
@@ -1394,12 +1533,39 @@ export function draw(ctx, canvas) {
   } else {
     ctx.beginPath();
     ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
-    ctx.fillStyle = player.color;
+    if (player.characterId === "elementalist") {
+      ctx.fillStyle = state.elementColors[state.element];
+    } else {
+      ctx.fillStyle = player.color;
+    }
     ctx.shadowBlur = 15;
-    ctx.shadowColor = player.color;
+    if (player.characterId === "elementalist") {
+      ctx.shadowColor = state.elementColors[state.element];
+    } else {
+      ctx.shadowColor = player.color;
+    }
     ctx.fill();
     ctx.shadowBlur = 0;
 
+    if (player.characterId === "elementalist") {
+      let color = state.elementColors[state.element];
+
+      ctx.beginPath();
+      ctx.arc(
+        player.x,
+        player.y,
+        player.radius + 6 + Math.sin(state.frameCount * 0.2) * 3,
+        0,
+        Math.PI * 2,
+      );
+
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = color;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
     if (player.shield > 0) {
       ctx.beginPath();
       ctx.arc(player.x, player.y, player.radius + 6, 0, Math.PI * 2);
@@ -1422,7 +1588,13 @@ export function draw(ctx, canvas) {
       for (let i = 0; i < 3; i++) {
         const a = state.frameCount * 0.2 + i * 2;
         ctx.beginPath();
-        ctx.arc(player.x + Math.cos(a) * 20, player.y + Math.sin(a) * 20, 3, 0, Math.PI * 2);
+        ctx.arc(
+          player.x + Math.cos(a) * 20,
+          player.y + Math.sin(a) * 20,
+          3,
+          0,
+          Math.PI * 2,
+        );
         ctx.fill();
       }
     }
@@ -1431,7 +1603,7 @@ export function draw(ctx, canvas) {
 
   // --- Destroyer: Rift ---
   if (state.destroyerRifts) {
-    state.destroyerRifts.forEach(r => {
+    state.destroyerRifts.forEach((r) => {
       const alpha = Math.min(1, r.life / 60);
       ctx.strokeStyle = `rgba(255, 0, 80, ${alpha * 0.8})`;
       ctx.lineWidth = 8 + Math.sin(state.frameCount * 0.1) * 3;
@@ -1472,7 +1644,7 @@ export function draw(ctx, canvas) {
 
   // --- Creator: Turrets ---
   if (state.creatorTurrets) {
-    state.creatorTurrets.forEach(t => {
+    state.creatorTurrets.forEach((t) => {
       ctx.beginPath();
       ctx.arc(t.x, t.y, 10, 0, Math.PI * 2);
       ctx.fillStyle = "rgba(255, 220, 100, 0.8)";
@@ -1505,7 +1677,7 @@ export function draw(ctx, canvas) {
 
   // --- Creator: Orbs ---
   if (state.creatorOrbs) {
-    state.creatorOrbs.forEach(orb => {
+    state.creatorOrbs.forEach((orb) => {
       const ox = player.x + Math.cos(orb.angle) * orb.orbitRadius;
       const oy = player.y + Math.sin(orb.angle) * orb.orbitRadius;
       ctx.beginPath();
@@ -1529,9 +1701,8 @@ export function draw(ctx, canvas) {
 
   // --- Ground Warnings (Energy Beams & Bloom) ---
   if (state.groundWarnings) {
-    state.groundWarnings.forEach(w => {
-
-      const progress = Math.max(0, 1 - (w.timer / (w.maxTimer || 60)));
+    state.groundWarnings.forEach((w) => {
+      const progress = Math.max(0, 1 - w.timer / (w.maxTimer || 60));
 
       // SAFEGUARD: Bỏ qua nếu tọa độ bị NaN để tránh treo renderer và làm lệch màn hình
       if (isNaN(w.x) || isNaN(w.y)) {
@@ -1561,10 +1732,11 @@ export function draw(ctx, canvas) {
         ctx.strokeStyle = `rgba(255, 0, 0, ${0.8})`;
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.moveTo(w.x - 15, w.y); ctx.lineTo(w.x + 15, w.y);
-        ctx.moveTo(w.x, w.y - 15); ctx.lineTo(w.x, w.y + 15);
+        ctx.moveTo(w.x - 15, w.y);
+        ctx.lineTo(w.x + 15, w.y);
+        ctx.moveTo(w.x, w.y - 15);
+        ctx.lineTo(w.x, w.y + 15);
         ctx.stroke();
-
       } else if (w.type === "geyser") {
         // ==========================================
         // 2. HIỆU ỨNG BOSS LỬA: CỘT LỬA PHUN TRÀO (Sủi bọt)
@@ -1584,8 +1756,11 @@ export function draw(ctx, canvas) {
           state.particles.push({
             x: w.x + (Math.random() - 0.5) * w.radius,
             y: w.y + (Math.random() - 0.5) * w.radius,
-            vx: (Math.random() - 0.5) * 0.5, vy: -1 - Math.random(),
-            life: 20, color: "#ffaa00", size: 2 + Math.random() * 3
+            vx: (Math.random() - 0.5) * 0.5,
+            vy: -1 - Math.random(),
+            life: 20,
+            color: "#ffaa00",
+            size: 2 + Math.random() * 3,
           });
         }
       } else if (w.type === "spike") {
@@ -1594,7 +1769,13 @@ export function draw(ctx, canvas) {
         // ==========================================
         const alpha = 0.2 + progress * 0.6;
         ctx.beginPath();
-        ctx.arc(w.x + (Math.random() - 0.5) * 3, w.y + (Math.random() - 0.5) * 3, w.radius, 0, Math.PI * 2);
+        ctx.arc(
+          w.x + (Math.random() - 0.5) * 3,
+          w.y + (Math.random() - 0.5) * 3,
+          w.radius,
+          0,
+          Math.PI * 2,
+        );
         ctx.fillStyle = `rgba(100, 50, 20, ${alpha * 0.3})`;
         ctx.fill();
         ctx.strokeStyle = `rgba(139, 69, 19, ${alpha})`;
@@ -1606,10 +1787,13 @@ export function draw(ctx, canvas) {
         ctx.strokeStyle = `rgba(50, 20, 0, ${alpha})`;
         ctx.lineWidth = 2;
         for (let i = 0; i < 3; i++) {
-          let a = (i * Math.PI * 2 / 3) + progress;
+          let a = (i * Math.PI * 2) / 3 + progress;
           ctx.beginPath();
           ctx.moveTo(w.x, w.y);
-          ctx.lineTo(w.x + Math.cos(a) * w.radius * 0.8, w.y + Math.sin(a) * w.radius * 0.8);
+          ctx.lineTo(
+            w.x + Math.cos(a) * w.radius * 0.8,
+            w.y + Math.sin(a) * w.radius * 0.8,
+          );
           ctx.stroke();
         }
 
@@ -1617,8 +1801,11 @@ export function draw(ctx, canvas) {
           state.particles.push({
             x: w.x + (Math.random() - 0.5) * w.radius,
             y: w.y + (Math.random() - 0.5) * w.radius,
-            vx: (Math.random() - 0.5), vy: -1 - Math.random(),
-            life: 20, color: "#8b4513", size: 2 + Math.random() * 3
+            vx: Math.random() - 0.5,
+            vy: -1 - Math.random(),
+            life: 20,
+            color: "#8b4513",
+            size: 2 + Math.random() * 3,
           });
         }
       } else {
@@ -1667,7 +1854,7 @@ export function draw(ctx, canvas) {
 
   // --- Environmental Hazards (Drawing) ---
   if (state.hazards) {
-    state.hazards.forEach(h => {
+    state.hazards.forEach((h) => {
       ctx.save();
       if (h.type === "fire") {
         const pulse = (Math.sin(state.frameCount * 0.1) + 1) * 0.5;
@@ -1692,6 +1879,110 @@ export function draw(ctx, canvas) {
       ctx.restore();
     });
   }
+  if (state.stormLightnings) {
+    state.stormLightnings = state.stormLightnings.filter((l) => {
+      l.life--;
+
+      // ⚡ vẽ tia sét
+      ctx.strokeStyle = "#ffff66";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+
+      let x = l.x;
+      let y = l.y;
+
+      ctx.moveTo(x, y - 80);
+
+      for (let i = 0; i < 5; i++) {
+        let offsetX = (Math.random() - 0.5) * 20;
+        let offsetY = i * 20;
+        ctx.lineTo(x + offsetX, y - 80 + offsetY);
+      }
+
+      ctx.stroke();
+
+      // ⚡ glow
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = "#ffff00";
+
+      // ⚡ impact circle
+      ctx.beginPath();
+      ctx.arc(x, y, 20, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(255,255,150,0.6)";
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+
+      return l.life > 0;
+    });
+  }
+  //wwindd
+  if (state.windParticles) {
+    state.windParticles = state.windParticles.filter((p) => {
+      p.life--;
+
+      p.angle += 0.2;
+      p.radius *= 0.97;
+
+      let x = state.player.x + Math.cos(p.angle) * p.radius;
+      let y = state.player.y + Math.sin(p.angle) * p.radius;
+
+      ctx.fillStyle = "rgba(180,255,255,0.6)";
+      ctx.beginPath();
+      ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      return p.life > 0;
+    });
+  }
+  if (state.windTornadoes) {
+    state.windTornadoes.forEach((t) => {
+      // vòng xoáy chính
+      ctx.strokeStyle = "rgba(180,255,255,0.6)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, t.radius, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // xoáy animation
+      for (let i = 0; i < 5; i++) {
+        let angle = (state.frameCount * 0.1 + i) % (Math.PI * 2);
+        let r = t.radius * (i / 5);
+
+        let x = t.x + Math.cos(angle) * r;
+        let y = t.y + Math.sin(angle) * r;
+
+        ctx.fillStyle = "rgba(200,255,255,0.7)";
+        ctx.beginPath();
+        ctx.arc(x, y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    });
+  }
+  // ❄️ ICICLE DRAW
+  if (state.icicles) {
+    state.icicles.forEach((ic) => {
+      ctx.save();
+
+      // ❄️ thân băng
+      ctx.fillStyle = "#aeefff";
+
+      ctx.beginPath();
+      ctx.moveTo(ic.x, ic.y - ic.radius);
+      ctx.lineTo(ic.x - ic.radius / 2, ic.y + ic.radius);
+      ctx.lineTo(ic.x + ic.radius / 2, ic.y + ic.radius);
+      ctx.closePath();
+      ctx.fill();
+
+      // ✨ glow
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = "#66ccff";
+
+      ctx.restore();
+    });
+  }
+  if (!state.particles) state.particles = [];
+
 
   // --- Knight: Shield ---
   if (state.knightShield) {
@@ -1738,7 +2029,7 @@ export function draw(ctx, canvas) {
 
   // Boss Phase Transition Effect
   if (state.phaseTransitionTimer > 0) {
-    let alpha = (Math.sin(state.frameCount * 0.2) * 0.1) + 0.1;
+    let alpha = Math.sin(state.frameCount * 0.2) * 0.1 + 0.1;
     ctx.fillStyle = `rgba(255, 0, 0, ${alpha})`;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -1766,7 +2057,7 @@ export function draw(ctx, canvas) {
   // --- HUD & Vignette ---
   // --- Particles ---
   if (state.particles) {
-    state.particles.forEach(p => {
+    state.particles.forEach((p) => {
       ctx.save();
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size || 2, 0, Math.PI * 2);
@@ -1796,13 +2087,13 @@ function drawSuctionParticles(ctx) {
       state.cinematicEffects.suctionParticles.push({
         x: Math.random() * 800,
         y: Math.random() * 600,
-        speed: 2 + Math.random() * 5
+        speed: 2 + Math.random() * 5,
       });
     }
   }
 
   ctx.fillStyle = state.boss.elementColor || "#fff";
-  state.cinematicEffects.suctionParticles.forEach(p => {
+  state.cinematicEffects.suctionParticles.forEach((p) => {
     const dx = state.boss.x - p.x;
     const dy = state.boss.y - p.y;
     const dist = Math.sqrt(dx * dx + dy * dy);
@@ -1810,8 +2101,8 @@ function drawSuctionParticles(ctx) {
       p.x = Math.random() * 800;
       p.y = Math.random() * 600;
     } else {
-      p.x += dx / dist * p.speed;
-      p.y += dy / dist * p.speed;
+      p.x += (dx / dist) * p.speed;
+      p.y += (dy / dist) * p.speed;
     }
     ctx.beginPath();
     ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
@@ -1821,7 +2112,14 @@ function drawSuctionParticles(ctx) {
 
 function drawFireVignette(ctx, canvas) {
   const pulse = (Math.sin(Date.now() / 100) + 1) * 0.5;
-  const grad = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, 200, canvas.width / 2, canvas.height / 2, 500);
+  const grad = ctx.createRadialGradient(
+    canvas.width / 2,
+    canvas.height / 2,
+    200,
+    canvas.width / 2,
+    canvas.height / 2,
+    500,
+  );
   grad.addColorStop(0, "rgba(255, 0, 0, 0)");
   grad.addColorStop(1, `rgba(255, 50, 0, ${0.1 + pulse * 0.2})`);
   ctx.fillStyle = grad;
