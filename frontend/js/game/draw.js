@@ -445,12 +445,24 @@ export function draw(ctx, canvas) {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
-  // 💻 glitch lines
-  for (let i = 0; i < 10; i++) {
-    if (Math.random() < 0.2) {
-      ctx.fillStyle = "#0f0";
-      ctx.fillRect(0, Math.random() * canvas.height, canvas.width, 2);
-    }
+  // 🌐 SOFT GRID GLITCH (rất dễ chịu)
+  ctx.strokeStyle = "rgba(0,255,180,0.08)";
+  ctx.lineWidth = 1;
+
+  let gridSize = 40;
+
+  for (let x = 0; x < canvas.width; x += gridSize) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
+
+  for (let y = 0; y < canvas.height; y += gridSize) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(canvas.width, y);
+    ctx.stroke();
   }
   if (char === "timekeeper") {
     if (buffs.e > 0) {
