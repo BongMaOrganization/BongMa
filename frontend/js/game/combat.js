@@ -66,7 +66,7 @@ export function playerTakeDamage(ctx, canvas, changeStateFn, amount = 1) {
 
   if (safeCtx && safeCanvas) {
     safeCtx.fillStyle = "rgba(255,0,0,0.5)";
-    safeCtx.fillRect(0, 0, safeCanvas.width, safeCanvas.height);
+    safeCtx.fillRect(0, 0, state.world.width, state.world.height);
   }
 
   if (player.hp <= 0) {
@@ -280,8 +280,8 @@ export function updateBullets(
         b.x = b.radius;
         b.vx *= -1;
         hitWall = true;
-      } else if (b.x > canvas.width - b.radius) {
-        b.x = canvas.width - b.radius;
+      } else if (b.x > state.world.width - b.radius) {
+        b.x = state.world.width - b.radius;
         b.vx *= -1;
         hitWall = true;
       }
@@ -289,8 +289,8 @@ export function updateBullets(
         b.y = b.radius;
         b.vy *= -1;
         hitWall = true;
-      } else if (b.y > canvas.height - b.radius) {
-        b.y = canvas.height - b.radius;
+      } else if (b.y > state.world.height - b.radius) {
+        b.y = state.world.height - b.radius;
         b.vy *= -1;
         hitWall = true;
       }

@@ -7,7 +7,7 @@ import { dist } from "./utils.js";
 // =======================
 const TAU = Math.PI * 2;
 
-export function activateShield(boss, amount) {}
+export function activateShield(boss, amount) { }
 
 export function spawnMeteor(tx, ty, destX, destY) {
   state.bullets.push({
@@ -1506,26 +1506,10 @@ export const BOSS_TYPES = {
 
 export function getInitialPlayerState() {
   return {
-    x: 400,
-    y: 300,
-    radius: 12,
-    speed: 4.5,
-    color: "#00ffcc",
-    hp: 10,
-    maxHp: 10,
-    coins: 0,
-    dashTimeLeft: 0,
-    dashCooldownTimer: 0,
-    dashMaxCooldown: 90,
-    dashDx: 0,
-    dashDy: 0,
-    isInvincible: false,
-    experience: 0,
-    experienceToLevel: 100,
-    multiShot: 1,
-    bounces: 0,
-    fireRate: 8,
-    cooldown: 0, // RESTORED
+    x: state.world ? state.world.width / 2 : 1500, // Đã fix tọa độ khởi tạo Map mới
+    y: state.world ? state.world.height / 2 : 1500,
+    radius: 12, speed: 4.5, color: "#00ffcc", hp: 10, maxHp: 10, coins: 0, dashTimeLeft: 0, dashCooldownTimer: 0, dashMaxCooldown: 90, dashDx: 0, dashDy: 0,
+    isInvincible: false, experience: 0, experienceToLevel: 100, multiShot: 1, bounces: 0, fireRate: 8, cooldown: 0,
   };
 }
 
@@ -1562,27 +1546,12 @@ export function createBoss(type) {
   if (!cfg) return null;
   return {
     ...cfg,
-    x: 400,
-    y: 150,
-    radius: 45,
-    attackTimer: 0,
-    moveTimer: 0,
-    moveTargetX: 400,
-    moveTargetY: 150,
-    shield: 0,
-    maxShield: 0,
-    shieldActive: false,
-    stunTimer: 0,
-    ultimatePhase: false,
-    bossType: type,
-    phaseCount: cfg.phaseCount || 3,
-    skillCooldown: 180,
-
-    summonCooldown: 10 * 60, // (Tương đương 10 * FPS)
-    ghostsActive: false,
-    entityPhase: false,
-    entityTriggered: false,
-    entityTimer: 0,
+    x: state.player ? state.player.x + 400 : 1500,
+    y: state.player ? state.player.y - 300 : 1350,
+    radius: 45, attackTimer: 0, moveTimer: 0,
+    moveTargetX: state.player ? state.player.x : 1500,
+    moveTargetY: state.player ? state.player.y : 1350,
+    shield: 0, maxShield: 0, shieldActive: false, stunTimer: 0, ultimatePhase: false, bossType: type, phaseCount: cfg.phaseCount || 3, skillCooldown: 180, summonCooldown: 10 * 60, ghostsActive: false, entityPhase: false, entityTriggered: false, entityTimer: 0,
   };
 }
 
@@ -1632,9 +1601,15 @@ export function updateBoss(boss) {
 
   // Movement
   if (boss.moveTimer % 120 === 0) {
-    boss.moveTargetX = 100 + Math.random() * 600;
-    boss.moveTargetY = 100 + Math.random() * 200;
+    // Lấy vị trí người chơi làm tâm, Boss sẽ lượn lờ xung quanh cách 200-400 pixel
+    boss.moveTargetX = state.player.x + (Math.random() > 0.5 ? 1 : -1) * (200 + Math.random() * 200);
+    boss.moveTargetY = state.player.y + (Math.random() > 0.5 ? 1 : -1) * (200 + Math.random() * 200);
+
+    // Chặn biên để Boss không vô tình bay ra khỏi World Map
+    boss.moveTargetX = Math.max(100, Math.min(state.world.width - 100, boss.moveTargetX));
+    boss.moveTargetY = Math.max(100, Math.min(state.world.height - 100, boss.moveTargetY));
   }
+
   const phaseIdx = getBossPhase(boss);
   const speed = boss.speed * (boss.phases[phaseIdx]?.speedMult || 1.0);
   boss.x += (boss.moveTargetX - boss.x) * 0.02 * speed;
@@ -2051,15 +2026,12 @@ export const ATTACK_MODES = {
 export function generateDummy(targetFrames = 600) {
   targetFrames = Math.min(targetFrames, 5000);
   let dummy = [];
-  let speedMult =
-    state.currentLevel <= 2
-      ? 0.5
-      : Math.min(1.0, 0.5 + (state.currentLevel - 2) * 0.1);
+
+  let startX = state.player ? state.player.x + (Math.random() > 0.5 ? 300 : -300) : 1500;
+  let startY = state.player ? state.player.y + (Math.random() > 0.5 ? 300 : -300) : 1500;
 
   for (let i = 0; i < targetFrames; i++) {
-    let x = 400 + Math.cos(i * 0.02 * speedMult) * 250;
-    let y = 300 + Math.sin(i * 0.03 * speedMult) * 200;
-    dummy.push([Math.round(x), Math.round(y)]);
+    dummy.push([Math.round(startX), Math.round(startY)]);
   }
   return dummy;
 }

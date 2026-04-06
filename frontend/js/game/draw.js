@@ -48,23 +48,6 @@ function getShakeOffset() {
   return (SCREEN_SHAKE_TYPES[type] || SCREEN_SHAKE_TYPES.earth)();
 }
 
-function drawGrid(ctx, canvas) {
-  ctx.strokeStyle = "#1a1a24";
-  ctx.lineWidth = 1;
-  for (let i = 0; i < canvas.width; i += 40) {
-    ctx.beginPath();
-    ctx.moveTo(i, 0);
-    ctx.lineTo(i, canvas.height);
-    ctx.stroke();
-  }
-  for (let i = 0; i < canvas.height; i += 40) {
-    ctx.beginPath();
-    ctx.moveTo(0, i);
-    ctx.lineTo(canvas.width, i);
-    ctx.stroke();
-  }
-}
-
 function drawLavaFloor(ctx, canvas) {
   // SỬA ĐỔI: Làm nền mặt đất tối đi (dung nham nguội), chỉ chừa lại các kẽ nứt nham thạch
   // Giúp màn hình không bị đỏ chót và dễ nhìn hơn rất nhiều.
@@ -117,6 +100,16 @@ function drawBurnVignette(ctx, canvas) {
 }
 
 export function draw(ctx, canvas) {
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  ctx.save();
+  // Dịch chuyển bối cảnh ngược chiều camera để tạo cảm giác di chuyển
+  ctx.translate(-state.camera.x, -state.camera.y);
+
+  // Vẽ lưới background (Grid) để dễ nhận biết người chơi đang di chuyển trong map to
+  drawMapGrid(ctx);
+
   let { player, boss, bullets, ghosts, mouse, activeBuffs } = state;
   let buffs = activeBuffs || { q: 0, e: 0, r: 0 };
   const char = player?.characterId;
@@ -132,7 +125,7 @@ export function draw(ctx, canvas) {
   ) {
     drawLavaFloor(ctx, canvas);
   } else {
-    drawGrid(ctx, canvas);
+    drawMapGrid(ctx);
   }
 
   const shake = getShakeOffset();
@@ -445,25 +438,6 @@ export function draw(ctx, canvas) {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
-  // 🌐 SOFT GRID GLITCH (rất dễ chịu)
-  ctx.strokeStyle = "rgba(0,255,180,0.08)";
-  ctx.lineWidth = 1;
-
-  let gridSize = 40;
-
-  for (let x = 0; x < canvas.width; x += gridSize) {
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, canvas.height);
-    ctx.stroke();
-  }
-
-  for (let y = 0; y < canvas.height; y += gridSize) {
-    ctx.beginPath();
-    ctx.moveTo(0, y);
-    ctx.lineTo(canvas.width, y);
-    ctx.stroke();
-  }
   if (char === "timekeeper") {
     if (buffs.e > 0) {
       ctx.fillStyle = "rgba(0, 255, 255, 0.1)";
@@ -1290,7 +1264,7 @@ export function draw(ctx, canvas) {
         g.historyPath[g.historyPath.length - 2].x,
         g.historyPath[g.historyPath.length - 2].y,
       ) >
-        8 * g.speedRate;
+      8 * g.speedRate;
 
     if (g.historyPath && g.historyPath.length > 0 && g.isStunned <= 0) {
       ctx.beginPath();
@@ -1756,6 +1730,8 @@ export function draw(ctx, canvas) {
     ctx.stroke();
   }
 
+  ctx.restore();
+
   // --- Ground Warnings (Energy Beams & Bloom) ---
   if (state.groundWarnings) {
     state.groundWarnings.forEach((w) => {
@@ -2139,6 +2115,8 @@ export function draw(ctx, canvas) {
     ctx.font = "30px monospace";
     ctx.fillText("ERROR: INPUT CORRUPTED", 200, 300);
   }
+
+  drawMinimap(ctx, canvas);
 }
 
 function drawSuctionParticles(ctx) {
@@ -2240,4 +2218,88 @@ function drawHUD(ctx, canvas) {
     ctx.fillStyle = "white";
     ctx.fillText("SHIELD / STANCE", centerX, centerY + 11);
   }
+}
+
+// ✅ THAY THẾ BẰNG HÀM NÀY:
+function drawMapGrid(ctx) {
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+  ctx.lineWidth = 1;
+  const gridSize = 100; // Bạn có thể chỉnh số này (ví dụ 50 hoặc 100) để ô vuông nhỏ/to theo ý muốn
+
+  ctx.beginPath();
+  // Vẽ các đường dọc chạy hết map
+  for (let x = 0; x <= state.world.width; x += gridSize) {
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, state.world.height);
+  }
+  // Vẽ các đường ngang chạy hết map
+  for (let y = 0; y <= state.world.height; y += gridSize) {
+    ctx.moveTo(0, y);
+    ctx.lineTo(state.world.width, y);
+  }
+  ctx.stroke();
+
+  // Vẽ bức tường Laser màu đỏ bao quanh Map để biết giới hạn
+  ctx.strokeStyle = "#ff4444";
+  ctx.lineWidth = 5;
+  ctx.strokeRect(0, 0, state.world.width, state.world.height);
+}
+
+// Hàm vẽ Minimap
+function drawMinimap(ctx, canvas) {
+  const mmSize = 220; // Kích thước Minimap
+  const padding = 20;
+  const mmX = canvas.width - mmSize - padding; // Góc phải
+  const mmY = padding + 60; // Dịch xuống 1 xíu để không đè lên Timer
+
+  // Nền Minimap (Trong suốt 50%)
+  ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
+  ctx.strokeStyle = "#444";
+  ctx.lineWidth = 2;
+  ctx.fillRect(mmX, mmY, mmSize, mmSize);
+  ctx.strokeRect(mmX, mmY, mmSize, mmSize);
+
+  // Tỷ lệ thu nhỏ
+  const scaleX = mmSize / state.world.width;
+  const scaleY = mmSize / state.world.height;
+
+  // Hàm phụ: Vẽ chấm tròn
+  const drawDot = (obj, color, size) => {
+    if (!obj || obj.hp <= 0 && obj !== state.player) return;
+    const x = mmX + obj.x * scaleX;
+    const y = mmY + obj.y * scaleY;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.fill();
+  };
+
+  // 1. Kẻ thù (Chấm đỏ nhỏ)
+  state.ghosts.forEach(g => drawDot(g, "#ff4444", 2));
+
+  // 2. Boss (Chấm tím/đỏ to có aura)
+  if (state.boss && state.boss.hp > 0) {
+    drawDot(state.boss, state.boss.color || "#ff00ff", 4);
+    // Aura viền
+    ctx.strokeStyle = state.boss.color || "#ff00ff";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(mmX + state.boss.x * scaleX, mmY + state.boss.y * scaleY, 7, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // 3. Người chơi (Chấm lục lam)
+  if (state.player && state.player.hp > 0) {
+    drawDot(state.player, "#00ffcc", 3);
+  }
+
+  // 4. Khung Camera (Hiển thị phần map người chơi đang nhìn thấy)
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(
+    mmX + state.camera.x * scaleX,
+    mmY + state.camera.y * scaleY,
+    state.camera.width * scaleX,
+    state.camera.height * scaleY
+  );
 }

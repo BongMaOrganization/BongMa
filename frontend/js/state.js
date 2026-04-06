@@ -6,6 +6,9 @@ export const state = {
   maxFramesToSurvive: 0,
   isBossLevel: false,
 
+  world: { width: 3000, height: 3000 },
+  camera: { x: 0, y: 0, width: 1536, height: 864 },
+
   player: null,
   boss: null,
   bullets: [],
@@ -48,7 +51,7 @@ export const state = {
 
   keys: {},
   prevKeys: {},
-  mouse: { x: 0, y: 0, clicked: false },
+  mouse: { x: 0, y: 0, screenX: 0, screenY: 0, clicked: false },
   loopId: null,
 
   // Hàng đợi các tác vụ trì hoãn (thay thế cho setTimeout)

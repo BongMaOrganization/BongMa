@@ -14,8 +14,13 @@ export function setupInput(canvas) {
 
   canvas.addEventListener("mousemove", (e) => {
     const rect = canvas.getBoundingClientRect();
-    state.mouse.x = e.clientX - rect.left;
-    state.mouse.y = e.clientY - rect.top;
+    // Lưu tọa độ thật trên màn hình thay vì gán thẳng vào thế giới
+    state.mouse.screenX = e.clientX - rect.left;
+    state.mouse.screenY = e.clientY - rect.top;
+
+    // Ngay lập tức cập nhật vị trí chuột trong World Map dựa theo Camera
+    state.mouse.x = state.mouse.screenX + state.camera.x;
+    state.mouse.y = state.mouse.screenY + state.camera.y;
   });
 
   canvas.addEventListener("mousedown", (e) => {

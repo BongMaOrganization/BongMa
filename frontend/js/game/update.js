@@ -12,6 +12,35 @@ import {
 import { updateBullets, playerTakeDamage } from "./combat.js";
 
 export function update(ctx, canvas, changeStateFn) {
+
+  state.camera.width = canvas.width;
+  state.camera.height = canvas.height;
+
+  if (state.player && state.player.hp > 0) {
+    // Để Camera luôn lấy người chơi làm trung tâm
+    state.camera.x = state.player.x - canvas.width / 2;
+    state.camera.y = state.player.y - canvas.height / 2;
+
+    // Giới hạn Camera không bị trượt ra ngoài viền Map
+    state.camera.x = Math.max(0, Math.min(state.camera.x, state.world.width - canvas.width));
+    state.camera.y = Math.max(0, Math.min(state.camera.y, state.world.height - canvas.height));
+
+    // Cập nhật lại vị trí ngắm bắn của chuột dựa theo camera đang di chuyển
+    state.mouse.x = (state.mouse.screenX || 0) + state.camera.x;
+    state.mouse.y = (state.mouse.screenY || 0) + state.camera.y;
+
+    // Giới hạn người chơi không được đi xuyên qua tường của Map
+    state.player.x = Math.max(state.player.radius, Math.min(state.player.x, state.world.width - state.player.radius));
+    state.player.y = Math.max(state.player.radius, Math.min(state.player.y, state.world.height - state.player.radius));
+  }
+
+  if (state.ghosts) {
+    state.ghosts.forEach(g => {
+      g.x = Math.max(0, Math.min(g.x, state.world.width));
+      g.y = Math.max(0, Math.min(g.y, state.world.height));
+    });
+  }
+
   let {
     player,
     boss,
@@ -258,14 +287,8 @@ export function update(ctx, canvas, changeStateFn) {
     }
   });
 
-  player.x = Math.max(
-    player.radius,
-    Math.min(canvas.width - player.radius, player.x),
-  );
-  player.y = Math.max(
-    player.radius,
-    Math.min(canvas.height - player.radius, player.y),
-  );
+  player.x = Math.max(player.radius, Math.min(state.world.width - player.radius, player.x));
+  player.y = Math.max(player.radius, Math.min(state.world.height - player.radius, player.y));
 
   // --- Terrain Collision (Earth Spikes/Barriers) ---
   state.hazards.forEach((h) => {
@@ -1107,8 +1130,8 @@ export function update(ctx, canvas, changeStateFn) {
       if (boss) boss.hp -= boss.maxHp * 0.15;
       if (!state.explosions) state.explosions = [];
       state.explosions.push({
-        x: canvas.width / 2,
-        y: canvas.height / 2,
+        x: state.world.width / 2,
+        y: state.world.height / 2,
         radius: 2000,
         life: 20,
         color: "rgba(0, 0, 0, 0.8)",
@@ -1674,7 +1697,7 @@ export function update(ctx, canvas, changeStateFn) {
       if (
         state.boss &&
         dist(ic.x, ic.y, state.boss.x, state.boss.y) <
-          state.boss.radius + ic.radius
+        state.boss.radius + ic.radius
       ) {
         state.boss.hp -= 2;
       }
@@ -1778,13 +1801,15 @@ export function update(ctx, canvas, changeStateFn) {
       g.timer++;
 
       // Khi còn 0.5 giây cuối, hiển thị nhấp nháy tại vị trí 3s sau để báo hiệu
+      if (g.respawnTimer === Math.floor(0.5 * FPS)) {
+        let spawnAngle = Math.random() * Math.PI * 2;
+        g.x = player.x + Math.cos(spawnAngle) * 400;
+        g.y = player.y + Math.sin(spawnAngle) * 400;
+      }
+
+      // Nhấp nháy báo hiệu chuẩn bị xuất hiện
       if (g.respawnTimer < 0.5 * FPS) {
-        let idx = Math.floor(g.timer * g.speedRate);
-        if (idx < g.record.length) {
-          g.x = g.record[idx][0];
-          g.y = g.record[idx][1];
-          g.flicker = true; // Vẽ nhấp nháy trong draw.js
-        }
+        g.flicker = true;
       }
 
       if (g.respawnTimer <= 0) {
@@ -1826,19 +1851,40 @@ export function update(ctx, canvas, changeStateFn) {
 
           if (idx1 + 1 < g.record.length) {
             let action2 = g.record[idx1 + 1];
-            let t = exactIndex - idx1;
-            g.x = action1[0] + (action2[0] - action1[0]) * t;
-            g.y = action1[1] + (action2[1] - action1[1]) * t;
+
+            // 1. Tính gia tốc lạng lách từ Record thay vì lấy tọa độ tuyệt đối
+            let recVx = action2[0] - action1[0];
+            let recVy = action2[1] - action1[1];
+
+            // 2. Thêm AI tạo lực hút đuổi theo người chơi
+            let angleToPlayer = Math.atan2(player.y - g.y, player.x - g.x);
+
+            let isDummy = g.isDummy || g.record.length === 5000;
+
+            let chaseSpeed = isDummy ? 4.5 : 1.5;
+            let chaseVx = Math.cos(angleToPlayer) * chaseSpeed;
+            let chaseVy = Math.sin(angleToPlayer) * chaseSpeed;
+
+            // 3. Kết hợp 2 yếu tố: Vừa di chuyển theo Record, vừa bám đuôi bạn
+            g.x += (recVx + chaseVx) * g.speedRate;
+            g.y += (recVy + chaseVy) * g.speedRate;
           } else {
-            g.x = action1[0];
-            g.y = action1[1];
+            // Khi đã chạy hết bộ nhớ Record cũ, quái hoàn toàn chuyển sang AI đuổi theo
+            let angleToPlayer = Math.atan2(player.y - g.y, player.x - g.x);
+
+            let isDummy = g.isDummy || g.record.length === 5000;
+            let chaseSpeed = isDummy ? 4.5 : 2.5;
+
+            g.x += Math.cos(angleToPlayer) * chaseSpeed * g.speedRate;
+            g.y += Math.sin(angleToPlayer) * chaseSpeed * g.speedRate;
           }
 
           g.historyPath.push({ x: g.x, y: g.y });
           if (g.historyPath.length > 8) g.historyPath.shift();
 
+          // 4. Ngắm thẳng đạn vào người chơi thay vì bắn vào khoảng không
           if (g.lastIdx !== idx1 && action1.length === 4) {
-            spawnBullet(g.x, g.y, action1[2], action1[3], false, 0, "ghost");
+            spawnBullet(g.x, g.y, player.x, player.y, false, 0, "ghost");
           }
           g.lastIdx = idx1;
 
@@ -2067,7 +2113,7 @@ export function update(ctx, canvas, changeStateFn) {
     if (
       boss &&
       dist(player.x, player.y, boss.x, boss.y) <
-        boss.radius + player.radius + 20
+      boss.radius + player.radius + 20
     ) {
       boss.hp -= 3;
     }
