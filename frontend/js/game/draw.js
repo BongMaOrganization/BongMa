@@ -118,7 +118,7 @@ export function draw(ctx, canvas) {
     ctx.save();
     const pulse = Math.sin(state.frameCount * 0.1) * 20;
     const opacity = sz.active ? 0.3 : 0.15;
-    
+
     // Vẽ vùng tròn mờ
     const grad = ctx.createRadialGradient(sz.x, sz.y, 0, sz.x, sz.y, sz.radius + pulse);
     grad.addColorStop(0, `rgba(255, 100, 0, ${opacity})`);
@@ -1389,9 +1389,9 @@ export function draw(ctx, canvas) {
       // 3. Shield Fill (Cyan Overlay)
       if (g.shieldActive && (g.shield || 0) > 0) {
         const shieldRatio = Math.max(0, g.shield / g.maxShield);
-        ctx.fillStyle = "rgba(0, 255, 255, 0.7)"; 
+        ctx.fillStyle = "rgba(0, 255, 255, 0.7)";
         ctx.fillRect(bx, by, barWidth * shieldRatio, barHeight);
-        
+
         // Pulsing border for shield
         const pulse = (Math.sin(state.frameCount * 0.2) + 1) * 0.5;
         ctx.strokeStyle = `rgba(255, 255, 255, ${0.4 + pulse * 0.4})`;
@@ -2414,7 +2414,7 @@ function drawMinimap(ctx, canvas) {
     ctx.beginPath();
     ctx.arc(x, y, 4, 0, Math.PI * 2);
     ctx.fill();
-    
+
     ctx.strokeStyle = color;
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -2451,7 +2451,7 @@ function drawMinimap(ctx, canvas) {
       const x = mmX + cp.x * scaleX;
       const y = mmY + cp.y * scaleY;
       const size = 6; // To hơn
-      
+
       // Vẽ bóng đổ/halo
       ctx.fillStyle = "rgba(255, 215, 0, 0.4)";
       ctx.beginPath();
@@ -2466,7 +2466,7 @@ function drawMinimap(ctx, canvas) {
       ctx.lineTo(x - size, y);
       ctx.closePath();
       ctx.fill();
-      
+
       ctx.strokeStyle = "#fff";
       ctx.lineWidth = 1;
       ctx.stroke();
@@ -2569,14 +2569,14 @@ function drawCapturePoints(ctx) {
     // 1. Vòng tròn sạc (Enhanced)
     if (cp.state === "charging") {
       const opacity = 0.15 + progressRatio * 0.45;
-      
+
       // 1a. VùNG NăNG LƯỢNG NỀN (Vibrant Floor)
       ctx.globalCompositeOperation = "lighter";
       const floorGrad = ctx.createRadialGradient(cp.x, cp.y, 0, cp.x, cp.y, cp.radius);
       floorGrad.addColorStop(0, `rgba(255, 180, 0, ${opacity * 0.8})`);
       floorGrad.addColorStop(0.5, `rgba(255, 100, 0, ${opacity * 0.4})`);
       floorGrad.addColorStop(1, "rgba(255, 50, 0, 0)");
-      
+
       ctx.fillStyle = floorGrad;
       ctx.beginPath();
       ctx.arc(cp.x, cp.y, cp.radius, 0, Math.PI * 2);
@@ -2654,7 +2654,7 @@ function drawCapturePoints(ctx) {
     ctx.lineTo(cp.x + 25, cp.y - 80);
     ctx.lineTo(cp.x + 20, cp.y + 20);
     ctx.fill();
-    
+
     // Orb with Pulsing Core
     const orbColor = cp.state === "charging" ? `hsl(${30 + progressRatio * 30}, 100%, 60%)` : "#444";
     ctx.save();
@@ -2678,7 +2678,7 @@ function drawCapturePoints(ctx) {
       ctx.moveTo(cp.x, cp.y - 80);
       ctx.lineTo(cp.x + Math.cos(cp.laserAngle) * cp.radius, cp.y + Math.sin(cp.laserAngle) * cp.radius);
       ctx.stroke();
-      
+
       ctx.strokeStyle = "#fff";
       ctx.lineWidth = 2;
       ctx.stroke();
@@ -2703,7 +2703,7 @@ function drawCapturePoints(ctx) {
     if (ctx.roundRect) ctx.roundRect(cp.x - barW / 2 - 2, cp.y - 132, barW + 4, barH + 4, 6);
     else ctx.rect(cp.x - barW / 2 - 2, cp.y - 132, barW + 4, barH + 4);
     ctx.fill();
-    
+
     ctx.fillStyle = "#ffaa00";
     ctx.beginPath();
     if (ctx.roundRect) ctx.roundRect(cp.x - barW / 2, cp.y - 130, barW * progressRatio, barH, 4);
@@ -2791,7 +2791,7 @@ function drawSatellite(ctx) {
 function drawGodMode(ctx) {
   const gm = state.godMode;
   if (!gm || !gm.active) return;
-  
+
   const p = state.player;
   ctx.save();
   const pulse = Math.sin(state.frameCount * 0.2) * 10;
@@ -2799,7 +2799,7 @@ function drawGodMode(ctx) {
   grad.addColorStop(0, "rgba(255, 215, 0, 0.6)");
   grad.addColorStop(0.5, "rgba(255, 100, 0, 0.2)");
   grad.addColorStop(1, "rgba(255, 255, 255, 0)");
-  
+
   ctx.fillStyle = grad;
   ctx.globalCompositeOperation = "lighter";
   ctx.beginPath();
