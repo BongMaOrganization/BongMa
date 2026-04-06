@@ -2139,7 +2139,7 @@ export function spawnCrate() {
 export function spawnCapturePoint() {
   let x, y, overlap;
   let attempts = 0;
-  const radius = 1000; // Vòng tròn ban đầu (Tăng từ 500 lên 1000)
+  const radius = 800; // Vòng tròn ban đầu (Giảm từ 1000 xuống 800)
 
   do {
     overlap = false;
@@ -2158,7 +2158,7 @@ export function spawnCapturePoint() {
     // Tránh các Capture Point khác (Đảm bảo khu vực cách xa nhau - NEW)
     if (!overlap && state.capturePoints) {
       for (const cp of state.capturePoints) {
-        if (dist(x, y, cp.x, cp.y) < 3000) { // Cách nhau ít nhất 3000 đơn vị
+        if (dist(x, y, cp.x, cp.y) < 2200) { // Giảm khoảng cách từ 3000 xuống 2200
           overlap = true;
           break;
         }
@@ -2166,11 +2166,11 @@ export function spawnCapturePoint() {
     }
 
     // Tránh người chơi
-    if (!overlap && state.player && dist(x, y, state.player.x, state.player.y) < 1500) {
+    if (!overlap && state.player && dist(x, y, state.player.x, state.player.y) < 1200) {
       overlap = true;
     }
     attempts++;
-  } while (overlap && attempts < 100);
+  } while (overlap && attempts < 200); // Tăng số lần thử lên 200
 
   if (!overlap) {
     const id = `cp_${Date.now()}`;

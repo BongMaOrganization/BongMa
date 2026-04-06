@@ -6,7 +6,7 @@ export const state = {
   maxFramesToSurvive: 0,
   isBossLevel: false,
 
-  world: { width: 3000, height: 3000 },
+  world: { width: 5000, height: 5000 },
   camera: { x: 0, y: 0, width: 1536, height: 864 },
 
   player: null,
