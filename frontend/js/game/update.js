@@ -112,7 +112,13 @@ export function update(ctx, canvas, changeStateFn) {
 
   // --- 6. Cập nhật Entities ---
   updateBullets(ctx, canvas, changeStateFn, state.timeFrozenModifier);
-  if (boss) updateBoss(boss);
+  if (boss) {
+    updateBoss(boss);
+    if (state._bossKilled) {
+      state._bossKilled = false;
+      return "BOSS_KILLED";
+    }
+  }
 
   state.ghosts.forEach((g) => {
     if (!state.timeFrozenModifier && g.hp > 0 && g.isStunned <= 0) {
@@ -131,6 +137,96 @@ export function update(ctx, canvas, changeStateFn) {
   if (!state.isBossLevel) {
     let allZonesCleared = state.swarmZones.every(zone => zone.isCompleted);
     if (allZonesCleared && state.swarmZones.length > 0) return "STAGE_CLEAR";
+  }
+
+  // --- 8. Timers (gracePeriod, debuffs) ---
+  if (player.gracePeriod > 0) player.gracePeriod--;
+  if (state.playerStatus) {
+    if (state.playerStatus.slowTimer > 0) state.playerStatus.slowTimer--;
+    if (state.playerStatus.stunTimer > 0) state.playerStatus.stunTimer--;
+    if (state.playerStatus.burnTimer > 0) {
+      state.playerStatus.burnTimer--;
+      if (state.frameCount % 60 === 0)
+        playerTakeDamage(ctx, canvas, changeStateFn, 0.5);
+    }
+  }
+
+  // --- 9. Delayed Tasks ---
+  for (let i = state.delayedTasks.length - 1; i >= 0; i--) {
+    state.delayedTasks[i].delay--;
+    if (state.delayedTasks[i].delay <= 0) {
+      try { state.delayedTasks[i].action(); } catch(e) { console.warn("delayedTask error:", e); }
+      state.delayedTasks.splice(i, 1);
+    }
+  }
+
+  // --- 10. Hazard Update (life, movement, damage player) ---
+  if (state.hazards) {
+    for (let i = state.hazards.length - 1; i >= 0; i--) {
+      const h = state.hazards[i];
+      h.life--;
+      if (h.life <= 0) { state.hazards.splice(i, 1); continue; }
+
+      if (h.vx) h.x += h.vx;
+      if (h.vy) h.y += h.vy;
+
+      // Vortex hút player
+      if (h.type === "vortex") {
+        const dvx = h.x - player.x, dvy = h.y - player.y;
+        const dv = Math.sqrt(dvx * dvx + dvy * dvy);
+        if (dv > 0 && dv < h.radius * 1.5) {
+          player.x += (dvx / dv) * 1.8;
+          player.y += (dvy / dv) * 1.8;
+        }
+      }
+
+      // Damage player nếu trong vùng nguy hiểm (chủ boss)
+      if (h.owner === "boss" && h.active !== false && h.type !== "rock") {
+        if (dist(player.x, player.y, h.x, h.y) < player.radius + h.radius) {
+          playerTakeDamage(ctx, canvas, changeStateFn, h.damage || 0.5);
+        }
+      }
+      // Rock: cản chuyển động player
+      if (h.type === "rock" && h.active !== false) {
+        const dr = dist(player.x, player.y, h.x, h.y);
+        if (dr < player.radius + h.radius) {
+          const ang = Math.atan2(player.y - h.y, player.x - h.x);
+          player.x = h.x + Math.cos(ang) * (player.radius + h.radius + 1);
+          player.y = h.y + Math.sin(ang) * (player.radius + h.radius + 1);
+        }
+      }
+    }
+  }
+
+  // --- 11. Global Hazard Timer ---
+  if (state.globalHazard && state.globalHazard.active) {
+    state.globalHazard.timer--;
+    if (state.globalHazard.timer <= 0) {
+      state.globalHazard.active = false;
+      state.globalHazard.type = null;
+      if (state.boss) state.boss.ultimatePhase = false;
+    } else if (state.frameCount % 90 === 0) {
+      playerTakeDamage(ctx, canvas, changeStateFn, state.globalHazard.damage || 0.5);
+    }
+  }
+
+  // --- 12. Safe Zones Update (di chuyển, hết thời gian) ---
+  if (state.safeZones) {
+    for (let i = state.safeZones.length - 1; i >= 0; i--) {
+      const sz = state.safeZones[i];
+      sz.life--;
+      if (sz.life <= 0) { state.safeZones.splice(i, 1); continue; }
+      sz.x += sz.vx || 0;
+      sz.y += sz.vy || 0;
+    }
+  }
+
+  // --- 13. Ground Warnings Timer ---
+  if (state.groundWarnings) {
+    for (let i = state.groundWarnings.length - 1; i >= 0; i--) {
+      state.groundWarnings[i].timer--;
+      if (state.groundWarnings[i].timer <= 0) state.groundWarnings.splice(i, 1);
+    }
   }
 
   state.frameCount++;

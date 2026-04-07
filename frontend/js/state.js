@@ -95,7 +95,7 @@ export const state = {
   knightShield: null,
   knightRage: null,
   isScoutQ: false,
-  
+
   floatingTexts: [], // Mảng chứa các đoạn chữ bay (XP, Gold, v.v.)
 
   // ===== Elemental Combat System =====
@@ -117,7 +117,7 @@ export const state = {
   // ===== Cinematic Boss Overhaul & Safe Zones =====
   bossBeams: [], // { x1, y1, x2, y2, state: 'charge'|'fire', timer }
   groundWarnings: [], // { x, y, radius, timer, maxTimer, type: 'lightning'|'rock' }
-  safeZones: [], 
+  safeZones: [],
   globalHazard: {
     type: null, // 'fire', 'electric', 'ice'
     active: false,

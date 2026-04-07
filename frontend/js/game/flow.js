@@ -163,7 +163,7 @@ export function initGame(isNextLevel = false) {
 
   if (shouldRegenZones) {
     state.swarmZones = [];
-    if (!state.isBossLevel) {
+    if (!state.isBossLevel && !state.bossArenaMode) {
       // Mỗi đợt rải đúng 3 khu vực bầy đàn, đảm bảo không chồng lấn
       const numZones = 3;
       for (let i = 0; i < numZones; i++) {
@@ -202,7 +202,7 @@ export function initGame(isNextLevel = false) {
   }
 
   // --- INITIALIZE ITEM CRATES ---
-  if (!state.isBossLevel) {
+  if (!state.isBossLevel && !state.bossArenaMode) {
     state.crates = [];
     for (let i = 0; i < 10; i++) {
       spawnCrate();
@@ -213,7 +213,10 @@ export function initGame(isNextLevel = false) {
       spawnCapturePoint();
     }
   } else {
-    state.crates = []; // Không sinh thùng ở màn boss (hoặc tùy chọn)
+    // Màn boss: xoá sạch mọi thực thể thuộc map thường
+    state.crates = [];
+    state.capturePoints = [];
+    state.swarmZones = [];
   }
 
   updateHealthUI();
@@ -459,8 +462,11 @@ export function startBossArenaFight(bossType, changeStateFn, gameLoopFn) {
   state.bossArenaType = bossType;
   initGame(false);
 
-  // Override to boss level
+  // Override to boss level — xoá sạch thực thể map thường do initGame sinh ra
   state.isBossLevel = true;
+  state.swarmZones = [];
+  state.crates = [];
+  state.capturePoints = [];
   state.maxFramesToSurvive = 999999;
   state.currentBossType = bossType;
   state.boss = createBoss(bossType);

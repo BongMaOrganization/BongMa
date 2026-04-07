@@ -1,5 +1,5 @@
 import { state } from "../../state.js";
-import { spawnBullet, spawnHazard, spawnBeam, spawnWarning, spawnMeteor } from "../helpers.js";
+import { spawnBullet, spawnHazard, spawnBeam, spawnWarning, spawnMeteor, spawnSafeZone } from "../helpers.js";
 import { dist } from "../../utils.js";
 
 const TAU = Math.PI * 2;
@@ -86,12 +86,14 @@ export const ATTACK_MODES = {
     33: (b) => {
         const gap = 80;
         const speed = 1.5;
+        const cx = state.camera.x;
+        const cy = state.camera.y;
 
         // Hàng ngang
-        for (let y = gap; y < 600; y += gap) {
+        for (let y = gap; y < 864; y += gap) {
             state.bullets.push({
-                x: 0,
-                y,
+                x: cx,
+                y: cy + y,
                 vx: speed,
                 vy: 0,
                 radius: 8,
@@ -103,10 +105,10 @@ export const ATTACK_MODES = {
         }
 
         // Hàng dọc
-        for (let x = gap; x < 800; x += gap) {
+        for (let x = gap; x < 1536; x += gap) {
             state.bullets.push({
-                x,
-                y: 0,
+                x: cx + x,
+                y: cy,
                 vx: 0,
                 vy: speed,
                 radius: 8,
@@ -121,8 +123,8 @@ export const ATTACK_MODES = {
     // 34: Homing Mine
     34: (b) => {
         for (let i = 0; i < 3; i++) {
-            const mx = Math.random() * 800;
-            const my = Math.random() * 600;
+            const mx = state.camera.x + Math.random() * 1536;
+            const my = state.camera.y + Math.random() * 864;
 
             const mine = {
                 x: mx,
@@ -164,22 +166,10 @@ export const ATTACK_MODES = {
             let side = Math.floor(Math.random() * 4);
             let x, y;
 
-            if (side === 0) {
-                x = 0;
-                y = Math.random() * 600;
-            }
-            if (side === 1) {
-                x = 800;
-                y = Math.random() * 600;
-            }
-            if (side === 2) {
-                x = Math.random() * 800;
-                y = 0;
-            }
-            if (side === 3) {
-                x = Math.random() * 800;
-                y = 600;
-            }
+            if (side === 0) { x = state.camera.x; y = state.camera.y + Math.random() * 864; }
+            if (side === 1) { x = state.camera.x + 1536; y = state.camera.y + Math.random() * 864; }
+            if (side === 2) { x = state.camera.x + Math.random() * 1536; y = state.camera.y; }
+            if (side === 3) { x = state.camera.x + Math.random() * 1536; y = state.camera.y + 864; }
 
             fireAngle(x, y, Math.atan2(state.player.y - y, state.player.x - x), 4);
         }
@@ -209,8 +199,8 @@ export const ATTACK_MODES = {
                 delay: 30,
                 action: () => {
                     // teleport + đổi hướng
-                    bullet.x = Math.random() * 800;
-                    bullet.y = Math.random() * 600;
+                    bullet.x = state.camera.x + Math.random() * 1536;
+                    bullet.y = state.camera.y + Math.random() * 864;
 
                     let dir = Math.random() > 0.5 ? 1 : -1;
                     let tmp = bullet.vx;
@@ -252,22 +242,10 @@ export const ATTACK_MODES = {
             let side = Math.floor(Math.random() * 4);
             let x, y;
 
-            if (side === 0) {
-                x = 0;
-                y = Math.random() * 600;
-            }
-            if (side === 1) {
-                x = 800;
-                y = Math.random() * 600;
-            }
-            if (side === 2) {
-                x = Math.random() * 800;
-                y = 0;
-            }
-            if (side === 3) {
-                x = Math.random() * 800;
-                y = 600;
-            }
+            if (side === 0) { x = state.camera.x; y = state.camera.y + Math.random() * 864; }
+            if (side === 1) { x = state.camera.x + 1536; y = state.camera.y + Math.random() * 864; }
+            if (side === 2) { x = state.camera.x + Math.random() * 1536; y = state.camera.y; }
+            if (side === 3) { x = state.camera.x + Math.random() * 1536; y = state.camera.y + 864; }
 
             let speed = 2 + Math.random() * 6;
 
@@ -304,19 +282,19 @@ export const ATTACK_MODES = {
     },
     41: (b) => {
         // teleport random
-        b.x = Math.random() * 800;
-        b.y = Math.random() * 600;
+        b.x = Math.max(100, Math.min(state.world.width - 100, state.player.x + (Math.random() - 0.5) * 800));
+        b.y = Math.max(100, Math.min(state.world.height - 100, state.player.y + (Math.random() - 0.5) * 600));
 
         // burst
         ring(b.x, b.y, 20, 0, 4);
     },
     42: () => {
         for (let i = 0; i < 20; i++) {
-            let x = Math.random() * 800;
+            let x = state.camera.x + Math.random() * 1536;
 
             state.bullets.push({
                 x,
-                y: 0,
+                y: state.camera.y,
                 vx: 0,
                 vy: 8,
                 radius: 6,
@@ -334,6 +312,10 @@ export const ATTACK_MODES = {
         state.player.x += (Math.random() - 0.5) * 200;
         state.player.y += (Math.random() - 0.5) * 200;
     },
+
+    // ===== THE ENTITY PHASE =====
+    60: (b) => ring(b.x, b.y, 24, state.frameCount * 0.08, 1),
+    61: (b) => fan(b.x, b.y, aim(b), 9, 0.15, 3),
 };
 
 export const SPECIAL_SKILLS = {
@@ -394,8 +376,8 @@ export const SPECIAL_SKILLS = {
         };
 
         // ĐÃ NERF: Vùng an toàn to hơn (250), đi chậm hơn và KHÔNG bị thu nhỏ nữa
-        spawnSafeZone(200, 200, 250, 600, { vx: 1.5, vy: 1, shrinking: false });
-        spawnSafeZone(600, 400, 250, 600, { vx: -1.5, vy: -1, shrinking: false });
+        spawnSafeZone(state.player.x - 400, state.player.y - 200, 250, 600, { vx: 1.5, vy: 1, shrinking: false });
+        spawnSafeZone(state.player.x + 200, state.player.y + 100, 250, 600, { vx: -1.5, vy: -1, shrinking: false });
     },
 
     // --- EARTH ---
@@ -462,7 +444,7 @@ export const SPECIAL_SKILLS = {
             timer: 600,
             damage: 1.2,
         };
-        spawnSafeZone(400, 300, 250, 600, { shrinking: false });
+        spawnSafeZone(state.player.x, state.player.y, 250, 600, { shrinking: false });
     },
 
     // --- ICE ---
@@ -477,9 +459,8 @@ export const SPECIAL_SKILLS = {
             state.delayedTasks.push({
                 delay: i * 4,
                 action: () => {
-                    const rx = Math.random() * 800;
-                    // SỬA LỖI: Đổi y từ -20 thành 15 để đạn không bị dội ngược ra ngoài bản đồ
-                    fireAngle(rx, 15, Math.PI / 2, 2);
+                    const rx = state.camera.x + Math.random() * 1536;
+                    fireAngle(rx, state.camera.y + 15, Math.PI / 2, 2);
                 },
             });
         }
@@ -499,8 +480,8 @@ export const SPECIAL_SKILLS = {
                 action: () =>
                     spawnHazard(
                         "frost",
-                        Math.random() * 800,
-                        Math.random() * 600,
+                        state.camera.x + Math.random() * 1536,
+                        state.camera.y + Math.random() * 864,
                         60 + Math.random() * 40,
                         180,
                     ),
@@ -545,7 +526,7 @@ export const SPECIAL_SKILLS = {
         state.screenShake.timer = 600;
         state.screenShake.intensity = 5; // Rung màn hình mạnh hơn do bão
         state.screenShake.type = "wind";
-        spawnSafeZone(400, 300, 250, 600, { vx: 1.2, vy: 0 });
+        spawnSafeZone(state.player.x, state.player.y, 250, 600, { vx: 1.2, vy: 0 });
     },
 
     // --- THUNDER ---
@@ -627,7 +608,7 @@ export const SPECIAL_SKILLS = {
             timer: 600,
             damage: 1.5,
         };
-        spawnSafeZone(Math.random() * 800, Math.random() * 600, 250, 600, {
+        spawnSafeZone(state.camera.x + Math.random() * 1536, state.camera.y + Math.random() * 864, 250, 600, {
             vx: 1,
             vy: 1,
         });
@@ -685,7 +666,7 @@ export const SPECIAL_SKILLS = {
         activateShield(boss, 150);
 
         // Gió: Tạo lốc xoáy khổng lồ giữa bản đồ hút nhẹ người chơi, cản trở việc chạy trốn
-        spawnHazard("vortex", 400, 300, 800, 150, 0, "boss");
+        spawnHazard("vortex", state.player.x, state.player.y, 800, 150, 0, "boss");
 
         for (let i = 0; i < 4; i++) {
             // Tăng lên 4 quả thiên thạch

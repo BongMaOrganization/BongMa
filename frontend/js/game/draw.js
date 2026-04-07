@@ -112,8 +112,8 @@ export function draw(ctx, canvas) {
   // Vẽ vết cháy vĩnh viễn (nằm dưới cùng)
   drawPermanentScars(ctx);
 
-  // --- DRAW SWARM ZONES ---
-  state.swarmZones.forEach(sz => {
+  // --- DRAW SWARM ZONES (chỉ map thường) ---
+  if (!state.isBossLevel && !state.bossArenaMode) state.swarmZones.forEach(sz => {
     if (sz.isCompleted) return;
     ctx.save();
     const pulse = Math.sin(state.frameCount * 0.1) * 20;
@@ -145,9 +145,11 @@ export function draw(ctx, canvas) {
     ctx.restore();
   });
 
-  drawCrates(ctx);
-  drawCapturePoints(ctx);
-  drawItems(ctx);
+  if (!state.isBossLevel && !state.bossArenaMode) {
+    drawCrates(ctx);
+    drawCapturePoints(ctx);
+    drawItems(ctx);
+  }
   drawSatellite(ctx);
   drawGodMode(ctx);
   drawFloatingTexts(ctx); // Thêm hàm vẽ chữ bay ở đây
@@ -316,6 +318,7 @@ export function draw(ctx, canvas) {
           life: 60,
           color: Math.random() > 0.5 ? "#ffaa00" : "#ff4400",
           size: 2 + Math.random() * 3,
+          screenSpace: true,
         });
       }
     } else if (state.globalHazard.type === "electric") {
@@ -362,6 +365,7 @@ export function draw(ctx, canvas) {
           life: 240,
           color: "#ffffff",
           size: 2 + Math.random() * 3,
+          screenSpace: true,
         });
       }
     } else if (state.globalHazard.type === "wind") {
@@ -380,6 +384,7 @@ export function draw(ctx, canvas) {
           life: 20,
           color: "#ccffff",
           size: 1 + Math.random() * 3,
+          screenSpace: true,
         });
       }
     }
@@ -2162,17 +2167,14 @@ export function draw(ctx, canvas) {
     ctx.restore();
   }
 
-  ctx.beginPath();
-  ctx.arc(mouse.x, mouse.y, 5, 0, Math.PI * 2);
-  ctx.strokeStyle = "rgba(0, 255, 204, 0.5)";
-  ctx.stroke();
-
-  ctx.restore();
-
-  // --- HUD & Vignette ---
-  // --- Particles ---
+  // --- Particles (world-space only, inside camera translation) ---
   if (state.particles) {
     state.particles.forEach((p) => {
+      if (p.screenSpace) return;
+      p.x += p.vx || 0;
+      p.y += p.vy || 0;
+      p.life--;
+      if (p.life <= 0) return;
       ctx.save();
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size || 2, 0, Math.PI * 2);
@@ -2183,6 +2185,33 @@ export function draw(ctx, canvas) {
     });
   }
 
+  ctx.beginPath();
+  ctx.arc(mouse.x, mouse.y, 5, 0, Math.PI * 2);
+  ctx.strokeStyle = "rgba(0, 255, 204, 0.5)";
+  ctx.stroke();
+
+  ctx.restore();
+
+  // --- Particles (screen-space, after camera restore) ---
+  if (state.particles) {
+    state.particles = state.particles.filter((p) => {
+      if (!p.screenSpace) return p.life > 0;
+      p.x += p.vx || 0;
+      p.y += p.vy || 0;
+      p.life--;
+      if (p.life <= 0) return false;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size || 2, 0, Math.PI * 2);
+      ctx.fillStyle = p.color || "white";
+      ctx.globalAlpha = Math.max(0, p.life / 30);
+      ctx.fill();
+      ctx.restore();
+      return true;
+    });
+  }
+
+  // --- HUD & Vignette ---
   drawHUD(ctx, canvas);
 
   if (state.playerStatus.burnTimer > 0) {
@@ -2308,8 +2337,10 @@ function drawHUD(ctx, canvas) {
     ctx.fillText("SHIELD / STANCE", centerX, centerY + 11);
   }
 
-  // --- Swarm Zone HUD ---
-  const activeZone = state.swarmZones.find(sz => sz.active && !sz.isCompleted);
+  // --- Swarm Zone HUD (chỉ map thường) ---
+  const activeZone = (!state.isBossLevel && !state.bossArenaMode)
+    ? state.swarmZones.find(sz => sz.active && !sz.isCompleted)
+    : null;
   if (activeZone) {
     const hudX = canvas.width / 2;
     const hudY = canvas.height - 150;
@@ -2404,8 +2435,8 @@ function drawMinimap(ctx, canvas) {
     drawDot(state.player, "#00ffcc", 3);
   }
 
-  // 3.5. Swarm Zones (Chấm vàng cam nhấp nháy)
-  state.swarmZones.forEach(sz => {
+  // 3.5. Swarm Zones (chỉ map thường)
+  if (!state.isBossLevel && !state.bossArenaMode) state.swarmZones.forEach(sz => {
     if (sz.isCompleted) return;
     const color = (state.frameCount % 40 < 20) ? "#ffaa00" : "#aa5500";
     const x = mmX + sz.x * scaleX;
@@ -2432,8 +2463,8 @@ function drawMinimap(ctx, canvas) {
     state.camera.height * scaleY
   );
 
-  // 5. Thùng vật phẩm (Chấm nâu nhỏ)
-  if (state.crates) {
+  // 5. Thùng vật phẩm (chỉ map thường)
+  if (!state.isBossLevel && !state.bossArenaMode && state.crates) {
     state.crates.forEach(c => {
       const x = mmX + c.x * scaleX;
       const y = mmY + c.y * scaleY;
@@ -2444,8 +2475,8 @@ function drawMinimap(ctx, canvas) {
     });
   }
 
-  // 6. Điểm chiếm đóng (Hình thoi vàng to, nổi bật hơn)
-  if (state.capturePoints) {
+  // 6. Điểm chiếm đóng (chỉ map thường)
+  if (!state.isBossLevel && !state.bossArenaMode && state.capturePoints) {
     state.capturePoints.forEach(cp => {
       if (cp.state === "completed") return;
       const x = mmX + cp.x * scaleX;

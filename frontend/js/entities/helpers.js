@@ -46,6 +46,15 @@ export function spawnWarning(x, y, radius, duration, type = "laser") {
     state.groundWarnings.push({ x, y, radius, timer: duration, maxTimer: duration, type });
 }
 
+export function spawnSafeZone(x, y, radius, life, options = {}) {
+    state.safeZones.push({
+        x, y, radius, life, maxLife: life,
+        vx: options.vx || 0,
+        vy: options.vy || 0,
+        shrinking: options.shrinking !== false,
+    });
+}
+
 export function spawnMeteor(tx, ty, destX, destY) {
     state.bullets.push({
         x: tx, y: ty, destX: destX, destY: destY, vx: 0, vy: 25,
