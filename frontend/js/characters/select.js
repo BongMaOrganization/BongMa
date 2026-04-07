@@ -1,5 +1,6 @@
 import { state } from "../state.js";
-import { CHARACTERS, GHOST_DATA_KEY } from "../config.js";
+import { GHOST_DATA_KEY } from "../config.js";
+import { CHARACTERS } from "./data.js";
 import { saveGame, saveGameToServer } from "../utils.js";
 
 export function openCharacterSelect(changeStateFn) {

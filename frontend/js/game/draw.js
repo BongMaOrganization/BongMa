@@ -1,5 +1,6 @@
 import { state } from "../state.js";
 import { dist } from "../utils.js";
+import { drawActiveCharacter } from "../characters/characterRegistry.js";
 
 const SCREEN_SHAKE_TYPES = {
   earth: () => ({
@@ -112,8 +113,8 @@ export function draw(ctx, canvas) {
   // Vẽ vết cháy vĩnh viễn (nằm dưới cùng)
   drawPermanentScars(ctx);
 
-  // --- DRAW SWARM ZONES ---
-  state.swarmZones.forEach(sz => {
+  // --- DRAW SWARM ZONES (chỉ map thường) ---
+  if (!state.isBossLevel && !state.bossArenaMode) state.swarmZones.forEach(sz => {
     if (sz.isCompleted) return;
     ctx.save();
     const pulse = Math.sin(state.frameCount * 0.1) * 20;
@@ -145,9 +146,11 @@ export function draw(ctx, canvas) {
     ctx.restore();
   });
 
-  drawCrates(ctx);
-  drawCapturePoints(ctx);
-  drawItems(ctx);
+  if (!state.isBossLevel && !state.bossArenaMode) {
+    drawCrates(ctx);
+    drawCapturePoints(ctx);
+    drawItems(ctx);
+  }
   drawSatellite(ctx);
   drawGodMode(ctx);
   drawFloatingTexts(ctx); // Thêm hàm vẽ chữ bay ở đây
@@ -316,6 +319,7 @@ export function draw(ctx, canvas) {
           life: 60,
           color: Math.random() > 0.5 ? "#ffaa00" : "#ff4400",
           size: 2 + Math.random() * 3,
+          screenSpace: true,
         });
       }
     } else if (state.globalHazard.type === "electric") {
@@ -362,6 +366,7 @@ export function draw(ctx, canvas) {
           life: 240,
           color: "#ffffff",
           size: 2 + Math.random() * 3,
+          screenSpace: true,
         });
       }
     } else if (state.globalHazard.type === "wind") {
@@ -380,6 +385,7 @@ export function draw(ctx, canvas) {
           life: 20,
           color: "#ccffff",
           size: 1 + Math.random() * 3,
+          screenSpace: true,
         });
       }
     }
@@ -478,519 +484,56 @@ export function draw(ctx, canvas) {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
-  if (char === "timekeeper") {
-    if (buffs.e > 0) {
-      ctx.fillStyle = "rgba(0, 255, 255, 0.1)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-    if (buffs.r > 0) {
+  // Hiệu ứng nhân vật - mỗi nhân vật tự vẽ hiệu ứng của mình
+  drawActiveCharacter(state, ctx, canvas, buffs);
+
+  // Vẽ chỉ báo phạm vi skill (shared)
+  if (state.skillRangeIndicators) {
+    for (let i = state.skillRangeIndicators.length - 1; i >= 0; i--) {
+      const ind = state.skillRangeIndicators[i];
+      const alpha = ind.life / ind.maxLife;
+      ctx.save();
       ctx.beginPath();
-      ctx.arc(player.x, player.y, player.radius + 15, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(0, 255, 255, 0.8)";
-      ctx.lineWidth = 4;
-      ctx.setLineDash([10, 5]);
+      ctx.arc(ind.x, ind.y, ind.radius * (1 + (1 - alpha) * 0.15), 0, Math.PI * 2);
+      ctx.strokeStyle = ind.color || "rgba(255,255,255,0.8)";
+      ctx.lineWidth = 2;
+      ctx.globalAlpha = alpha * 0.8;
+      ctx.setLineDash([12, 8]);
       ctx.stroke();
       ctx.setLineDash([]);
-    }
-  }
-
-  if (char === "void") {
-    if (state.voidBlackholes) {
-      state.voidBlackholes.forEach((bh) => {
-        ctx.beginPath();
-        ctx.arc(
-          bh.x,
-          bh.y,
-          40 + Math.sin(state.frameCount * 0.2) * 10,
-          0,
-          Math.PI * 2,
-        );
-        ctx.fillStyle = "black";
-        ctx.fill();
-        ctx.strokeStyle = "purple";
-        ctx.lineWidth = 3;
-        ctx.stroke();
-      });
-    }
-    if (buffs.e > 0) {
-      ctx.fillStyle = "rgba(128, 0, 128, 0.2)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-    if (buffs.r > 0 && state.voidLaser) {
+      // Fill mờ bên trong
       ctx.beginPath();
-      ctx.moveTo(state.voidLaser.x, state.voidLaser.y);
-      ctx.lineTo(
-        state.voidLaser.x + Math.cos(state.voidLaser.angle) * 2000,
-        state.voidLaser.y + Math.sin(state.voidLaser.angle) * 2000,
-      );
-      ctx.strokeStyle = `rgba(100, 0, 200, 0.8)`;
-      ctx.lineWidth = 40;
-      ctx.stroke();
-      ctx.strokeStyle = `rgba(255, 255, 255, 0.9)`;
-      ctx.lineWidth = 15;
-      ctx.stroke();
-    }
-  }
-
-  if (char === "destroyer") {
-    if (state.destroyerRifts) {
-      state.destroyerRifts.forEach((r) => {
-        const opacity = r.life / (5 * 60);
-        ctx.beginPath();
-        ctx.moveTo(r.x, r.y);
-        ctx.lineTo(r.endX, r.endY);
-        ctx.strokeStyle = `rgba(255, 0, 100, ${opacity})`;
-        ctx.lineWidth = 15;
-        ctx.stroke();
-
-        ctx.strokeStyle = `rgba(255, 255, 255, ${opacity * 0.8})`;
-        ctx.lineWidth = 4;
-        ctx.stroke();
-      });
-    }
-
-    if (state.destroyerAbsorb) {
-      const field = state.destroyerAbsorb;
-      const pulse = Math.sin(state.frameCount * 0.2) * 10;
-      const alpha = (field.life / 60) * 0.3;
-
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, field.radius + pulse, 0, Math.PI * 2);
-
-      ctx.strokeStyle = `rgba(180, 0, 255, ${alpha})`;
-      ctx.lineWidth = 8;
-      ctx.stroke();
-
-      ctx.fillStyle = `rgba(100, 0, 200, ${alpha * 0.5})`;
+      ctx.arc(ind.x, ind.y, ind.radius, 0, Math.PI * 2);
+      ctx.fillStyle = ind.color || "rgba(255,255,255,0.8)";
+      ctx.globalAlpha = alpha * 0.06;
       ctx.fill();
-
-      for (let i = 0; i < 4; i++) {
-        let a = state.frameCount * 0.05 + i * (Math.PI / 2);
-        ctx.beginPath();
-        ctx.arc(player.x, player.y, field.radius + pulse - 5, a, a + 0.8);
-        ctx.strokeStyle = `rgba(255, 255, 255, ${alpha})`;
-        ctx.lineWidth = 3;
-        ctx.stroke();
-      }
+      ctx.restore();
+      ind.life--;
+      if (ind.life <= 0) state.skillRangeIndicators.splice(i, 1);
     }
   }
 
-  if (char === "storm") {
-    if (state.stormLightnings) {
-      for (let i = state.stormLightnings.length - 1; i >= 0; i--) {
-        let l = state.stormLightnings[i];
-        ctx.beginPath();
-        ctx.moveTo(l.x, l.y - 1000);
-        ctx.lineTo(l.x + (Math.random() - 0.5) * 50, l.y - 500);
-        ctx.lineTo(l.x + (Math.random() - 0.5) * 50, l.y);
-        ctx.strokeStyle = "rgba(0, 255, 255, 0.9)";
-        ctx.lineWidth = 6;
-        ctx.stroke();
 
-        ctx.beginPath();
-        ctx.arc(l.x, l.y, 100, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(0, 255, 255, 0.2)";
-        ctx.fill();
 
-        l.life--;
-        if (l.life <= 0) state.stormLightnings.splice(i, 1);
-      }
-    }
-    if (state.stormTraps) {
-      state.stormTraps.forEach((t) => {
-        ctx.beginPath();
-        ctx.arc(t.x, t.y, 15, 0, Math.PI * 2);
-        ctx.fillStyle =
-          state.frameCount % 10 < 5
-            ? "rgba(0,255,255,0.8)"
-            : "rgba(255,255,255,0.8)";
-        ctx.fill();
-      });
-    }
-  }
 
-  if (char === "reaper") {
-    if (buffs.q > 0 && state.reaperSlash) {
-      let s = state.reaperSlash;
-      ctx.beginPath();
-      ctx.arc(s.x, s.y, 150, s.angle - Math.PI / 2, s.angle + Math.PI / 2);
-      ctx.strokeStyle = `rgba(255, 0, 0, ${buffs.q / 15})`;
-      ctx.lineWidth = 30;
-      ctx.stroke();
-    }
-    if (buffs.r > 0) {
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, 300, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(255, 0, 0, 0.5)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.fillStyle = `rgba(255, 0, 0, ${(1 - buffs.r / (2 * 60)) * 0.3})`;
-      ctx.fill();
-    }
-  }
 
-  if (char === "oracle") {
-    if (buffs.q > 0) {
-      ctx.fillStyle = "rgba(255, 200, 0, 0.08)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-    if (buffs.r > 0) {
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, player.radius + 12, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(255, 100, 255, 0.8)";
-      ctx.lineWidth = 2;
-      ctx.setLineDash([5, 5]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-  }
 
-  if (state.phantoms) {
-    state.phantoms.forEach((p) => {
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-      ctx.fillStyle = p.color;
-      ctx.globalAlpha = p.life / (2 * 60);
-      ctx.fill();
-      ctx.globalAlpha = 1.0;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.radius + 2, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
-      ctx.globalAlpha = p.life / (2 * 60);
-      ctx.stroke();
-      ctx.globalAlpha = 1.0;
-    });
-  }
 
-  if (char === "tank" && buffs.r > 0) {
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, 200 + (15 - buffs.r) * 5, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(0, 255, 204, ${buffs.r / 15})`;
-    ctx.lineWidth = 10;
-    ctx.stroke();
-  }
-  if (char === "sharpshooter" && buffs.r > 0) {
-    ctx.fillStyle = `rgba(255, 0, 0, ${buffs.r / 20})`;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  }
-  if (player.characterId === "mage" && buffs.r > 0) {
-    ctx.fillStyle = `rgba(0, 150, 255, 0.15)`;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  }
 
-  if (char === "berserker") {
-    if (buffs.r > 0) {
-      ctx.fillStyle = `rgba(255, 0, 0, ${buffs.r / (5 * 60)})`;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-    if (buffs.q > 0) {
-      ctx.beginPath();
-      ctx.arc(
-        player.x,
-        player.y,
-        player.radius + 6 + Math.random() * 4,
-        0,
-        Math.PI * 2,
-      );
-      ctx.strokeStyle = "rgba(255, 0, 0, 0.8)";
-      ctx.lineWidth = 3;
-      ctx.stroke();
-    }
-  }
 
-  if (char === "assassin" && buffs.e > 0) {
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, player.radius + 10, 0, Math.PI * 2);
-    ctx.stroke();
-  }
 
-  if (char === "brawler") {
-    if (buffs.q > 0) {
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, 120 - buffs.q * 8, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(255, 100, 50, ${buffs.q / 15})`;
-      ctx.lineWidth = 10;
-      ctx.stroke();
-    }
-    if (buffs.e > 0) {
-      ctx.beginPath();
-      ctx.arc(
-        player.x,
-        player.y,
-        player.radius + 6 + Math.random() * 4,
-        0,
-        Math.PI * 2,
-      );
-      ctx.strokeStyle = "rgba(255, 100, 0, 0.7)";
-      ctx.lineWidth = 4;
-      ctx.stroke();
-    }
-    if (buffs.r > 0) {
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, 300 - buffs.r * 10, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(255, 200, 0, ${buffs.r / 30})`;
-      ctx.lineWidth = 15;
-      ctx.stroke();
-      ctx.fillStyle = `rgba(255, 100, 0, ${(buffs.r / 30) * 0.1})`;
-      ctx.fill();
-    }
-  }
 
-  if (char === "scout") {
-    if (buffs.q > 0) {
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, 100, 0, Math.PI * 2);
-      ctx.strokeStyle = `rgba(255, 255, 255, ${buffs.q / 15})`;
-      ctx.lineWidth = 4;
-      ctx.stroke();
-    }
-    if (buffs.e > 0 && player.grappleTarget) {
-      ctx.beginPath();
-      ctx.moveTo(player.x, player.y);
-      ctx.lineTo(player.grappleTarget.x, player.grappleTarget.y);
-      ctx.strokeStyle = "rgba(150, 150, 150, 0.8)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(
-        player.grappleTarget.x,
-        player.grappleTarget.y,
-        5,
-        0,
-        Math.PI * 2,
-      );
-      ctx.fillStyle = "#aaa";
-      ctx.fill();
-    }
-    if (buffs.r > 0) {
-      ctx.beginPath();
-      ctx.arc(
-        player.x,
-        player.y,
-        player.radius + 10 + Math.sin(state.frameCount * 0.2) * 5,
-        0,
-        Math.PI * 2,
-      );
-      ctx.strokeStyle = "rgba(255, 50, 50, 0.8)";
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      ctx.fillStyle = "rgba(255, 0, 0, 0.05)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-  }
 
-  if (char === "medic") {
-    if (buffs.q > 0) {
-      ctx.fillStyle = `rgba(0, 255, 100, ${buffs.q / 30})`;
-      ctx.font = "bold 20px Arial";
-      ctx.fillText("+1 HP", player.x - 25, player.y - 20 - (30 - buffs.q));
-    }
-    if (buffs.e > 0) {
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, player.radius + 8, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(100, 255, 150, 0.5)";
-      ctx.setLineDash([5, 5]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-    if (buffs.r > 0) {
-      ctx.fillStyle = `rgba(0, 255, 150, ${(buffs.r / 60) * 0.2})`;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.beginPath();
-      ctx.arc(
-        player.x,
-        player.y,
-        player.radius + (60 - buffs.r) * 2,
-        0,
-        Math.PI * 2,
-      );
-      ctx.strokeStyle = `rgba(0, 255, 100, ${buffs.r / 60})`;
-      ctx.lineWidth = 8;
-      ctx.stroke();
-    }
-  }
 
-  if (char === "summoner" && buffs.q > 0) {
-    let angle = (state.frameCount || 0) * 0.1;
-    for (let i = 0; i < 2; i++) {
-      let a = angle + i * Math.PI;
-      let x = player.x + Math.cos(a) * 40;
-      let y = player.y + Math.sin(a) * 40;
-      ctx.beginPath();
-      ctx.arc(x, y, 6, 0, Math.PI * 2);
-      ctx.fillStyle = "#b400ff";
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = "#b400ff";
-      ctx.fill();
-      ctx.shadowBlur = 0;
-    }
-  }
 
-  if (char === "alchemist" && buffs.r > 0) {
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, 250, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(0, 255, 128, 0.4)";
-    ctx.lineWidth = 2;
-    ctx.setLineDash([10, 10]);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = "rgba(0, 255, 128, 0.05)";
-    ctx.fill();
-  }
 
-  if (char === "summoner" && buffs.r > 0) {
-    ctx.fillStyle = "rgba(180, 0, 255, 0.12)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  }
 
-  if (char === "warden" && buffs.r > 0) {
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, 150, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255, 215, 0, 0.5)";
-    ctx.lineWidth = 4;
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = "#ffd700";
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = "rgba(255, 215, 0, 0.05)";
-    ctx.fill();
-  }
 
-  if (char === "void" && buffs.r > 0) {
-    ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  }
 
-  if (char === "storm" && buffs.r > 0) {
-    ctx.fillStyle = "rgba(255, 255, 0, 0.12)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  }
 
-  if (char === "reaper" && buffs.r > 0) {
-    ctx.fillStyle = "rgba(255, 0, 0, 0.18)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  }
 
-  if (char === "engineer" && buffs.r > 0) {
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, 120, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(0, 200, 255, 0.6)";
-    ctx.lineWidth = 3;
-    ctx.setLineDash([6, 6]);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-  if (char === "spirit" && buffs.q > 0) {
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, player.radius + 6, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(200, 200, 255, 0.8)";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  }
-  if (char === "spirit" && buffs.e > 0) {
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, 200, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(150, 150, 255, 0.4)";
-    ctx.setLineDash([5, 5]);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-  if (char === "spirit" && buffs.r > 0) {
-    for (let i = 0; i < 10; i++) {
-      let x = Math.random() * canvas.width;
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x + (Math.random() - 0.5) * 50, canvas.height);
-      ctx.strokeStyle = "rgba(255,255,255,0.7)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-    }
-  }
-  if (char === "druid" && buffs.r > 0) {
-    ctx.fillStyle = "rgba(0,255,100,0.08)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  }
-  if (char === "druid" && buffs.e > 0) {
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, player.radius + 4, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(0,255,100,0.6)";
-    ctx.stroke();
-  }
 
-  if (char === "frost") {
-    if (buffs.q > 0) {
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, player.radius + 15, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(0, 200, 255, 0.6)";
-      ctx.fill();
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.8)";
-      ctx.lineWidth = 4;
-      ctx.stroke();
 
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, 100, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(0, 200, 255, 0.1)";
-      ctx.fill();
-    }
-    if (buffs.r > 0) {
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, 200, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(100, 200, 255, 0.15)";
-      ctx.fill();
-      ctx.strokeStyle = "rgba(200, 255, 255, 0.5)";
-      ctx.setLineDash([10, 15]);
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-  }
-
-  if (char === "gunner") {
-    if (buffs.q > 0 && state.gunnerLaser) {
-      ctx.beginPath();
-      ctx.moveTo(state.gunnerLaser.x, state.gunnerLaser.y);
-      ctx.lineTo(
-        state.gunnerLaser.x + Math.cos(state.gunnerLaser.angle) * 2000,
-        state.gunnerLaser.y + Math.sin(state.gunnerLaser.angle) * 2000,
-      );
-      ctx.strokeStyle = `rgba(0, 255, 255, ${buffs.q / 15})`;
-      ctx.lineWidth = 15;
-      ctx.stroke();
-      ctx.strokeStyle = `rgba(255, 255, 255, ${buffs.q / 15})`;
-      ctx.lineWidth = 5;
-      ctx.stroke();
-    }
-    if (state.gunnerMines) {
-      state.gunnerMines.forEach((m) => {
-        ctx.beginPath();
-        ctx.arc(m.x, m.y, 10, 0, Math.PI * 2);
-        ctx.fillStyle = "#333";
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(m.x, m.y, 4, 0, Math.PI * 2);
-        ctx.fillStyle = state.frameCount % 20 < 10 ? "#ff0000" : "#550000";
-        ctx.fill();
-      });
-    }
-    if (state.gunnerAirstrikes) {
-      state.gunnerAirstrikes.forEach((strike) => {
-        let maxT = 1 * 60;
-        let progress = 1 - strike.timer / maxT;
-        ctx.beginPath();
-        ctx.arc(strike.x, strike.y, 200, 0, Math.PI * 2);
-        ctx.strokeStyle = "rgba(255, 0, 0, 0.5)";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        ctx.beginPath();
-        ctx.arc(strike.x, strike.y, 200 * progress, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(255, 0, 0, 0.2)";
-        ctx.fill();
-      });
-    }
-  }
   if (state.explosions) {
     for (let i = state.explosions.length - 1; i >= 0; i--) {
       let exp = state.explosions[i];
@@ -1005,209 +548,7 @@ export function draw(ctx, canvas) {
     }
   }
 
-  if (char === "hunter") {
-    if (buffs.e > 0) {
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, 300, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(255, 100, 0, 0.6)";
-      ctx.lineWidth = 3;
-      ctx.setLineDash([10, 10]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      ctx.fillStyle = "rgba(255, 100, 0, 0.05)";
-      ctx.fill();
-    }
-    if (state.hunterTraps) {
-      state.hunterTraps.forEach((trap) => {
-        ctx.beginPath();
-        ctx.arc(trap.x, trap.y, 15, 0, Math.PI * 2);
-        ctx.strokeStyle = "rgba(139, 69, 19, 0.8)";
-        ctx.setLineDash([5, 5]);
-        ctx.lineWidth = 4;
-        ctx.stroke();
-        ctx.setLineDash([]);
-      });
-    }
-  }
-  if (state.phoenixTrails) {
-    state.phoenixTrails.forEach((t) => {
-      ctx.beginPath();
-      ctx.arc(t.x, t.y, 6, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(255,120,0,0.5)";
-      ctx.fill();
-    });
-  }
-  if (char === "phoenix" && buffs.r > 0) {
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, player.radius + 6, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255,200,0,0.8)";
-    ctx.stroke();
-  }
-  if (state.phoenixReviveFx > 0) {
-    let progress = state.phoenixReviveFx / 20;
 
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, 150 * (1 - progress), 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255,120,0,0.9)";
-    ctx.lineWidth = 5;
-    ctx.stroke();
-
-    ctx.fillStyle = "rgba(255,150,0,0.15)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  }
-  if (state.phoenixEfx && state.phoenixEfx.life > 0) {
-    let t = state.phoenixEfx.life / 10;
-
-    ctx.beginPath();
-    ctx.arc(
-      state.phoenixEfx.x,
-      state.phoenixEfx.y,
-      120 * (1 - t),
-      0,
-      Math.PI * 2,
-    );
-    ctx.strokeStyle = "rgba(255,120,0,0.9)";
-    ctx.lineWidth = 4;
-    ctx.stroke();
-
-    ctx.fillStyle = "rgba(255,150,0,0.1)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  }
-
-  if (state.necroMinions) {
-    state.necroMinions.forEach((m) => {
-      ctx.beginPath();
-      ctx.arc(m.x, m.y, 5, 0, Math.PI * 2);
-      ctx.fillStyle = m.type === "orbit" ? "#bb66ff" : "#6600aa";
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = "#aa00ff";
-      ctx.fill();
-      ctx.shadowBlur = 0;
-    });
-  }
-  if (state.necroZone) {
-    let z = state.necroZone;
-
-    ctx.beginPath();
-    ctx.arc(z.x, z.y, 120, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(150,0,200,0.6)";
-    ctx.lineWidth = 3;
-    ctx.stroke();
-
-    ctx.fillStyle = "rgba(150,0,200,0.08)";
-    ctx.fill();
-  }
-  if (state.necroExplosions) {
-    state.necroExplosions.forEach((e) => {
-      let t = e.life / 15;
-
-      ctx.beginPath();
-      ctx.arc(e.x, e.y, 100 * (1 - t), 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(180,0,255,0.8)";
-      ctx.lineWidth = 3;
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.arc(e.x, e.y, 50 * (1 - t), 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(255,0,255,0.5)";
-      ctx.stroke();
-    });
-  }
-  if (state.painterTrails) {
-    state.painterTrails.forEach((t) => {
-      ctx.beginPath();
-      for (let i = 0; i < t.points.length; i++) {
-        let p = t.points[i];
-        if (i === 0) ctx.moveTo(p.x, p.y);
-        else ctx.lineTo(p.x, p.y);
-      }
-      ctx.strokeStyle = "rgba(255,100,200,0.8)";
-      ctx.lineWidth = 6;
-      ctx.stroke();
-    });
-  }
-  if (state.painterZones) {
-    state.painterZones.forEach((z) => {
-      ctx.beginPath();
-      ctx.arc(z.x, z.y, z.radius, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(255,150,200,0.2)";
-      ctx.fill();
-    });
-  }
-  if (state.painterBomb) {
-    ctx.beginPath();
-    ctx.arc(state.painterBomb.x, state.painterBomb.y, 10, 0, Math.PI * 2);
-    ctx.fillStyle = "pink";
-    ctx.fill();
-  }
-  if (player.characterId === "elementalist" && buffs.e > 0) {
-    let el = state.element;
-
-    if (el === "fire") {
-      ctx.fillStyle = "rgba(255,80,0,0.1)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-
-    if (el === "ice") {
-      ctx.fillStyle = "rgba(0,200,255,0.1)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-
-    if (el === "lightning") {
-      if (state.frameCount % 10 < 5) {
-        ctx.fillStyle = "rgba(255,255,200,0.1)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
-    }
-
-    if (el === "earth") {
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, 120, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(150,100,50,0.6)";
-      ctx.lineWidth = 5;
-      ctx.stroke();
-    }
-
-    if (el === "wind") {
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, 100, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(200,255,255,0.6)";
-      ctx.setLineDash([5, 10]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
-  }
-  if (player.characterId === "elementalist" && buffs.r > 0) {
-    let el = state.element;
-
-    if (el === "fire") {
-      ctx.fillStyle = "rgba(255,50,0,0.2)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-
-    if (el === "ice") {
-      ctx.fillStyle = "rgba(0,200,255,0.2)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-
-    if (el === "lightning") {
-      ctx.fillStyle = "rgba(255,255,0,0.15)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-
-    if (el === "earth") {
-      ctx.beginPath();
-      ctx.arc(player.x, player.y, 250, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(150,100,50,0.5)";
-      ctx.lineWidth = 10;
-      ctx.stroke();
-    }
-
-    if (el === "wind") {
-      ctx.fillStyle = "rgba(200,255,255,0.1)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-  }
   if (boss && !boss.entityPhase) {
     let phase;
     const ratio = boss.hp / boss.maxHp;
@@ -1583,17 +924,6 @@ export function draw(ctx, canvas) {
     }
   }
 
-  if (state.druidOrbs && char === "druid" && buffs.q > 0) {
-    state.druidOrbs.forEach((o) => {
-      ctx.beginPath();
-      ctx.arc(o.x, o.y, 6, 0, Math.PI * 2);
-      ctx.fillStyle = "#00ff88";
-      ctx.shadowBlur = 10;
-      ctx.shadowColor = "#00ff88";
-      ctx.fill();
-      ctx.shadowBlur = 0;
-    });
-  }
 
   if (state.engineerTurrets) {
     state.engineerTurrets.forEach((t) => {
@@ -1716,45 +1046,10 @@ export function draw(ctx, canvas) {
   // ===== NEW CHARACTER VFX =====
 
   // --- Destroyer: Rift ---
-  if (state.destroyerRifts) {
-    state.destroyerRifts.forEach((r) => {
-      const alpha = Math.min(1, r.life / 60);
-      ctx.strokeStyle = `rgba(255, 0, 80, ${alpha * 0.8})`;
-      ctx.lineWidth = 8 + Math.sin(state.frameCount * 0.1) * 3;
-      ctx.shadowBlur = 20;
-      ctx.shadowColor = "#ff0055";
-      ctx.beginPath();
-      ctx.moveTo(r.x, r.y);
-      ctx.lineTo(r.endX, r.endY);
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-    });
-  }
 
   // --- Destroyer: Ult aura ---
-  if (state.destroyerUlt) {
-    const pulse = Math.sin(state.frameCount * 0.15) * 15;
-    const radius = state.destroyerUlt.radius + pulse;
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, radius, 0, Math.PI * 2);
-    ctx.strokeStyle = `rgba(255, 0, 80, 0.6)`;
-    ctx.lineWidth = 3;
-    ctx.shadowBlur = 30;
-    ctx.shadowColor = "#ff0055";
-    ctx.stroke();
-    ctx.fillStyle = `rgba(255, 0, 80, 0.08)`;
-    ctx.fill();
-    ctx.shadowBlur = 0;
-  }
 
   // --- Destroyer: E aura ---
-  if (char === "destroyer" && buffs.e > 0) {
-    ctx.beginPath();
-    ctx.arc(player.x, player.y, player.radius + 10, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255, 0, 80, 0.5)";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-  }
 
   // --- Creator: Turrets ---
   if (state.creatorTurrets) {
@@ -2162,17 +1457,14 @@ export function draw(ctx, canvas) {
     ctx.restore();
   }
 
-  ctx.beginPath();
-  ctx.arc(mouse.x, mouse.y, 5, 0, Math.PI * 2);
-  ctx.strokeStyle = "rgba(0, 255, 204, 0.5)";
-  ctx.stroke();
-
-  ctx.restore();
-
-  // --- HUD & Vignette ---
-  // --- Particles ---
+  // --- Particles (world-space only, inside camera translation) ---
   if (state.particles) {
     state.particles.forEach((p) => {
+      if (p.screenSpace) return;
+      p.x += p.vx || 0;
+      p.y += p.vy || 0;
+      p.life--;
+      if (p.life <= 0) return;
       ctx.save();
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.size || 2, 0, Math.PI * 2);
@@ -2183,6 +1475,33 @@ export function draw(ctx, canvas) {
     });
   }
 
+  ctx.beginPath();
+  ctx.arc(mouse.x, mouse.y, 5, 0, Math.PI * 2);
+  ctx.strokeStyle = "rgba(0, 255, 204, 0.5)";
+  ctx.stroke();
+
+  ctx.restore();
+
+  // --- Particles (screen-space, after camera restore) ---
+  if (state.particles) {
+    state.particles = state.particles.filter((p) => {
+      if (!p.screenSpace) return p.life > 0;
+      p.x += p.vx || 0;
+      p.y += p.vy || 0;
+      p.life--;
+      if (p.life <= 0) return false;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size || 2, 0, Math.PI * 2);
+      ctx.fillStyle = p.color || "white";
+      ctx.globalAlpha = Math.max(0, p.life / 30);
+      ctx.fill();
+      ctx.restore();
+      return true;
+    });
+  }
+
+  // --- HUD & Vignette ---
   drawHUD(ctx, canvas);
 
   if (state.playerStatus.burnTimer > 0) {
@@ -2308,8 +1627,10 @@ function drawHUD(ctx, canvas) {
     ctx.fillText("SHIELD / STANCE", centerX, centerY + 11);
   }
 
-  // --- Swarm Zone HUD ---
-  const activeZone = state.swarmZones.find(sz => sz.active && !sz.isCompleted);
+  // --- Swarm Zone HUD (chỉ map thường) ---
+  const activeZone = (!state.isBossLevel && !state.bossArenaMode)
+    ? state.swarmZones.find(sz => sz.active && !sz.isCompleted)
+    : null;
   if (activeZone) {
     const hudX = canvas.width / 2;
     const hudY = canvas.height - 150;
@@ -2404,8 +1725,8 @@ function drawMinimap(ctx, canvas) {
     drawDot(state.player, "#00ffcc", 3);
   }
 
-  // 3.5. Swarm Zones (Chấm vàng cam nhấp nháy)
-  state.swarmZones.forEach(sz => {
+  // 3.5. Swarm Zones (chỉ map thường)
+  if (!state.isBossLevel && !state.bossArenaMode) state.swarmZones.forEach(sz => {
     if (sz.isCompleted) return;
     const color = (state.frameCount % 40 < 20) ? "#ffaa00" : "#aa5500";
     const x = mmX + sz.x * scaleX;
@@ -2432,8 +1753,8 @@ function drawMinimap(ctx, canvas) {
     state.camera.height * scaleY
   );
 
-  // 5. Thùng vật phẩm (Chấm nâu nhỏ)
-  if (state.crates) {
+  // 5. Thùng vật phẩm (chỉ map thường)
+  if (!state.isBossLevel && !state.bossArenaMode && state.crates) {
     state.crates.forEach(c => {
       const x = mmX + c.x * scaleX;
       const y = mmY + c.y * scaleY;
@@ -2444,8 +1765,8 @@ function drawMinimap(ctx, canvas) {
     });
   }
 
-  // 6. Điểm chiếm đóng (Hình thoi vàng to, nổi bật hơn)
-  if (state.capturePoints) {
+  // 6. Điểm chiếm đóng (chỉ map thường)
+  if (!state.isBossLevel && !state.bossArenaMode && state.capturePoints) {
     state.capturePoints.forEach(cp => {
       if (cp.state === "completed") return;
       const x = mmX + cp.x * scaleX;
@@ -2807,7 +2128,3 @@ function drawGodMode(ctx) {
   ctx.fill();
   ctx.restore();
 }
-
-
-
-

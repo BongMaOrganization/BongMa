@@ -1,5 +1,6 @@
 import { state } from "../state.js";
-import { CHARACTERS, GHOST_DATA_KEY, SCROLLS, BOSS_FRAGMENTS } from "../config.js";
+import { GHOST_DATA_KEY, SCROLLS, BOSS_FRAGMENTS } from "../config.js";
+import { CHARACTERS } from "./data.js";
 import { saveGame } from "../utils.js";
 import { persistState } from "../auth.js";
 

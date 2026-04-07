@@ -1,6 +1,6 @@
 import { state } from "../state.js";
-import { CHARACTERS } from "../config.js";
 import { getInitialPlayerState } from "../entities.js";
+import { CHARACTERS } from "./data.js";
 
 export function getCharacterConfig(id) {
   const character = CHARACTERS.find((c) => c.id === id) || CHARACTERS[0];

@@ -3,7 +3,8 @@ import { FPS } from "../config.js";
 import { dist } from "../utils.js";
 import { UI, updateHealthUI, updateXPUI } from "../ui.js";
 import { playSound } from "./audio.js";
-import { spawnHazard, spawnSatelliteDrone } from "../entities.js";
+import { spawnSatelliteDrone } from "../world/element.js";
+import { spawnHazard } from "../entities/helpers.js";
 
 export function playerTakeDamage(ctx, canvas, changeStateFn, amount = 1) {
   if (state.player.isInvincible) return; // FIX I-FRAMES
@@ -437,8 +438,6 @@ export function updateBullets(
               const zone = state.swarmZones.find((sz) => sz.id === g.parentZoneId);
               if (zone && !zone.isCompleted) {
                 zone.currentKills++;
-                addExperience(6, changeStateFn);
-                state.player.coins = (state.player.coins || 0) + 5;
 
                 // --- MISSION COMPLETION CHECK ---
                 if (zone.currentKills >= zone.requiredKills) {
@@ -468,17 +467,17 @@ export function updateBullets(
                     opacity: 1,
                     life: 100
                   });
-                  
+
                   // Hiệu ứng Mission Clear bằng loạt nổ màu Cyan
                   if (!state.explosions) state.explosions = [];
                   for (let i = 0; i < 15; i++) {
-                      state.explosions.push({
-                        x: zone.x + (Math.random() - 0.5) * zone.radius * 1.5,
-                        y: zone.y + (Math.random() - 0.5) * zone.radius * 1.5,
-                        radius: 60,
-                        life: 45,
-                        color: "rgba(0, 255, 255, 0.8)" 
-                      });
+                    state.explosions.push({
+                      x: zone.x + (Math.random() - 0.5) * zone.radius * 1.5,
+                      y: zone.y + (Math.random() - 0.5) * zone.radius * 1.5,
+                      radius: 60,
+                      life: 45,
+                      color: "rgba(0, 255, 255, 0.8)"
+                    });
                   }
                 }
               }
@@ -509,8 +508,6 @@ export function updateBullets(
               g.x += (dx / len) * 10;
               g.y += (dy / len) * 10;
             }
-
-            // earth = default (không cần code)
 
             // ⚠️ giữ nguyên logic cũ của bạn
             if (
@@ -545,8 +542,6 @@ export function updateBullets(
             if (finalDmg > 0) {
               g.hp = (g.hp || 1) - finalDmg;
             }
-            addExperience(6, changeStateFn);
-            state.player.coins = (state.player.coins || 0) + 5;
           }
           hitGhost = true;
 

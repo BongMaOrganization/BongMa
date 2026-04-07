@@ -8,6 +8,7 @@ import {
   BOSS_FRAGMENT_DROP_RATE,
   BOSS_ARENA_REWARDS,
 } from "../config.js";
+
 import { saveGame, dist } from "../utils.js";
 import { UI, updateHealthUI, updateXPUI, generateCards } from "../ui.js";
 import { generateDummy } from "../entities.js";
@@ -15,10 +16,11 @@ import {
   applyCharacterToPlayer,
   ensureCharacterData,
 } from "../characters/manager.js";
-import { syncRemoteState, persistState } from "../auth.js";
+import { persistState } from "../auth.js";
 import { initSkills } from "./skills.js";
 import { playBGM, stopAllBGM, playSound } from "./audio.js";
-import { createBoss, bossSummonGhosts, BOSS_TYPES, spawnCrate, spawnCapturePoint } from "../entities.js";
+import { spawnCrate, spawnCapturePoint } from "../world/element.js";
+import { createBoss, BOSS_TYPES } from "../entities/bosses/boss_manager.js";
 export function initGame(isNextLevel = false) {
   let saved = JSON.parse(localStorage.getItem(GHOST_DATA_KEY) || "{}");
 
@@ -161,7 +163,7 @@ export function initGame(isNextLevel = false) {
 
   if (shouldRegenZones) {
     state.swarmZones = [];
-    if (!state.isBossLevel) {
+    if (!state.isBossLevel && !state.bossArenaMode) {
       // Mỗi đợt rải đúng 3 khu vực bầy đàn, đảm bảo không chồng lấn
       const numZones = 3;
       for (let i = 0; i < numZones; i++) {
@@ -200,7 +202,7 @@ export function initGame(isNextLevel = false) {
   }
 
   // --- INITIALIZE ITEM CRATES ---
-  if (!state.isBossLevel) {
+  if (!state.isBossLevel && !state.bossArenaMode) {
     state.crates = [];
     for (let i = 0; i < 10; i++) {
       spawnCrate();
@@ -211,7 +213,10 @@ export function initGame(isNextLevel = false) {
       spawnCapturePoint();
     }
   } else {
-    state.crates = []; // Không sinh thùng ở màn boss (hoặc tùy chọn)
+    // Màn boss: xoá sạch mọi thực thể thuộc map thường
+    state.crates = [];
+    state.capturePoints = [];
+    state.swarmZones = [];
   }
 
   updateHealthUI();
@@ -422,7 +427,7 @@ export async function openBossArena(changeStateFn, gameLoopFn) {
   const container = document.getElementById("boss-arena-cards");
   container.innerHTML = "";
 
-  const { BOSS_TYPES } = await import("../entities.js");
+  const { BOSS_TYPES } = await import("../entities/bosses/boss_manager.js");
   const bossKeys = Object.keys(BOSS_TYPES);
 
   bossKeys.forEach((key) => {
@@ -457,8 +462,11 @@ export function startBossArenaFight(bossType, changeStateFn, gameLoopFn) {
   state.bossArenaType = bossType;
   initGame(false);
 
-  // Override to boss level
+  // Override to boss level — xoá sạch thực thể map thường do initGame sinh ra
   state.isBossLevel = true;
+  state.swarmZones = [];
+  state.crates = [];
+  state.capturePoints = [];
   state.maxFramesToSurvive = 999999;
   state.currentBossType = bossType;
   state.boss = createBoss(bossType);

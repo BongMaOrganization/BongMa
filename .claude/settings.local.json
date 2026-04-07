@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep:*)",
+      "Bash(find . -maxdepth 2 -name *.js)",
+      "Bash(grep -n \"boss.*fireRate\\\\|boss.*cooldown\\\\|boss.*CD\\\\|spawnBullet.*boss\" *.js)",
+      "Bash(grep -n \"style.*1\\\\|style: 1\" *.js)",
+      "Bash(grep -n \"state\\\\.bullets\\\\.push\\\\|bullets\\\\.push\" *.js)",
+      "Bash(grep -n \"function spawnBullet\\\\|spawnBullet.*=\\\\|export.*spawnBullet\" *.js)",
+      "Bash(grep -n \"spawnBossAttack\" /e/Users/Admin/Desktop/BongMa/frontend/js/*.js)",
+      "Bash(grep -rn \"state.hazards\" frontend/js/game/*.js)",
+      "Bash(node -e ':*)",
+      "Bash(node _cleanup_draw.js)",
+      "Bash(python3 -)"
+    ]
+  }
+}

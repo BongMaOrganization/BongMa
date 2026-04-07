@@ -1,71 +1,135 @@
-import { dist } from "../utils.js";
+import { dist } from "../../utils.js";
+import { FPS } from "../../config.js";
 
 export const spirit = {
     id: "spirit",
-    update: (state, ctx, canvas, buffs, changeStateFn) => {
-        let { player, ghosts, boss } = state;
 
-        // Kỹ năng Q: Trở nên tàng hình/bất tử 
-        // Được xử lý qua isInvulnSkill ở update.js chính dựa trên buffs.q
+    onTrigger: (key, state, canvas, changeStateFn) => {
+        // Q: Bất tử / Đi xuyên không gian
+        if (key === "q") {
+            state.activeBuffs.q = 4 * FPS;
+            // isInvulnSkill được xử lý bởi update.js chính nếu activeBuffs.q > 0
+        }
 
-        // Xử lý Phantoms
-        if (state.phantoms) {
-            for (let i = state.phantoms.length - 1; i >= 0; i--) {
-                state.phantoms[i].life--;
-                if (state.phantoms[i].life <= 0) state.phantoms.splice(i, 1);
+        // E: Vùng Không Gian Tâm Linh (Làm chậm quái)
+        if (key === "e") {
+            state.activeBuffs.e = 6 * FPS;
+        }
+
+        // R: Mưa Linh Hồn (Sét Trắng giáng xuống liên tục)
+        if (key === "r") {
+            state.activeBuffs.r = 8 * FPS;
+            state.screenShake = { timer: 15, intensity: 4 };
+        }
+        return true;
+    },
+
+    update: (state) => {
+        const { player, ghosts, boss, frameCount } = state;
+
+        // Logic Q: Để lại các phân bóng mờ (Phantoms) khi đang tàng hình
+        if (state.activeBuffs.q > 0) {
+            if (frameCount % 6 === 0) {
+                if (!state.phantoms) state.phantoms = [];
+                state.phantoms.push({
+                    x: player.x, y: player.y,
+                    life: 20,
+                    color: "rgba(200, 200, 255, 0.4)",
+                    radius: player.radius
+                });
             }
+        }
+
+        // Logic E: Aura 250px hút năng lượng và làm chậm
+        if (state.activeBuffs.e > 0) {
+            ghosts.forEach(g => {
+                if (dist(player.x, player.y, g.x, g.y) < 250) {
+                    g.speed *= 0.4; // Làm chậm cực mạnh (Chỉ còn 40% tốc)
+                    g.hp -= 0.15; // Rút máu liên tục
+                }
+            });
+        }
+
+        // Logic R: Mưa tia sét trắng liên hoàn
+        if (state.activeBuffs.r > 0 && frameCount % 12 === 0) {
+            let lx = player.x + (Math.random() - 0.5) * 800;
+            let ly = player.y + (Math.random() - 0.5) * 600;
+
+            if (!state.stormLightnings) state.stormLightnings = [];
+            state.stormLightnings.push({ x: lx, y: ly, life: 15, color: "white" });
+
+            ghosts.forEach(g => {
+                if (dist(lx, ly, g.x, g.y) < 110) {
+                    g.hp -= 10;
+                    g.isStunned = 50;
+                }
+            });
+            if (boss && dist(lx, ly, boss.x, boss.y) < 110 + boss.radius) boss.hp -= 12;
+        }
+
+        // Xóa dần Phantoms
+        if (state.phantoms) {
+            state.phantoms.forEach(p => p.life--);
+            state.phantoms = state.phantoms.filter(p => p.life > 0);
+        }
+
+        // Xóa dần Sét Trắng
+        if (state.stormLightnings) {
+            state.stormLightnings.forEach(l => l.life--);
+            state.stormLightnings = state.stormLightnings.filter(l => l.life > 0);
         }
     },
 
     draw: (state, ctx, canvas, buffs) => {
-        let { player } = state;
+        const { player } = state;
 
-        // Vẽ Phantoms
-        if (state.phantoms) {
-            state.phantoms.forEach((p) => {
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-                ctx.fillStyle = p.color;
-                ctx.globalAlpha = p.life / (2 * 60);
-                ctx.fill();
-                ctx.globalAlpha = 1.0;
+        // Vẽ Phantoms (Q)
+        state.phantoms?.forEach(p => {
+            ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fillStyle = p.color; ctx.fill();
+        });
 
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, p.radius + 2, 0, Math.PI * 2);
-                ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
-                ctx.globalAlpha = p.life / (2 * 60);
-                ctx.stroke();
-                ctx.globalAlpha = 1.0;
-            });
+        // Vẽ Vòng Tròn Tâm Linh (E)
+        if (buffs.e > 0) {
+            ctx.beginPath(); ctx.arc(player.x, player.y, 250, 0, Math.PI * 2);
+            ctx.strokeStyle = "rgba(150, 150, 255, 0.6)";
+            ctx.lineWidth = 3;
+            ctx.setLineDash([15, 10]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            ctx.fillStyle = "rgba(150, 150, 255, 0.08)";
+            ctx.fill();
         }
 
+        // Kỹ năng Q đang bật: Bọc sáng nhân vật
         if (buffs.q > 0) {
-            ctx.beginPath();
-            ctx.arc(player.x, player.y, player.radius + 6, 0, Math.PI * 2);
-            ctx.strokeStyle = "rgba(200, 200, 255, 0.8)";
+            ctx.beginPath(); ctx.arc(player.x, player.y, player.radius + 6, 0, Math.PI * 2);
+            ctx.strokeStyle = "rgba(200, 200, 255, 0.9)";
             ctx.lineWidth = 2;
             ctx.stroke();
         }
 
-        if (buffs.e > 0) {
+        // Vẽ Mưa Sét Trắng (R)
+        state.stormLightnings?.forEach(l => {
+            ctx.save();
+            // Vẽ Sét
             ctx.beginPath();
-            ctx.arc(player.x, player.y, 200, 0, Math.PI * 2);
-            ctx.strokeStyle = "rgba(150, 150, 255, 0.4)";
-            ctx.setLineDash([5, 5]);
+            ctx.moveTo(l.x, l.y - 1000);
+            ctx.lineTo(l.x + (Math.random() - 0.5) * 60, l.y - 500);
+            ctx.lineTo(l.x, l.y);
+            ctx.strokeStyle = l.color || "white";
+            ctx.lineWidth = 8;
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = l.color || "white";
             ctx.stroke();
-            ctx.setLineDash([]);
-        }
 
-        if (buffs.r > 0) {
-            for (let i = 0; i < 10; i++) {
-                let x = Math.random() * canvas.width;
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x + (Math.random() - 0.5) * 50, canvas.height);
-                ctx.strokeStyle = "rgba(255,255,255,0.7)";
-                ctx.lineWidth = 2;
-                ctx.stroke();
-            }
-        }
+            // Vẽ Vụ Nổ dưới chân
+            ctx.beginPath();
+            ctx.arc(l.x, l.y, 110, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
+            ctx.fill();
+            ctx.restore();
+        });
     }
 };
