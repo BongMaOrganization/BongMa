@@ -515,6 +515,9 @@ export function startBossArenaFight(bossType, changeStateFn, gameLoopFn) {
   state.boss = createBoss(bossType);
   state.ghosts = [];
 
+  // ✅ THÊM DÒNG NÀY: Ép tải lại bối cảnh theo đúng con Boss vừa tạo
+  import("../game/mapTheme.js").then((m) => m.initMapTheme());
+
   UI.bossUi.style.display = "block";
   UI.bossName.innerText = state.boss.name;
   UI.bossHp.style.width = "100%";

@@ -192,13 +192,8 @@ export function draw(ctx, canvas) {
   ctx.save();
   // Dịch chuyển bối cảnh ngược chiều camera để tạo cảm giác di chuyển
   ctx.translate(-state.camera.x, -state.camera.y);
-  if (state.currentMapTheme === "fire") {
-    drawLavaFloor(ctx, canvas);
-  } else {
-    drawMapGrid(ctx);
-  }
-  // Vẽ lưới background (Grid) để dễ nhận biết người chơi đang di chuyển trong map to
-  //drawMapGrid(ctx);
+  // Vẽ Nền Theo Theme Cực Xịn
+  drawThemedBackground(ctx);
   // Vẽ vết cháy vĩnh viễn (nằm dưới cùng)
   drawPermanentScars(ctx);
 
@@ -388,6 +383,153 @@ export function draw(ctx, canvas) {
         );
         ctx.stroke();
       }
+      ctx.restore();
+    } else if (h.type === "void_crush") {
+      ctx.save();
+      ctx.translate(h.x, h.y);
+      ctx.rotate(-state.frameCount * 0.05);
+      let pulse = Math.sin(state.frameCount * 0.2) * 20;
+
+      let grad = ctx.createRadialGradient(0, 0, 0, 0, 0, h.radius);
+      grad.addColorStop(0, "#000000");
+      grad.addColorStop(0.8, "rgba(70,0,150, 0.8)");
+      grad.addColorStop(1, "rgba(0,0,0,0)");
+
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, h.radius + pulse, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(180, 0, 255, 0.5)";
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      ctx.restore();
+    } else if (h.type === "void_devourer" || h.type === "void_rift") {
+      ctx.save();
+      ctx.fillStyle = "#0a001a";
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = "#aa00ff";
+      ctx.beginPath();
+      ctx.arc(h.x, h.y, h.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#cc00ff";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.ellipse(
+        h.x,
+        h.y,
+        h.radius * 1.2,
+        h.radius * 0.3,
+        state.frameCount * 0.1,
+        0,
+        Math.PI * 2,
+      );
+      ctx.stroke();
+      ctx.restore();
+    } else if (h.type === "glitch_zone") {
+      ctx.save();
+      ctx.globalCompositeOperation = "screen";
+      ctx.fillStyle =
+        state.frameCount % 10 < 5
+          ? "rgba(0,255,255,0.2)"
+          : "rgba(255,0,255,0.2)";
+      ctx.fillRect(h.x - h.radius, h.y - h.radius, h.radius * 2, h.radius * 2);
+
+      ctx.strokeStyle = "#00ff00";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([10, 10]);
+      ctx.lineDashOffset = -state.frameCount;
+      ctx.strokeRect(
+        h.x - h.radius,
+        h.y - h.radius,
+        h.radius * 2,
+        h.radius * 2,
+      );
+
+      // Vẽ kí tự ma trận nhấp nháy
+      ctx.fillStyle = "#00ff00";
+      ctx.font = "20px monospace";
+      ctx.fillText("01001", h.x, h.y);
+      ctx.restore();
+    } else if (h.type === "error_box") {
+      ctx.save();
+      ctx.fillStyle = "rgba(200,0,0,0.5)";
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = "red";
+      ctx.fillRect(h.x - h.radius, h.y - h.radius, h.radius * 2, h.radius * 2);
+
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 16px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText("FATAL", h.x, h.y);
+      ctx.restore();
+    }
+    // 🧱 BỨC TƯỜNG PIXEL
+    else if (h.type === "pixel_wall") {
+      ctx.save();
+      let isCyan = Math.random() > 0.5;
+      ctx.fillStyle = isCyan
+        ? "rgba(0, 255, 255, 0.4)"
+        : "rgba(255, 0, 255, 0.4)";
+      // Vẽ tường bằng các dải pixel đứt nét
+      for (let i = -h.radius; i < h.radius; i += 20) {
+        if (Math.random() > 0.2) {
+          ctx.fillRect(h.x + i, h.y - 20, 18, 40);
+        }
+      }
+      ctx.strokeStyle = "#ffffff";
+      ctx.strokeRect(h.x - h.radius, h.y - 20, h.radius * 2, 40);
+      ctx.restore();
+    }
+
+    // 🌧 MƯA MÃ NHỊ PHÂN
+    else if (h.type === "binary_rain") {
+      ctx.save();
+      ctx.fillStyle = "rgba(0, 255, 0, 0.1)";
+      ctx.beginPath();
+      ctx.arc(h.x, h.y, h.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#00ff00";
+      ctx.font = "14px monospace";
+      ctx.textAlign = "center";
+      // Rơi chữ loạn cào cào
+      for (let i = 0; i < 8; i++) {
+        let px = h.x + (Math.random() - 0.5) * h.radius * 1.5;
+        let py =
+          h.y +
+          (Math.random() - 0.5) * h.radius * 1.5 +
+          (state.frameCount % 20) * 2;
+        ctx.fillText(Math.random() > 0.5 ? "0" : "1", px, py);
+      }
+      ctx.restore();
+    }
+
+    // ⚡ TIA LASER NHIỄU SÓNG
+    else if (h.type === "corrupt_laser") {
+      ctx.save();
+      ctx.strokeStyle =
+        state.frameCount % 6 < 3
+          ? "rgba(255, 0, 0, 0.8)"
+          : "rgba(255, 255, 255, 0.8)";
+      ctx.lineWidth = 10 + Math.random() * 5;
+      ctx.shadowBlur = 20;
+      ctx.shadowColor = "#ff0000";
+
+      ctx.beginPath();
+      // Tâm Laser
+      ctx.moveTo(h.x - h.radius, h.y);
+      ctx.lineTo(h.x + h.radius, h.y);
+      ctx.stroke();
+
+      // Vẽ giật điện xung quanh
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(h.x - h.radius, h.y);
+      for (let i = -h.radius; i < h.radius; i += 30) {
+        ctx.lineTo(h.x + i, h.y + (Math.random() - 0.5) * 40);
+      }
+      ctx.stroke();
       ctx.restore();
     }
     ctx.restore();
@@ -660,6 +802,132 @@ export function draw(ctx, canvas) {
     ctx.rotate(state.frameCount * 0.01);
 
     ctx.beginPath();
+    
+    // Ngoại hình VOID: Hố đen bẻ cong ánh sáng
+    if (boss.id === "void" || boss.bossType === "void") {
+      ctx.arc(0, 0, boss.radius, 0, Math.PI * 2);
+      ctx.fillStyle = "#050011"; // Tối đen như mực
+      ctx.fill();
+
+      // Vòng nhẫn Accretion Disk (giống Interstellar)
+      ctx.rotate(-state.frameCount * 0.05);
+      ctx.beginPath();
+      ctx.ellipse(
+        0,
+        0,
+        boss.radius * 2.2,
+        boss.radius * 0.6,
+        Math.PI / 4,
+        0,
+        Math.PI * 2,
+      );
+      ctx.strokeStyle = "rgba(180, 0, 255, 0.8)";
+      ctx.lineWidth = 6;
+      ctx.stroke();
+    }
+    // Ngoại hình GLITCH: Tùy thuộc vào Phase
+    else if (boss.id === "glitch" || boss.bossType === "glitch") {
+      if (boss.ultimatePhase) {
+        // ===================================================
+        // 👁️ THE ENTITY (PHASE CUỐI) - THỰC THỂ TỐI THƯỢNG
+        // ===================================================
+        ctx.save();
+        const pulse = Math.sin(state.frameCount * 0.1) * 10;
+
+        // Hào quang rực rỡ chói lòa
+        ctx.shadowBlur = 40 + pulse;
+        ctx.shadowColor = "#ffffff";
+
+        // Lõi năng lượng trắng sáng chói
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(0, 0, boss.radius * 0.8 + pulse * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Hiệu ứng nhiều vòng xoay đồng tâm (Như thiên sứ kỹ thuật số)
+        ctx.shadowBlur = 20;
+
+        // 1. Vòng xoay ma trận bên trong (Hình Vuông - Xanh Cyan)
+        ctx.shadowColor = "#00ffff";
+        ctx.rotate(state.frameCount * 0.05);
+        ctx.strokeStyle = "#00ffff";
+        ctx.lineWidth = 4;
+        ctx.strokeRect(
+          -boss.radius,
+          -boss.radius,
+          boss.radius * 2,
+          boss.radius * 2,
+        );
+
+        // 2. Vòng xoay ma trận bên ngoài (Hình Thoi - Hồng Magenta xoay ngược chiều)
+        ctx.shadowColor = "#ff00ff";
+        ctx.rotate(-state.frameCount * 0.1);
+        ctx.strokeStyle = "#ff00ff";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(0, -boss.radius * 1.5);
+        ctx.lineTo(boss.radius * 1.5, 0);
+        ctx.lineTo(0, boss.radius * 1.5);
+        ctx.lineTo(-boss.radius * 1.5, 0);
+        ctx.closePath();
+        ctx.stroke();
+
+        // 3. Con Mắt Hư Vô ở chính giữa lõi
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "#000000";
+        ctx.beginPath();
+        ctx.ellipse(
+          0,
+          0,
+          boss.radius * 0.2,
+          boss.radius * 0.5,
+          state.frameCount * 0.2,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+
+        ctx.restore();
+      } else {
+        // ===================================================
+        // 👾 GLITCH BÌNH THƯỜNG (PHASE 1 & 2)
+        // ===================================================
+        ctx.save();
+        // Hiệu ứng bóng ma tách màu (Cyan / Magenta)
+        ctx.globalCompositeOperation = "screen";
+
+        const offset = (Math.random() - 0.5) * 10;
+        ctx.fillStyle = "#00ffff";
+        ctx.fillRect(
+          -boss.radius + offset,
+          -boss.radius,
+          boss.radius * 2,
+          boss.radius * 2,
+        );
+
+        ctx.fillStyle = "#ff00ff";
+        ctx.fillRect(
+          -boss.radius - offset,
+          -boss.radius,
+          boss.radius * 2,
+          boss.radius * 2,
+        );
+
+        ctx.fillStyle = "#111111";
+        ctx.fillRect(
+          -boss.radius,
+          -boss.radius,
+          boss.radius * 2,
+          boss.radius * 2,
+        );
+
+        // Mã nhị phân chạy trên mặt boss
+        ctx.fillStyle = "#00ff00";
+        ctx.font = "bold 16px monospace";
+        ctx.fillText(Math.random() > 0.5 ? "010" : "101", -12, 5);
+        ctx.restore();
+      }
+    }
     switch (boss.shape) {
       case "triangle":
         for (let i = 0; i < 3; i++) {
@@ -1059,7 +1327,208 @@ export function draw(ctx, canvas) {
         ctx.restore();
         break;
       }
+      // 🌌 STYLE 10: VOID BULLET (Hố đen thu nhỏ)
+      case 10: {
+        ctx.save();
+        const pulse = state.frameCount * 0.2;
 
+        // Vòng xoáy đĩa không gian
+        ctx.translate(b.x, b.y);
+        ctx.rotate(pulse);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, b.radius * 1.5, b.radius * 0.5, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(180, 0, 255, 0.6)";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Lõi hố đen
+        ctx.beginPath();
+        ctx.arc(0, 0, b.radius * 0.8, 0, Math.PI * 2);
+        ctx.fillStyle = "#000000";
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = "#9900ff";
+        ctx.fill();
+        ctx.restore();
+        break;
+      }
+
+      // 👾 STYLE 11: GLITCH PIXEL (Lỗi hiển thị)
+      case 11: {
+        ctx.save();
+        // Lệch màu (Chromatic Aberration)
+        const isCyan = state.frameCount % 4 < 2;
+        ctx.fillStyle = isCyan ? "#00ffff" : "#ff00ff";
+
+        // Quỹ đạo zic-zac
+        const glitchOffset = (Math.random() - 0.5) * 4;
+
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = ctx.fillStyle;
+        ctx.fillRect(
+          b.x - b.radius + glitchOffset,
+          b.y - b.radius,
+          b.radius * 2,
+          b.radius * 2,
+        );
+
+        // Lõi trắng
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(
+          b.x - b.radius / 2 + glitchOffset,
+          b.y - b.radius / 2,
+          b.radius,
+          b.radius,
+        );
+        ctx.restore();
+        break;
+      }
+
+      // 💻 STYLE 12 OPTIMIZED: DATA STREAM (Tia Neon Dài - Siêu mượt 60FPS)
+      case 12: {
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.translate(b.x, b.y);
+        ctx.rotate(Math.atan2(b.vy, b.vx));
+
+        // 1. Vẽ quầng sáng bên ngoài bằng màu trong suốt (Fake shadowBlur)
+        ctx.fillStyle = "rgba(0, 255, 150, 0.6)";
+        ctx.beginPath();
+        ctx.moveTo(b.radius * 2, 0);
+        ctx.lineTo(0, b.radius * 0.6);
+        ctx.lineTo(-b.radius * 3, 0);
+        ctx.lineTo(0, -b.radius * 0.6);
+        ctx.fill();
+
+        // 2. Vẽ lõi sáng trắng gắt ở giữa (Fake Gradient)
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.moveTo(b.radius, 0);
+        ctx.lineTo(0, b.radius * 0.2);
+        ctx.lineTo(-b.radius * 1.5, 0);
+        ctx.lineTo(0, -b.radius * 0.2);
+        ctx.fill();
+
+        ctx.restore();
+        break;
+      }
+      // 👻 13. PACKET LOSS (Đạn tàng hình chớp tắt)
+      case 13: {
+        ctx.save();
+        if (state.frameCount % 15 < 7) {
+          ctx.fillStyle = "#ff0044";
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = "#ff0044";
+          ctx.fillRect(
+            b.x - b.radius,
+            b.y - b.radius,
+            b.radius * 2,
+            b.radius * 2,
+          );
+          ctx.strokeStyle = "#fff";
+          ctx.strokeRect(
+            b.x - b.radius,
+            b.y - b.radius,
+            b.radius * 2,
+            b.radius * 2,
+          );
+        }
+        ctx.restore();
+        break;
+      }
+      // 🐛 14. VIRUS NODE (Khối u nhọt phình to)
+      case 14: {
+        ctx.save();
+        let pulse = Math.sin(state.frameCount * 0.4) * 5;
+        ctx.fillStyle = "#8800ff";
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = "#ff00ff";
+
+        ctx.beginPath();
+        // Vẽ khối gai góc dị hợm
+        for (let i = 0; i < 8; i++) {
+          let a = (i * Math.PI) / 4 + state.frameCount * 0.05;
+          let r = b.radius + (i % 2 === 0 ? pulse : -pulse);
+          ctx.lineTo(b.x + Math.cos(a) * r, b.y + Math.sin(a) * r);
+        }
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.fillStyle = "#00ffcc";
+        ctx.fillRect(b.x - 2, b.y - 2, 4, 4); // Lõi bé xíu
+        ctx.restore();
+        break;
+      }
+
+      // 🌀 15. MATRIX SHURIKEN (Phi tiêu lưới)
+      case 15: {
+        ctx.save();
+        ctx.translate(b.x, b.y);
+        ctx.rotate(-state.frameCount * 0.2);
+
+        ctx.strokeStyle = "#00ff00";
+        ctx.lineWidth = 2;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = "#00ff00";
+
+        ctx.beginPath();
+        ctx.moveTo(-b.radius, -b.radius);
+        ctx.lineTo(b.radius, b.radius);
+        ctx.moveTo(-b.radius, b.radius);
+        ctx.lineTo(b.radius, -b.radius);
+        ctx.stroke();
+
+        ctx.strokeRect(
+          -b.radius * 0.6,
+          -b.radius * 0.6,
+          b.radius * 1.2,
+          b.radius * 1.2,
+        );
+        ctx.restore();
+        break;
+      }
+
+      // 🌐 16. FATAL ORB (Quả cầu nhiễu sóng to đùng)
+      case 16: {
+        ctx.save();
+        ctx.globalCompositeOperation = "screen";
+        // 3 vòng tròn tách màu lắc lư
+        ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
+        ctx.beginPath();
+        ctx.arc(b.x + Math.random() * 4, b.y, b.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "rgba(0, 255, 0, 0.7)";
+        ctx.beginPath();
+        ctx.arc(b.x - Math.random() * 4, b.y, b.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "rgba(0, 0, 255, 0.7)";
+        ctx.beginPath();
+        ctx.arc(b.x, b.y + Math.random() * 4, b.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        break;
+      }
+
+      // ⚡ 17. GLITCH SPARK (Tia lửa điện nhiễu chớp nhoáng)
+      case 17: {
+        ctx.save();
+        ctx.strokeStyle = Math.random() > 0.5 ? "#ffff00" : "#ffffff";
+        ctx.lineWidth = 3;
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = "#ffff00";
+
+        ctx.beginPath();
+        ctx.moveTo(b.x, b.y);
+        // Tia vẽ giật lùi tạo cảm giác chớp
+        ctx.lineTo(
+          b.x - b.vx * 2 + (Math.random() - 0.5) * 10,
+          b.y - b.vy * 2 + (Math.random() - 0.5) * 10,
+        );
+        ctx.stroke();
+        ctx.restore();
+        break;
+      }
       // DEFAULT
       default: {
         ctx.beginPath();
@@ -2978,6 +3447,170 @@ function drawElementalZoneVFX(ctx, z) {
     ctx.strokeText(z.element.toUpperCase(), z.x, z.y - z.radius - 10);
     ctx.fillStyle = "#ffffff";
     ctx.fillText(z.element.toUpperCase(), z.x, z.y - z.radius - 10);
+  }
+
+  ctx.restore();
+}
+function drawThemedBackground(ctx) {
+  const theme = state.currentMapTheme || "fire";
+  const w = state.world.width;
+  const h = state.world.height;
+  const cx = state.camera.x;
+  const cy = state.camera.y;
+  const cw = state.camera.width;
+  const ch = state.camera.height;
+  const t = state.frameCount;
+
+  ctx.save();
+
+  // ==========================================
+  // 1. TÔ NỀN GỐC (Tối ưu: Chỉ fill vùng Camera)
+  // ==========================================
+  let colors = {
+    fire: ["#1a0500", "#050100"],
+    earth: ["#1a1000", "#050300"],
+    ice: ["#001122", "#00050a"],
+    wind: ["#001a1a", "#000505"],
+    thunder: ["#0a001a", "#05000a"],
+    void: ["#030005", "#000000"],
+    glitch: ["#050505", "#000000"],
+    omni: [`hsla(${(t * 0.5) % 360}, 50%, 8%, 1)`, "#000000"],
+  };
+
+  let cSet = colors[theme] || colors.fire;
+  let bgGrad = ctx.createRadialGradient(
+    cx + cw / 2,
+    cy + ch / 2,
+    0,
+    cx + cw / 2,
+    cy + ch / 2,
+    cw,
+  );
+  bgGrad.addColorStop(0, cSet[0]);
+  bgGrad.addColorStop(1, cSet[1]);
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(cx, cy, cw, ch);
+
+  // ==========================================
+  // 2. LƯỚI KHÔNG GIAN ĐỔI MÀU THEO THEME
+  // ==========================================
+  const gridSize = 100;
+  // Căn chỉnh điểm bắt đầu để lưới di chuyển trơn tru theo camera
+  const startX = Math.floor(cx / gridSize) * gridSize;
+  const startY = Math.floor(cy / gridSize) * gridSize;
+
+  let gridAlpha = 0.05;
+  let gridColor = "255, 255, 255";
+
+  if (theme === "fire") gridColor = "255, 60, 0";
+  if (theme === "earth") gridColor = "200, 100, 0";
+  if (theme === "ice") gridColor = "0, 200, 255";
+  if (theme === "wind") gridColor = "0, 255, 200";
+  if (theme === "thunder") gridColor = "200, 0, 255";
+  if (theme === "void") {
+    gridColor = "100, 0, 255";
+    gridAlpha = 0.03;
+  }
+  if (theme === "glitch") {
+    gridColor = t % 10 < 2 ? "255, 0, 255" : "0, 255, 0";
+    gridAlpha = 0.1;
+    // Hiệu ứng giật hình ma trận nhẹ
+    if (t % 20 < 2)
+      ctx.translate((Math.random() - 0.5) * 10, (Math.random() - 0.5) * 10);
+  }
+  if (theme === "omni") {
+    gridColor = `${Math.floor((Math.sin(t * 0.05) + 1) * 127)}, ${Math.floor((Math.cos(t * 0.05) + 1) * 127)}, 255`;
+    gridAlpha = 0.08;
+  }
+
+  ctx.strokeStyle = `rgba(${gridColor}, ${gridAlpha})`;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+
+  // Chỉ vẽ những đoạn thẳng đi ngang qua màn hình người chơi
+  for (let x = startX; x <= cx + cw; x += gridSize) {
+    ctx.moveTo(x, Math.max(0, cy));
+    ctx.lineTo(x, Math.min(h, cy + ch));
+  }
+  for (let y = startY; y <= cy + ch; y += gridSize) {
+    ctx.moveTo(Math.max(0, cx), y);
+    ctx.lineTo(Math.min(w, cx + cw), y);
+  }
+  ctx.stroke();
+
+  // ==========================================
+  // 3. HIỆU ỨNG TRANG TRÍ ĐỘC QUYỀN THEO BẢN ĐỒ
+  // ==========================================
+  ctx.globalCompositeOperation = "lighter";
+
+  if (theme === "fire") {
+    // Mạch dung nham tĩnh lặng
+    const numVeins = 3;
+    for (let i = 0; i < numVeins; i++) {
+      ctx.beginPath();
+      const vY = (h / numVeins) * i + 200;
+      if (vY > cy - 300 && vY < cy + ch + 300) {
+        // Render culling
+        ctx.moveTo(cx, vY);
+        for (let x = cx; x <= cx + cw; x += 100) {
+          const wave = Math.sin(x * 0.005 + t * 0.02 + i) * 60;
+          ctx.lineTo(x, vY + wave);
+        }
+        ctx.strokeStyle = `rgba(255, 60, 0, ${0.05 + Math.sin(t * 0.05) * 0.02})`;
+        ctx.lineWidth = 80;
+        ctx.stroke();
+        ctx.strokeStyle = "rgba(255, 150, 0, 0.1)";
+        ctx.lineWidth = 20;
+        ctx.stroke();
+      }
+    }
+  } else if (theme === "wind") {
+    // Vệt gió lốc vờn xung quanh
+    ctx.strokeStyle = "rgba(0, 255, 200, 0.05)";
+    ctx.lineWidth = 40;
+    for (let i = 0; i < 5; i++) {
+      let wx = cx + ((t * 2 + i * 500) % (cw + 1000)) - 500;
+      ctx.beginPath();
+      ctx.arc(wx, cy + ch / 2 + Math.sin(t * 0.02 + i) * 300, 200, 0, Math.PI);
+      ctx.stroke();
+    }
+  } else if (theme === "glitch") {
+    // Code rơi hắt mờ ở phía xa
+    ctx.fillStyle = "rgba(0, 255, 0, 0.15)";
+    ctx.font = "bold 20px monospace";
+    for (let i = 0; i < 15; i++) {
+      let bx = cx + ((Math.sin(i * 77) * cw) / 2 + cw / 2);
+      let by = cy + ((t * 8 + i * 200) % (ch + 100)) - 50;
+      ctx.fillText(Math.random() > 0.5 ? "1" : "0", bx, by);
+    }
+  } else if (theme === "void") {
+    // Đám mây tinh vân tím đen
+    ctx.fillStyle = "rgba(100, 0, 255, 0.1)";
+    for (let i = 0; i < 10; i++) {
+      let nx = cx + ((Math.sin(i * 99) * cw) / 2 + cw / 2);
+      let ny = cy + ((Math.cos(i * 88) * ch) / 2 + ch / 2);
+      ctx.beginPath();
+      ctx.arc(nx, ny, Math.sin(t * 0.05 + i) * 30 + 50, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (theme === "ice") {
+    // Lớp sương giá lạnh lẽo bay bồng bềnh
+    ctx.fillStyle = "rgba(0, 200, 255, 0.02)";
+    for (let i = 0; i < 3; i++) {
+      let ix = cx + Math.sin(t * 0.01 + i) * 100;
+      let iy = cy + Math.cos(t * 0.01 + i) * 100;
+      ctx.beginPath();
+      ctx.ellipse(
+        ix + cw / 2,
+        iy + ch / 2,
+        cw * 0.8,
+        ch * 0.8,
+        0,
+        0,
+        Math.PI * 2,
+      );
+      ctx.fill();
+    }
   }
 
   ctx.restore();

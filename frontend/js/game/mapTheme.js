@@ -2,46 +2,23 @@ import { state } from "../state.js";
 import { spawnHazard } from "../entities/helpers.js";
 
 export function initMapTheme() {
-  const bossType = state.currentBossType || "fire";
+  // Lấy Theme chuẩn dựa trên chế độ đang chơi
+  let bossType = "fire";
+  if (state.bossArenaMode && state.bossArenaType) {
+    bossType = state.bossArenaType;
+  } else {
+    bossType = state.selectedMap || state.pendingBossType || "fire";
+  }
+
   state.currentMapTheme = bossType;
 
-  // clear old map hazards
+  // Dọn dẹp rác bẫy trang trí nếu có sót từ version cũ
   state.hazards = state.hazards.filter(h => h.owner !== "map");
 
-  // ❌ TẮT GLOBAL HAZARD HOÀN TOÀN
+  // Tắt các hiệu ứng toàn bản đồ mặc định
   state.globalHazard = {
     type: null,
     active: false,
     damage: 0,
   };
-
-  // ===== FIRE THEME =====
-  if (bossType === "fire") {
-    for (let i = 0; i < 6; i++) {
-      spawnHazard(
-        "fire",
-        Math.random() * state.world.width,
-        Math.random() * state.world.height,
-        60,
-        999999,
-        0, // ✅ KHÔNG DAMAGE
-        "map"
-      );
-    }
-  }
-
-  // ===== EARTH THEME =====
-  if (bossType === "earth") {
-    for (let i = 0; i < 6; i++) {
-      spawnHazard(
-        "rock",
-        Math.random() * state.world.width,
-        Math.random() * state.world.height,
-        100,
-        999999,
-        0, // vốn đã không damage
-        "map"
-      );
-    }
-  }
 }

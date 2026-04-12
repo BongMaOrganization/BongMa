@@ -394,6 +394,60 @@ export const ATTACK_MODES = {
   // ===== THE ENTITY PHASE =====
   60: (b) => ring(b.x, b.y, 24, state.frameCount * 0.08, 1),
   61: (b) => fan(b.x, b.y, aim(b), 9, 0.15, 3),
+  // ===== VOID (HƯ KHÔNG) MỚI =====
+  // Bắn đạn bóng tối chậm nhưng xé rách không gian (Style 10)
+  70: (b) => {
+    const a = aim(b);
+    fan(b.x, b.y, a, 5, 0.4, 10, "boss", 1.5);
+    ring(b.x, b.y, 8, state.frameCount * 0.05, 10, "boss", 1.5);
+  },
+  // Bão tinh vân: Đạn xoắn ốc kép
+  71: (b) => {
+    for (let i = 0; i < 4; i++) {
+      fireAngle(
+        b.x,
+        b.y,
+        state.frameCount * 0.1 + (i * Math.PI) / 2,
+        10,
+        "boss",
+        2,
+      );
+      fireAngle(
+        b.x,
+        b.y,
+        -state.frameCount * 0.1 + (i * Math.PI) / 2,
+        10,
+        "boss",
+        2,
+      );
+    }
+  },
+
+  // ===== GLITCH / ENTITY MỚI =====
+  // Mã độc (Corruption): Bắn đạn vuông (Style 11) lan truyền như virus
+  80: (b) => {
+    const a = aim(b);
+    for (let i = 0; i < 8; i++) {
+      state.delayedTasks.push({
+        delay: i * 5,
+        action: () => {
+          fireAngle(
+            b.x + (Math.random() - 0.5) * 50,
+            b.y + (Math.random() - 0.5) * 50,
+            a + (Math.random() - 0.5) * 0.3,
+            11,
+            "boss",
+            1.5,
+          );
+        },
+      });
+    }
+  },
+  // Data Stream: Bắn các luồng dữ liệu neon tốc độ cực cao (Style 12)
+  81: (b) => {
+    const a = aim(b);
+    fan(b.x, b.y, a, 15, 0.1, 12, "boss", 2);
+  },
 };
 
 export const SPECIAL_SKILLS = {
@@ -1050,342 +1104,423 @@ export const SPECIAL_SKILLS = {
       });
     }
   },
-
-  //Glitch
-  Visual_Glitch_Matrix: (boss) => {
-    let px = state.player.x;
-    let py = state.player.y;
-
-    // warning 3 tia
-    for (let i = -1; i <= 1; i++) {
-      let angle = aim(boss) + i * 0.2;
-      spawnBeam(
-        boss.x,
-        boss.y,
-        boss.x + Math.cos(angle) * 800,
-        boss.y + Math.sin(angle) * 800,
-        60,
-        10,
-      );
-    }
-
-    // spawn decoy
-    state.delayedTasks.push({
-      delay: 60,
-      action: () => {
-        boss.invisible = true;
-
-        state.glitchDecoys = [
-          { x: Math.random() * 800, y: Math.random() * 600 },
-          { x: Math.random() * 800, y: Math.random() * 600 },
-        ];
-      },
-    });
-
-    // fire thật + giả
-    state.delayedTasks.push({
-      delay: 90,
-      action: () => {
-        let bosses = [
-          { x: boss.x, y: boss.y, real: true },
-          ...state.glitchDecoys.map((d) => ({ ...d, real: false })),
-        ];
-
-        bosses.forEach((b) => {
-          spawnBeam(b.x, b.y, px, py, 10, 30);
-        });
-      },
-    });
-
-    // clear
-    state.delayedTasks.push({
-      delay: 180,
-      action: () => {
-        boss.invisible = false;
-        state.glitchDecoys = [];
-      },
-    });
-  },
-  Control_Corruption: (boss) => {
-    state.screenShake.timer = 20;
-
-    state.delayedTasks.push({
-      delay: 30,
-      action: () => {
-        state.glitch.invertControls = true;
-        state.glitch.fakeUI = true;
-      },
-    });
-
-    // spam đạn
-    for (let i = 0; i < 200; i++) {
+  // ==========================================
+  // 🌌 VOID (CHÚA TỂ HƯ KHÔNG)
+  // Theme: Hố đen, trọng lực, rạn nứt không gian
+  // ==========================================
+  ABYSSAL_RIFT: (boss) => {
+    activateShield(boss, 150);
+    // Xé rách 4 khe nứt không gian quanh người chơi
+    for (let i = 0; i < 4; i++) {
       state.delayedTasks.push({
-        delay: i * 3,
-        action: () => ATTACK_MODES[39](boss),
-      });
-    }
-
-    // reset
-    state.delayedTasks.push({
-      delay: 270,
-      action: () => {
-        state.glitch.invertControls = false;
-        state.glitch.fakeUI = false;
-      },
-    });
-  },
-  SYSTEM_REBOOT_FAILURE: (boss) => {
-    boss.x = 400;
-    boss.y = 300;
-
-    // ===== ENTER EFFECT =====
-    state.screenShake.timer = 120;
-    state.screenShake.intensity = 8;
-
-    state.glitch.matrixMode = true;
-    state.glitch.stepMode = true;
-
-    // 🌑 màn tối dần
-    state.cinematicEffects.fogAlpha = 0.7;
-
-    // ===== PIE WARNING =====
-    let directions = [];
-    for (let i = 0; i < 8; i++) {
-      let a = (i * Math.PI) / 4;
-      directions.push(a);
-
-      // warning beam
-      spawnBeam(
-        boss.x,
-        boss.y,
-        boss.x + Math.cos(a) * 1000,
-        boss.y + Math.sin(a) * 1000,
-        60,
-        10,
-      );
-    }
-
-    // ===== STEP SHOOT LOGIC =====
-    state.glitch.stepShoot = () => {
-      let a = directions[Math.floor(Math.random() * directions.length)];
-
-      // 🔥 đạn glitch
-      fireAngle(boss.x, boss.y, a, 4);
-
-      // 🔥 thêm chaos
-      if (Math.random() < 0.3) {
-        fireAngle(boss.x, boss.y, a + 0.2, 3);
-        fireAngle(boss.x, boss.y, a - 0.2, 3);
-      }
-    };
-
-    // ===== BACKGROUND CHAOS =====
-    for (let i = 0; i < 200; i++) {
-      state.delayedTasks.push({
-        delay: i * 3,
+        delay: i * 20,
         action: () => {
-          // spam đạn từ viền
-          ATTACK_MODES[39]();
+          const px = state.player.x + (Math.random() - 0.5) * 400;
+          const py = state.player.y + (Math.random() - 0.5) * 400;
+          spawnWarning(px, py, 80, 45, "meteor"); // Cảnh báo nứt không gian
+
+          state.delayedTasks.push({
+            delay: 45,
+            action: () => {
+              // Khe nứt phát nổ thành 12 viên đạn Void (Style 10)
+              ring(px, py, 12, 0, 10, "boss", 2);
+              state.screenShake.timer = 5;
+              state.screenShake.intensity = 8;
+            },
+          });
         },
       });
     }
+  },
+  EVENT_HORIZON: (boss) => {
+    boss.ultimatePhase = true;
+    state.screenShake.timer = 200;
+    state.screenShake.intensity = 6;
 
-    // ===== RANDOM GLITCH EFFECT =====
+    // Tỏa ra một chân trời sự kiện (Vòng sáng tím khổng lồ)
+    state.globalHazard = {
+      type: "void_aura",
+      active: true,
+      timer: 600,
+      damage: 1,
+    };
+
+    // Boss dồn năng lượng bắn đạn liên tục theo hình bông hoa
     for (let i = 0; i < 150; i++) {
       state.delayedTasks.push({
         delay: i * 4,
         action: () => {
-          // teleport player nhẹ
-          if (Math.random() < 0.2) {
-            state.player.x += (Math.random() - 0.5) * 100;
-            state.player.y += (Math.random() - 0.5) * 100;
+          fireAngle(boss.x, boss.y, i * 0.13, 10, "boss", 1.5);
+          fireAngle(boss.x, boss.y, -i * 0.13 + Math.PI, 10, "boss", 1.5);
+        },
+      });
+    }
+  },
+  DARK_MATTER_BEAM: (boss) => {
+    activateShield(boss, 150);
+    // Quét tia laser bóng tối cực lớn (Quét ngang màn hình)
+    let startAngle = aim(boss) - 0.5;
+    for (let i = 0; i < 15; i++) {
+      state.delayedTasks.push({
+        delay: i * 4,
+        action: () => {
+          let a = startAngle + i * 0.08;
+          spawnBeam(
+            boss.x,
+            boss.y,
+            boss.x + Math.cos(a) * 2000,
+            boss.y + Math.sin(a) * 2000,
+            20,
+            30,
+          );
+          state.screenShake.timer = 5;
+          state.screenShake.intensity = 5;
+        },
+      });
+    }
+  },
+  GRAVITY_CRUSH: (boss) => {
+    activateShield(boss, 120);
+    // Bóp nghẹt không gian tại vị trí người chơi
+    let px = state.player.x;
+    let py = state.player.y;
+    spawnWarning(px, py, 150, 60, "meteor");
+    state.delayedTasks.push({
+      delay: 60,
+      action: () => {
+        spawnHazard("void_crush", px, py, 150, 120, 1.5, "boss");
+        state.screenShake.timer = 15;
+        state.screenShake.intensity = 15;
+        // Bắn đạn nổ từ tâm vụ bóp nghẹt
+        ring(px, py, 16, 0, 10, "boss", 1.5);
+      },
+    });
+  },
+  ECLIPSE_RING: (boss) => {
+    activateShield(boss, 120);
+    // Vòng xuyến hư không (Bắn đạn Void Style 10 liên tiếp)
+    for (let i = 0; i < 5; i++) {
+      state.delayedTasks.push({
+        delay: i * 20,
+        action: () => ring(boss.x, boss.y, 24, i * 0.1, 10, "boss", 1),
+      });
+    }
+  },
+  COSMIC_FRACTURE: (boss) => {
+    activateShield(boss, 150);
+    // Vạch những đường nứt trên mặt đất xung quanh người chơi
+    for (let i = 0; i < 4; i++) {
+      state.delayedTasks.push({
+        delay: i * 15,
+        action: () => {
+          let lx = state.player.x + (Math.random() - 0.5) * 600;
+          let ly = state.player.y + (Math.random() - 0.5) * 600;
+          spawnWarning(lx, ly, 60, 45, "laser");
+          state.delayedTasks.push({
+            delay: 45,
+            action: () => {
+              spawnHazard("void_rift", lx, ly, 60, 180, 1, "boss");
+              state.screenShake.timer = 8;
+              state.screenShake.intensity = 8;
+            },
+          });
+        },
+      });
+    }
+  },
+  STAR_DEVOURER: (boss) => {
+    activateShield(boss, 180);
+    // Bắn ra một cục Hố đen chậm di chuyển, tự đẻ ra đạn Void
+    let angle = aim(boss);
+    let devX = boss.x + Math.cos(angle) * 100;
+    let devY = boss.y + Math.sin(angle) * 100;
+
+    spawnHazard("void_devourer", devX, devY, 100, 300, 1, "boss");
+  },
+  EVENT_HORIZON: (boss) => {
+    boss.ultimatePhase = true;
+    state.screenShake.timer = 600;
+    state.screenShake.intensity = 8;
+
+    // Đốt máu liên tục toàn map
+    state.globalHazard = {
+      type: "electric",
+      active: true,
+      timer: 600,
+      damage: 1.5,
+    };
+
+    // SPAWN SAFE ZONE NÚP CHIÊU
+    spawnSafeZone(
+      state.camera.x + 200 + Math.random() * 1100,
+      state.camera.y + 200 + Math.random() * 400,
+      200,
+      600,
+      {
+        shrinking: false,
+        vx: 0.5,
+        vy: 0.5,
+      },
+    );
+
+    // Đạn mưa sao băng bóng tối
+    for (let i = 0; i < 150; i++) {
+      state.delayedTasks.push({
+        delay: i * 4,
+        action: () => {
+          fireAngle(boss.x, boss.y, i * 0.13, 10, "boss", 1.5);
+          fireAngle(boss.x, boss.y, -i * 0.13 + Math.PI, 10, "boss", 1.5);
+        },
+      });
+    }
+  },
+
+  // ==========================================
+  // 👾 GLITCH & THE ENTITY (THỰC THỂ MA TRẬN)
+  // Theme: Mã độc, Lỗi hệ thống, Neon chói lóa
+  // KHÔNG TELEPORT - Thay bằng vùng đạn khóa góc
+  // ==========================================
+  // ==========================================
+  // 👾 GLITCH (ERROR_404) - 10 SPECIAL SKILLS (UNIQUE VISUALS)
+  // ==========================================
+
+  GLITCH_MEMORY_LEAK: (boss) => {
+    activateShield(boss, 150);
+    // Virus lây lan (Style 14) bắn liên tục theo vòng xoáy
+    for (let i = 0; i < 15; i++) {
+      state.delayedTasks.push({
+        delay: i * 8,
+        action: () => {
+          let a = (i * Math.PI * 2) / 15 + state.frameCount * 0.01;
+          fireAngle(boss.x, boss.y, a, 14, "boss", 2.5);
+
+          // Thêm các tia lửa điện (Style 17) bay kèm
+          if (i % 3 === 0) {
+            fireAngle(boss.x, boss.y, aim(boss), 17, "boss", 5);
           }
         },
       });
     }
+  },
 
-    // ===== END =====
+  GLITCH_SYNTAX_ERROR: (boss) => {
+    activateShield(boss, 150);
+    // Xuất hiện các khối lỗi hiển thị (Error Box) rải rác
+    for (let i = 0; i < 8; i++) {
+      let px = state.player.x + (Math.random() - 0.5) * 600;
+      let py = state.player.y + (Math.random() - 0.5) * 600;
+      spawnWarning(px, py, 60, 45, "laser");
+      state.delayedTasks.push({
+        delay: 45,
+        action: () => {
+          spawnHazard("error_box", px, py, 60, 120, 2, "boss");
+          state.screenShake.timer = 5;
+          state.screenShake.intensity = 5;
+        },
+      });
+    }
+  },
+
+  GLITCH_FIREWALL_BREACH: (boss) => {
+    activateShield(boss, 180);
+    // Dựng lên các bức tường Pixel (Pixel Wall) khổng lồ cản đường
+    let px = state.player.x;
+    let py = state.player.y;
+    spawnWarning(px, py - 300, 300, 60, "laser");
+    spawnWarning(px, py + 300, 300, 60, "laser");
+
     state.delayedTasks.push({
-      delay: 600,
+      delay: 60,
       action: () => {
-        state.glitch.matrixMode = false;
-        state.glitch.stepMode = false;
-        state.cinematicEffects.fogAlpha = 0;
+        spawnHazard("pixel_wall", px, py - 300, 300, 200, 1.5, "boss");
+        spawnHazard("pixel_wall", px, py + 300, 300, 200, 1.5, "boss");
+        state.screenShake.timer = 10;
+        state.screenShake.intensity = 8;
       },
     });
   },
 
-  //Entity
-  ENTITY_GLITCH: (boss) => {
-    state.glitch.invertControls = true;
+  GLITCH_TROJAN_HORSE: (boss) => {
+    activateShield(boss, 120);
+    // Bắn ra các Shuriken ma trận (Style 15) xoáy về phía người chơi
+    for (let i = 0; i < 12; i++) {
+      state.delayedTasks.push({
+        delay: i * 8,
+        action: () => {
+          let a = aim(boss) + Math.sin(i) * 0.5;
+          fireAngle(boss.x, boss.y, a, 15, "boss", 1.5);
+        },
+      });
+    }
+  },
 
-    // ⚡ flash glitch
-    state.screenShake.timer = 20;
-    state.screenShake.intensity = 8;
+  GLITCH_BUFFER_OVERFLOW: (boss) => {
+    activateShield(boss, 150);
+    // Xả tia Neon Laser (Style 12) liên thanh, xoay vòng như chong chóng
+    for (let i = 0; i < 50; i++) {
+      state.delayedTasks.push({
+        delay: i * 3,
+        action: () => {
+          fireAngle(boss.x, boss.y, i * 0.2, 12, "boss", 1.5);
+        },
+      });
+    }
+  },
 
-    // 👾 spawn decoy fake boss
-    state.glitch.decoys = [
-      { x: Math.random() * 800, y: Math.random() * 600 },
-      { x: Math.random() * 800, y: Math.random() * 600 },
-    ];
-
-    // 🔥 spam edge attack
+  GLITCH_DEAD_PIXEL_STORM: (boss) => {
+    activateShield(boss, 150);
+    // Mưa Pixel lệch màu (Style 11) rớt xuống liên tục
     for (let i = 0; i < 60; i++) {
       state.delayedTasks.push({
         delay: i * 2,
-        action: () => ATTACK_MODES[39](),
-      });
-    }
-
-    // 💥 fake teleport player
-    for (let i = 0; i < 10; i++) {
-      state.delayedTasks.push({
-        delay: i * 10,
         action: () => {
-          state.player.x += (Math.random() - 0.5) * 150;
-          state.player.y += (Math.random() - 0.5) * 150;
+          let sx = state.camera.x + Math.random() * 1536;
+          spawnBullet(
+            sx,
+            state.camera.y - 50,
+            sx,
+            state.camera.y + 800,
+            false,
+            11,
+            "boss",
+            1,
+          );
         },
       });
     }
-
-    // reset
-    state.delayedTasks.push({
-      delay: 120,
-      action: () => {
-        state.glitch.invertControls = false;
-        state.glitch.decoys = [];
-      },
-    });
   },
-  ABSOLUTE_NULL: (boss) => {
-    boss.x = 400;
-    boss.y = 300;
 
-    state.glitch.stepMode = true;
-    state.glitch.matrixMode = true;
-
-    // 🌑 màn tối cực mạnh
-    state.cinematicEffects.fogAlpha = 0.9;
-
-    state.screenShake.timer = 100;
-    state.screenShake.intensity = 10;
-
-    // ===== LASER CAGE =====
-    for (let i = 0; i < 8; i++) {
-      let a = (i * Math.PI) / 4;
-
-      spawnBeam(
-        boss.x,
-        boss.y,
-        boss.x + Math.cos(a) * 1000,
-        boss.y + Math.sin(a) * 1000,
-        40,
-        40,
-      );
-    }
-
-    // ===== BULLET SPIRAL CHAOS =====
-    for (let i = 0; i < 200; i++) {
+  GLITCH_PACKET_LOSS: (boss) => {
+    activateShield(boss, 150);
+    // Xả 3 đợt đạn Packet Loss chớp tắt
+    for (let wave = 0; wave < 3; wave++) {
       state.delayedTasks.push({
-        delay: i,
+        delay: wave * 25,
         action: () => {
-          let a = i * 0.2;
-          fireAngle(boss.x, boss.y, a, 5);
-        },
-      });
-    }
-
-    // ===== SCREEN GLITCH =====
-    for (let i = 0; i < 150; i++) {
-      state.delayedTasks.push({
-        delay: i * 2,
-        action: () => {
-          if (Math.random() < 0.3) {
-            state.player.x = Math.random() * 800;
-            state.player.y = Math.random() * 600;
+          let centerA = aim(boss);
+          // Mỗi đợt bắn 7 viên hình quạt
+          for (let i = -3; i <= 3; i++) {
+            fireAngle(
+              boss.x,
+              boss.y,
+              centerA + i * 0.2,
+              13, // Đạn chớp tắt
+              "boss",
+              3 + wave, // Tốc độ tăng dần qua mỗi đợt
+            );
           }
         },
       });
     }
-
-    // ===== END =====
-    state.delayedTasks.push({
-      delay: 300,
-      action: () => {
-        state.glitch.stepMode = false;
-        state.glitch.matrixMode = false;
-        state.cinematicEffects.fogAlpha = 0;
-      },
-    });
   },
-  ENTITY_OVERLOAD: (boss) => {
-    // 🔥 bật hiệu ứng toàn màn
-    state.glitch.matrixMode = true;
-    state.glitch.invertControls = true;
 
-    // 💀 chaos kéo dài ~10s
+  GLITCH_DDOS_ATTACK: (boss) => {
+    activateShield(boss, 200);
+    // Dội bom Binary liên tục (Flood)
+    for (let i = 0; i < 20; i++) {
+      state.delayedTasks.push({
+        delay: i * 8, // Rơi dày đặc hơn
+        action: () => {
+          // Khóa quanh người chơi nhưng có độ lệch ngẫu nhiên
+          let px = state.player.x + (Math.random() - 0.5) * 500;
+          let py = state.player.y + (Math.random() - 0.5) * 500;
+          spawnHazard("binary_rain", px, py, 120, 180, 2, "boss");
+
+          // Thêm âm thanh hoặc rung nhẹ cho mỗi lần dội
+          if (i % 5 === 0) {
+            state.screenShake.timer = 2;
+            state.screenShake.intensity = 3;
+          }
+        },
+      });
+    }
+  },
+
+  GLITCH_FATAL_EXCEPTION: (boss) => {
+    activateShield(boss, 120);
+    // Bắn một vòng tròn 12 quả cầu dữ liệu siêu to (Style 16)
+    for (let i = 0; i < 12; i++) {
+      let angle = (i * Math.PI * 2) / 12;
+      fireAngle(boss.x, boss.y, angle, 16, "boss", 2); // Quả cầu to
+
+      // Thêm đạn bay xen kẽ tạo hiệu ứng "bụi dữ liệu"
+      state.delayedTasks.push({
+        delay: 30,
+        action: () => {
+          fireAngle(boss.x, boss.y, angle + 0.1, 11, "boss", 4);
+        },
+      });
+    }
+    state.screenShake.timer = 15;
+    state.screenShake.intensity = 10;
+  },
+  GLITCH_CORRUPTED_SECTOR: (boss) => {
+    activateShield(boss, 150);
+    // Khóa người chơi vào lồng tia chớp nhiễu (Corrupt Laser)
+    let px = state.player.x;
+    let py = state.player.y;
+    let s = 250;
+
+    spawnHazard("corrupt_laser", px - s, py, s, 180, 2, "boss"); // Tường trái
+    spawnHazard("corrupt_laser", px + s, py, s, 180, 2, "boss"); // Tường phải
+    spawnHazard("corrupt_laser", px, py - s, s, 180, 2, "boss"); // Tường trên
+    spawnHazard("corrupt_laser", px, py + s, s, 180, 2, "boss"); // Tường dưới
+
+    // Ném thêm đạn chớp giật (Style 17) vào trong lồng
+    for (let i = 0; i < 20; i++) {
+      state.delayedTasks.push({
+        delay: 60 + i * 5,
+        action: () => {
+          fireAngle(
+            boss.x,
+            boss.y,
+            aim(boss) + (Math.random() - 0.5) * 0.5,
+            17,
+            "boss",
+            1.5,
+          );
+        },
+      });
+    }
+  },
+
+  ENTITY_KERNEL_PANIC: (boss) => {
+    // Ultimate Của The Entity: Đồ họa cực đỉnh, nổ tung data
+    boss.ultimatePhase = true;
+    state.glitch.matrixMode = true; // Bật nền code rơi
+    state.screenShake.timer = 300;
+    state.screenShake.intensity = 8;
+
+    boss.x = 400;
+    boss.y = 300; // Đứng giữa
+
+    // Xả 8 tia Data Stream (Style 12) xoay như chong chóng
     for (let i = 0; i < 300; i++) {
       state.delayedTasks.push({
         delay: i,
         action: () => {
-          // ===== 1. RANDOM BURST 360 =====
-          for (let j = 0; j < 6; j++) {
-            fireAngle(
-              boss.x,
-              boss.y,
-              Math.random() * Math.PI * 2,
-              4 + Math.random() * 3,
-            );
+          if (i % 5 === 0) {
+            for (let j = 0; j < 8; j++) {
+              let angle = (j * Math.PI) / 4 + i * 0.02;
+              // Bắn đạn Neon dài
+              state.bullets.push({
+                x: boss.x,
+                y: boss.y,
+                vx: Math.cos(angle) * 7,
+                vy: Math.sin(angle) * 7,
+                isPlayer: false,
+                radius: 12,
+                life: 200,
+                style: 12, // Style Data Stream
+                damage: 2,
+              });
+            }
           }
-
-          // ===== 2. SPIRAL CHAOS =====
-          let angle = i * 0.2;
-          fireAngle(boss.x, boss.y, angle, 6);
-          fireAngle(boss.x, boss.y, angle + Math.PI, 6);
-
-          // ===== 3. EDGE ATTACK =====
-          if (Math.random() < 0.4) {
-            let x = Math.random() * 800;
-            state.bullets.push({
-              x,
-              y: 0,
-              vx: (Math.random() - 0.5) * 4,
-              vy: 6 + Math.random() * 4,
-              radius: 5 + Math.random() * 3,
-              life: 120,
-              isPlayer: false,
-              style: 4,
-            });
-          }
-
-          // ===== 4. TELEPORT GLITCH =====
-          if (i % 20 === 0) {
-            boss.x += (Math.random() - 0.5) * 100;
-            boss.y += (Math.random() - 0.5) * 100;
-          }
-
-          // ===== 5. SCREEN SHAKE =====
-          state.screenShake.timer = 5;
-          state.screenShake.intensity = 6;
-
-          // ===== 6. FLASH (fake crash) =====
-          if (Math.random() < 0.1) {
-            state.cinematicEffects.fogAlpha = 0.8;
-          } else {
-            state.cinematicEffects.fogAlpha = 0;
-          }
+          // Chớp tắt màn hình ngẫu nhiên (Flash bạo loạn)
+          if (Math.random() < 0.05) state.cinematicEffects.fogAlpha = 0.8;
+          else state.cinematicEffects.fogAlpha = 0;
         },
       });
     }
-
-    // 🔥 kết thúc → trả control lại
-    state.delayedTasks.push({
-      delay: 300,
-      action: () => {
-        state.glitch.invertControls = false;
-        state.glitch.matrixMode = false;
-        state.cinematicEffects.fogAlpha = 0;
-      },
-    });
   },
 };

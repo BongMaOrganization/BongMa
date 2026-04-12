@@ -154,7 +154,6 @@ export const BOSS_TYPES = {
       },
     ],
   },
-
   void: {
     name: "Hư Không Chúa",
     hp: 900,
@@ -162,23 +161,31 @@ export const BOSS_TYPES = {
     speed: 2.2,
     color: "#5500aa",
     originalColor: "#5500aa",
-    icon: "🌀",
-
+    icon: "🌌",
     phases: [
       {
-        attackModes: [33, 34],
-        special: "Void Prison",
+        attackModes: [70, 34], // Đạn Void (70) và Homing Mine (34)
+        // Phase 1 xài 2 chiêu bắn tia và vòng xoáy
+        special: ["DARK_MATTER_BEAM", "ECLIPSE_RING"],
         speedMult: 1.0,
       },
       {
-        attackModes: [35, 36],
-        special: "Gravity Well",
+        attackModes: [71, 35], // Bão xoắn ốc (71) và Black Hole Pull (35)
+        // Phase 2 đổi bài sang 2 chiêu bóp nghẹt và xé nứt mặt đất
+        special: ["GRAVITY_CRUSH", "COSMIC_FRACTURE"],
         speedMult: 1.3,
       },
       {
-        attackModes: [33, 35, 36],
-        special: ["Void Prison", "Gravity Well"],
-        ultimate: "EVENT HORIZON",
+        attackModes: [70, 71, 36], // Kết hợp cả đạn và Void Rifts (36)
+        // Phase cuối: Xoay tua cả 5 chiêu độc quyền (Thêm cục Hố Đen STAR_DEVOURER)
+        special: [
+          "DARK_MATTER_BEAM",
+          "GRAVITY_CRUSH",
+          "ECLIPSE_RING",
+          "COSMIC_FRACTURE",
+          "STAR_DEVOURER",
+        ],
+        ultimate: "EVENT_HORIZON",
         speedMult: 1.8,
       },
     ],
@@ -186,24 +193,50 @@ export const BOSS_TYPES = {
 
   glitch: {
     name: "Mã Lỗi Vĩnh Cửu (ERROR_404)",
-    hp: 111,
-    maxHp: 111,
-    speed: 1.0,
-    color: "#000000",
-    originalColor: "#000000",
+    hp: 500,
+    maxHp: 500,
+    speed: 1.8,
+    color: "#00ffff",
+    originalColor: "#00ffff",
     icon: "👾",
-
     phases: [
       {
-        attackModes: [37, 38],
-        special: "Visual_Glitch_Matrix",
+        attackModes: [80, 40], // Đạn thường
+        // Phase 1 xài 3 chiêu cơ bản
+        special: [
+          "GLITCH_MEMORY_LEAK",
+          "GLITCH_SYNTAX_ERROR",
+          "GLITCH_PACKET_LOSS",
+        ],
         speedMult: 1.0,
       },
-      { attackModes: [39, 40], special: "Control_Corruption", speedMult: 1.4 },
       {
-        attackModes: [37, 38, 39, 40],
-        special: ["Visual_Glitch_Matrix", "Control_Corruption"],
-        ultimate: "SYSTEM_REBOOT_FAILURE",
+        attackModes: [81, 39], // Đạn thường
+        // Phase 2 xài 4 chiêu khác gắt hơn
+        special: [
+          "GLITCH_FIREWALL_BREACH",
+          "GLITCH_DEAD_PIXEL_STORM",
+          "GLITCH_DDOS_ATTACK",
+          "GLITCH_FATAL_EXCEPTION",
+        ],
+        speedMult: 1.4,
+      },
+      {
+        attackModes: [80, 81],
+        // Phase cuối: Xoay tua ĐẦY ĐỦ 10 CHIÊU ngẫu nhiên
+        special: [
+          "GLITCH_MEMORY_LEAK",
+          "GLITCH_SYNTAX_ERROR",
+          "GLITCH_FIREWALL_BREACH",
+          "GLITCH_TROJAN_HORSE",
+          "GLITCH_BUFFER_OVERFLOW",
+          "GLITCH_DEAD_PIXEL_STORM",
+          "GLITCH_PACKET_LOSS",
+          "GLITCH_DDOS_ATTACK",
+          "GLITCH_FATAL_EXCEPTION",
+          "GLITCH_CORRUPTED_SECTOR",
+        ],
+        ultimate: "ENTITY_KERNEL_PANIC",
         speedMult: 1.8,
       },
     ],
@@ -229,7 +262,7 @@ export function createBoss(type) {
     ultimatePhase: false,
     bossType: type,
     phaseCount: cfg.phaseCount || 3,
-    skillCooldown: 180,
+    skillCooldown: 120,
     summonCooldown: 10 * 60,
   };
 }
@@ -264,11 +297,20 @@ export function updateBoss(boss) {
   }
 
   const phaseIdx = getBossPhase(boss);
+  
+  // [CỰC KỲ QUAN TRỌNG] Reset Cooldown ngay lập tức khi Boss chuyển Phase
+  if (boss.currentPhaseIndex === undefined) boss.currentPhaseIndex = phaseIdx;
+  if (boss.currentPhaseIndex !== phaseIdx) {
+      boss.currentPhaseIndex = phaseIdx;
+      boss.skillCooldown = 0; // Sang Phase mới là xả chiêu luôn, không chờ đợi!
+  }
+
   const speed = boss.speed * (boss.phases[phaseIdx]?.speedMult || 1.0);
   boss.x += (boss.moveTargetX - boss.x) * 0.02 * speed;
   boss.y += (boss.moveTargetY - boss.y) * 0.02 * speed;
 
-  if (state.bossSpecial.timer > 0) {
+  // Xử lý khi đang gồng chiêu
+  if (state.bossSpecial && state.bossSpecial.timer > 0) {
     state.bossSpecial.timer--;
 
     if (state.bossSpecial.timer === 0) {
@@ -281,6 +323,12 @@ export function updateBoss(boss) {
     }
     return;
   }
+  
+  // NẾU GIÁP BỊ PHÁ (chiêu bị hủy, bossSpecial.name === ""): Cần reset lại cooldown để boss bừng tỉnh
+  if (boss.skillCooldown <= 0 && state.bossSpecial && state.bossSpecial.name === "") {
+     boss.skillCooldown = 400 + Math.random() * 100;
+     state.bossSpecial = null; // Dọn dẹp sạch sẽ
+  }
 
   if (boss.skillCooldown > 0) {
     boss.skillCooldown--;
@@ -290,7 +338,7 @@ export function updateBoss(boss) {
     const phase = boss.phases[phaseIdx];
     let nextSkill = "";
 
-    if (phase.ultimate && Math.random() < 0.4) {
+    if (phase.ultimate && (!boss.ultimatePhase || Math.random() < 0.4)) {
       nextSkill = Array.isArray(phase.ultimate)
         ? phase.ultimate[Math.floor(Math.random() * phase.ultimate.length)]
         : phase.ultimate;

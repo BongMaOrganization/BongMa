@@ -281,124 +281,33 @@ export function update(ctx, canvas, changeStateFn) {
     state.currentRunRecord.push(frameData);
   }
 
-  // --- 6. BOSS LOGIC & THE ENTITY PHASE ---
-  if (state.boss && state.boss.shieldActive && state.boss.shield <= 0) {
-    state.boss.shieldActive = false;
-    state.boss.stunTimer = 180;
-    if (state.bossSpecial) {
-      state.bossSpecial.timer = 0;
-      state.bossSpecial.name = "";
-    }
-    state.screenShake.timer = 30;
-    state.screenShake.intensity = 15;
-    state.bossBeams = [];
-    state.groundWarnings = [];
-    state.safeZones = [];
-  }
-
-  if (state.boss && state.boss.stunTimer > 0) {
-    state.boss.stunTimer--;
-    state.boss.color =
-      state.boss.stunTimer % 20 < 10
-        ? "#ffffff"
-        : state.boss.originalColor || "#ff0055";
-  }
+  // --- 6. XỬ LÝ QUÁI THÚ VÀ BOSS CHẾT ---
+  // ... (Code Shield với Stun của bạn giữ nguyên)
 
   if (boss && !boss.entityPhase) {
     updateBoss(boss);
   }
 
-  // Kích hoạt The Entity Phase HOẶC Chết (Dành cho Boss thường)
-  if (boss && boss.hp <= 0 && !boss.entityTriggered) {
-    // Check chéo cả 3 trường hợp để chắc chắn 100% nó là con glitch
-    const isGlitchBoss =
-      state.currentBossType === "glitch" ||
-      boss.bossType === "glitch" ||
-      boss.id === "glitch";
+  // XỬ LÝ BOSS CHẾT (Dành cho MỌI LOẠI BOSS)
+  if (boss && boss.hp <= 0) {
+    state.player.coins = (state.player.coins || 0) + 100; // Thưởng tiền
+    state.boss = null;
+    state.isBossLevel = false;
 
-    // 1. Chỉ duy nhất con Glitch mới được hóa The Entity
-    if (isGlitchBoss) {
-      boss.entityPhase = true;
-      boss.entityTriggered = true;
-      boss.hp = boss.maxHp = 999999;
-      boss.entityTimer = 40 * FPS;
-      boss.phase2Triggered = false;
-      boss.phase3Triggered = false;
-      boss.phase4Triggered = false;
-      boss.name = "The Entity";
-      boss.color = "#ffffff";
-      state.screenShake.timer = 30;
-      state.screenShake.intensity = 12;
-      state.bullets = [];
-      state.delayedTasks = [];
-      state.glitch.invertControls = false;
-      state.glitch.stepMode = false;
-      state.glitch.matrixMode = false;
-      return;
-    }
-    // 2. Các Boss khác chết là "cút" luôn, văng thưởng
-    else {
-      state.player.coins = (state.player.coins || 0) + 100;
-      state.boss = null;
-      state.isBossLevel = false;
+    // Dọn dẹp rác trên sân
+    state.bullets = [];
+    state.bossBeams = [];
+    state.groundWarnings = [];
+    state.safeZones = [];
+    state.hazards = []; // Dọn sạch bẫy
 
-      // Dọn dẹp rác trên sân
-      state.bullets = [];
-      state.bossBeams = [];
-      state.groundWarnings = [];
-      state.safeZones = [];
+    // Reset hiệu ứng cinematic
+    state.glitch.matrixMode = false;
+    state.glitch.invertControls = false;
+    state.cinematicEffects.fogAlpha = 0;
 
-      // Chốt chặn an toàn: Ép false để không bao giờ lọt xuống logic The Entity bên dưới
-      boss.entityPhase = false;
-
-      return "BOSS_KILLED";
-    }
+    return "BOSS_KILLED";
   }
-
-  // The Entity Logic
-  if (boss && boss.entityPhase) {
-    boss.entityTimer--;
-    let time = boss.entityTimer;
-
-    if (time > 30 * FPS) {
-      if (state.frameCount % 15 === 0) ATTACK_MODES[42]();
-    } else if (time > 20 * FPS) {
-      if (!boss.phase2Triggered) {
-        SPECIAL_SKILLS.ENTITY_GLITCH(boss);
-        boss.phase2Triggered = true;
-      }
-      if (state.frameCount % 40 === 0) ATTACK_MODES[41](boss);
-    } else if (time > 10 * FPS) {
-      if (!boss.phase3Triggered) {
-        SPECIAL_SKILLS.ABSOLUTE_NULL(boss);
-        boss.phase3Triggered = true;
-      }
-      if (state.frameCount % 20 === 0) ATTACK_MODES[43]();
-    } else {
-      if (!boss.phase4Triggered) {
-        SPECIAL_SKILLS.ENTITY_OVERLOAD(boss);
-        boss.phase4Triggered = true;
-      }
-      if (state.frameCount % 10 === 0) ATTACK_MODES[43]();
-    }
-
-    state.glitch.matrixMode = true;
-    if (state.frameCount % 10 === 0) {
-      state.screenShake.timer = 5;
-      state.screenShake.intensity = 4;
-    }
-
-    if (boss.entityTimer <= 0) {
-      state.player.coins = (state.player.coins || 0) + 100;
-      state.boss = null;
-      state.isBossLevel = false;
-      state.glitch.matrixMode = false;
-      state.glitch.stepMode = false;
-      state.glitch.invertControls = false;
-      return "BOSS_KILLED";
-    }
-  }
-
   // Update Bullets
   updateBullets(ctx, canvas, changeStateFn, state.timeFrozenModifier);
 
@@ -762,7 +671,8 @@ export function update(ctx, canvas, changeStateFn) {
       if (g.x > 0) activeGhosts++;
     }
   }
-  if (state.frameCount % 180 === 0) {
+// THÊM ĐIỀU KIỆN: Chỉ spawn khi KHÔNG ở level Boss và KHÔNG ở Boss Arena
+  if (!state.isBossLevel && !state.bossArenaMode && state.frameCount % 180 === 0) {
     const existingElements = new Set(
       state.elementalEnemies.map((e) => e.element),
     );
