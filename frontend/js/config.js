@@ -1,21 +1,25 @@
 export const FPS = 60;
 export const GHOST_DATA_KEY = "AsynchronousEchoes_V4";
-export const BOSS_FRAGMENT_DROP_RATE = 0.1; // 10% chance
+export const BOSS_FRAGMENT_DROP_RATE = 1; // 100% chance
 
 export const BOSS_FRAGMENTS = [
-  { id: "frag_fire", name: "Mảnh Lửa", icon: "🔥", desc: "Mảnh nguyên liệu từ Fire Lord", bossType: "fireBoss" },
-  { id: "frag_ice", name: "Mảnh Băng", icon: "❄️", desc: "Mảnh nguyên liệu từ Ice Queen", bossType: "iceBoss" },
-  { id: "frag_storm", name: "Mảnh Sấm", icon: "⚡", desc: "Mảnh nguyên liệu từ Thunder King", bossType: "thunderBoss" },
-  { id: "frag_shadow", name: "Mảnh Đất", icon: "🪨", desc: "Mảnh nguyên liệu từ Earth Titan", bossType: "earthBoss" },
-  { id: "frag_spirit", name: "Mảnh Gió", icon: "🌪️", desc: "Mảnh nguyên liệu từ Wind Spirit", bossType: "windBoss" },
+  { id: "frag_fire", name: "Mảnh Lửa", icon: "🔥", desc: "Mảnh nguyên liệu từ Fire Lord", bossType: "fire" },
+  { id: "frag_ice", name: "Mảnh Băng", icon: "❄️", desc: "Mảnh nguyên liệu từ Ice Queen", bossType: "ice" },
+  { id: "frag_storm", name: "Mảnh Sấm", icon: "⚡", desc: "Mảnh nguyên liệu từ Thunder King", bossType: "thunder" },
+  { id: "frag_shadow", name: "Mảnh Đất", icon: "🪨", desc: "Mảnh nguyên liệu từ Earth Titan", bossType: "earth" },
+  { id: "frag_spirit", name: "Mảnh Gió", icon: "🌪️", desc: "Mảnh nguyên liệu từ Wind Spirit", bossType: "wind" },
+  { id: "frag_void", name: "Mảnh Hư Không", icon: "🌌", desc: "Mảnh nguyên liệu từ Void Knight", bossType: "void" },
+  { id: "frag_glitch", name: "Mảnh Lỗi", icon: "👾", desc: "Mảnh nguyên liệu từ Lỗi Vĩnh Cửu", bossType: "glitch" }
 ];
 
 export const BOSS_ARENA_REWARDS = {
-  fireBoss: { coins: 150, rareTicket: 0.15 },
-  iceBoss: { coins: 130, rareTicket: 0.12 },
-  thunderBoss: { coins: 180, rareTicket: 0.18 },
-  earthBoss: { coins: 200, rareTicket: 0.2 },
-  windBoss: { coins: 160, rareTicket: 0.15 },
+  fire: { coins: 150, rareTicket: 0.15 },
+  ice: { coins: 130, rareTicket: 0.12 },
+  thunder: { coins: 180, rareTicket: 0.18 },
+  earth: { coins: 200, rareTicket: 0.2 },
+  wind: { coins: 160, rareTicket: 0.15 },
+  void: { coins: 300, rareTicket: 0.3 },
+  glitch: { coins: 500, rareTicket: 0.5 },
   omni: { coins: 1000, rareTicket: 0.80 },
 };
 
