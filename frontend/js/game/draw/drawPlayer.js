@@ -1,4 +1,5 @@
 import { state } from "../../state.js";
+import { drawBrawlerPlayer } from "../../characters/common/brawler.js";
 import { drawDruidPlayer } from "../../characters/common/druid.js";
 import { drawEngineerPlayer } from "../../characters/common/engineer.js";
 import { drawGhostPlayer } from "../../characters/common/ghost.js";
@@ -157,6 +158,11 @@ export function drawPlayer(ctx) {
 
   if (char === "druid") {
     drawDruidPlayer(ctx, state, buffs, isInvulnSkill);
+    return;
+  }
+
+  if (char === "brawler") {
+    drawBrawlerPlayer(ctx, state, buffs, isInvulnSkill);
     return;
   }
 

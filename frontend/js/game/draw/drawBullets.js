@@ -480,6 +480,113 @@ function drawDruidBullet(ctx, b) {
   ctx.restore();
 }
 
+function drawBrawlerBullet(ctx, b) {
+  const speed = Math.hypot(b.vx, b.vy) || 1;
+  const nx = b.vx / speed;
+  const ny = b.vy / speed;
+  const px = -ny;
+  const py = nx;
+  const angle = Math.atan2(b.vy, b.vx);
+  const pulse = (Math.sin(state.frameCount * 0.34 + b.x * 0.01) + 1) * 0.5;
+  const R = Math.max(8, b.radius * 2.25);
+
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+
+  if (state.frameCount % 2 === 0) {
+    state.particles.push({
+      x: b.x - nx * R * 1.2 + px * (Math.random() - 0.5) * R,
+      y: b.y - ny * R * 1.2 + py * (Math.random() - 0.5) * R,
+      vx: -nx * 0.7 + (Math.random() - 0.5) * 0.55,
+      vy: -ny * 0.7 + (Math.random() - 0.5) * 0.55,
+      life: 18,
+      color: Math.random() > 0.35 ? "#ff6432" : "#ffc800",
+      size: 2 + Math.random() * 2.8,
+    });
+  }
+
+  const tail = ctx.createLinearGradient(
+    b.x - nx * R * 3.6,
+    b.y - ny * R * 3.6,
+    b.x + nx * R,
+    b.y + ny * R,
+  );
+  tail.addColorStop(0, "rgba(255, 60, 20, 0)");
+  tail.addColorStop(0.45, "rgba(255, 100, 50, 0.3)");
+  tail.addColorStop(1, "rgba(255, 200, 0, 0.74)");
+  ctx.beginPath();
+  ctx.moveTo(b.x + nx * R * 1.2, b.y + ny * R * 1.2);
+  ctx.lineTo(b.x - nx * R * 3.2 + px * R * 0.75, b.y - ny * R * 3.2 + py * R * 0.75);
+  ctx.lineTo(b.x - nx * R * 2.55 - px * R * 0.75, b.y - ny * R * 2.55 - py * R * 0.75);
+  ctx.closePath();
+  ctx.fillStyle = tail;
+  ctx.shadowBlur = 20;
+  ctx.shadowColor = "#ff6432";
+  ctx.fill();
+
+  ctx.translate(b.x, b.y);
+  ctx.rotate(angle);
+
+  const aura = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 2);
+  aura.addColorStop(0, "rgba(255, 255, 255, 0.9)");
+  aura.addColorStop(0.34, "rgba(255, 200, 0, 0.5)");
+  aura.addColorStop(0.68, "rgba(255, 100, 50, 0.36)");
+  aura.addColorStop(1, "rgba(90, 20, 0, 0)");
+  ctx.beginPath();
+  ctx.ellipse(0, 0, R * (1.45 + pulse * 0.2), R * (0.95 + pulse * 0.12), 0, 0, Math.PI * 2);
+  ctx.fillStyle = aura;
+  ctx.shadowBlur = 26;
+  ctx.shadowColor = "#ff6432";
+  ctx.fill();
+
+  ctx.save();
+  ctx.rotate(Math.sin(state.frameCount * 0.12) * 0.18);
+  ctx.fillStyle = "#ff6432";
+  ctx.strokeStyle = "#ffe4c0";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.roundRect(-R * 0.5, -R * 0.45, R * 1.0, R * 0.78, R * 0.16);
+  ctx.fill();
+  ctx.stroke();
+
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.roundRect(-R * 0.56 + i * R * 0.28, -R * 0.82, R * 0.22, R * 0.48, R * 0.08);
+    ctx.fillStyle = i % 2 === 0 ? "#ffc800" : "#ff8a1c";
+    ctx.fill();
+    ctx.stroke();
+  }
+
+  ctx.beginPath();
+  ctx.ellipse(-R * 0.62, -R * 0.02, R * 0.22, R * 0.32, -0.35, 0, Math.PI * 2);
+  ctx.fillStyle = "#ff3b1f";
+  ctx.fill();
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.strokeStyle = "rgba(255, 240, 200, 0.82)";
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  for (let i = 0; i < 4; i++) {
+    const a = i * Math.PI / 2 + state.frameCount * 0.08;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * R * 0.8, Math.sin(a) * R * 0.8);
+    ctx.lineTo(Math.cos(a) * R * (1.35 + pulse * 0.15), Math.sin(a) * R * (1.35 + pulse * 0.15));
+    ctx.shadowBlur = 16;
+    ctx.shadowColor = "#ffc800";
+    ctx.stroke();
+  }
+
+  ctx.beginPath();
+  ctx.arc(R * 0.18, -R * 0.06, R * 0.24, 0, Math.PI * 2);
+  ctx.fillStyle = "#fff2c8";
+  ctx.shadowBlur = 16;
+  ctx.shadowColor = "#ffffff";
+  ctx.fill();
+
+  ctx.restore();
+}
+
 // ===== BULLETS (14+ styles) =====
 export function drawBullets(ctx) {
   const { bullets, player } = state;
@@ -576,6 +683,11 @@ export function drawBullets(ctx) {
 
     if (b.isPlayer && b.visualStyle === "druid_seed") {
       drawDruidBullet(ctx, b);
+      continue;
+    }
+
+    if (b.isPlayer && b.visualStyle === "brawler_impact") {
+      drawBrawlerBullet(ctx, b);
       continue;
     }
 
