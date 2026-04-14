@@ -1,5 +1,100 @@
 import { state } from "../../state.js";
 
+function drawJaggedLine(ctx, points, jitter = 0) {
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  for (let i = 1; i < points.length; i++) {
+    ctx.lineTo(
+      points[i].x + (Math.random() - 0.5) * jitter,
+      points[i].y + (Math.random() - 0.5) * jitter,
+    );
+  }
+  ctx.stroke();
+}
+
+function drawSpeedsterBullet(ctx, b) {
+  const speed = Math.hypot(b.vx, b.vy) || 1;
+  const nx = b.vx / speed;
+  const ny = b.vy / speed;
+  const px = -ny;
+  const py = nx;
+  const len = Math.max(18, b.radius * 5);
+  const pulse = (Math.sin(state.frameCount * 0.45) + 1) * 0.5;
+
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+
+  if (state.frameCount % 2 === 0) {
+    state.particles.push({
+      x: b.x - nx * b.radius * 2,
+      y: b.y - ny * b.radius * 2,
+      vx: -nx * 0.8 + (Math.random() - 0.5) * 0.8,
+      vy: -ny * 0.8 + (Math.random() - 0.5) * 0.8,
+      life: 18,
+      color: Math.random() > 0.35 ? "#ffd400" : "#ffffff",
+      size: 1.5 + Math.random() * 2.5,
+    });
+  }
+
+  const points = [
+    { x: b.x + nx * len * 0.45, y: b.y + ny * len * 0.45 },
+    {
+      x: b.x + nx * len * 0.12 + px * b.radius * 0.7,
+      y: b.y + ny * len * 0.12 + py * b.radius * 0.7,
+    },
+    {
+      x: b.x - nx * len * 0.15 - px * b.radius * 0.8,
+      y: b.y - ny * len * 0.15 - py * b.radius * 0.8,
+    },
+    { x: b.x - nx * len * 0.55, y: b.y - ny * len * 0.55 },
+  ];
+
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.shadowBlur = 22 + pulse * 12;
+  ctx.shadowColor = "#ffd400";
+  ctx.strokeStyle = "rgba(255, 174, 0, 0.45)";
+  ctx.lineWidth = b.radius * 2.6;
+  drawJaggedLine(ctx, points, 5);
+
+  ctx.strokeStyle = "rgba(255, 235, 80, 0.9)";
+  ctx.lineWidth = b.radius * 1.3;
+  drawJaggedLine(ctx, points, 4);
+
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = Math.max(1.5, b.radius * 0.45);
+  drawJaggedLine(ctx, points, 2);
+
+  for (let i = 0; i < 2; i++) {
+    const a = state.frameCount * 0.2 + i * Math.PI;
+    const sideLen = b.radius * (1.8 + pulse);
+    ctx.strokeStyle = `rgba(255, 255, 160, ${0.45 + pulse * 0.35})`;
+    ctx.lineWidth = 1.5;
+    drawJaggedLine(
+      ctx,
+      [
+        { x: b.x, y: b.y },
+        {
+          x: b.x + Math.cos(a) * sideLen,
+          y: b.y + Math.sin(a) * sideLen,
+        },
+      ],
+      4,
+    );
+  }
+
+  const grad = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.radius * 2.4);
+  grad.addColorStop(0, "#ffffff");
+  grad.addColorStop(0.35, "#fff36a");
+  grad.addColorStop(1, "rgba(255, 160, 0, 0)");
+  ctx.beginPath();
+  ctx.arc(b.x, b.y, b.radius * (1.25 + pulse * 0.25), 0, Math.PI * 2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  ctx.restore();
+}
+
 // ===== BULLETS (14+ styles) =====
 export function drawBullets(ctx) {
   const { bullets, player } = state;
@@ -71,6 +166,11 @@ export function drawBullets(ctx) {
       ctx.stroke();
 
       ctx.restore();
+      continue;
+    }
+
+    if (b.isPlayer && b.visualStyle === "speedster_lightning") {
+      drawSpeedsterBullet(ctx, b);
       continue;
     }
 

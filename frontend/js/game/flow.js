@@ -38,6 +38,8 @@ export function initGame(isNextLevel = false) {
     state.resources = saved.resources ||
       state.resources || { common: 0, rare: 0, legendary: 0 };
     state.bossFragments = saved.bossFragments || state.bossFragments || [];
+    state.maps = saved.maps || state.maps;
+    state.selectedMap = saved.selectedMap || state.selectedMap;
 
     if (saved.player) {
       state.player = saved.player;

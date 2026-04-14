@@ -4,6 +4,7 @@ import { state } from "../state.js";
 export function spawnBullet(sx, sy, tx, ty, isPlayer, style = 0, source = "enemy", damage = 1) {
     const angle = Math.atan2(ty - sy, tx - sx);
     const speed = isPlayer ? 10 : 4.5;
+    const ownerCharacter = isPlayer ? state.player?.characterId : null;
     state.bullets.push({
         x: sx,
         y: sy,
@@ -14,6 +15,8 @@ export function spawnBullet(sx, sy, tx, ty, isPlayer, style = 0, source = "enemy
         life: 240,
         style,
         damage,
+        ownerCharacter,
+        visualStyle: ownerCharacter === "speedster" ? "speedster_lightning" : null,
         bounces: isPlayer ? state.player.bounces || 0 : 0,
         pierce: isPlayer ? state.player.pierce || false : false,
     });

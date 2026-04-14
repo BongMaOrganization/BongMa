@@ -1,6 +1,24 @@
 import { state } from "../../state.js";
-import { FPS } from "../../config.js";
+import {
+  FPS,
+  BOSS_ATTACK_INTERVAL,
+  BOSS_MOVE_SPEED_MULTIPLIER,
+  BOSS_SPECIAL_CAST_TIME_MULTIPLIER,
+  BOSS_SPECIAL_COOLDOWN_BASE,
+  BOSS_SPECIAL_COOLDOWN_VARIANCE,
+} from "../../config.js";
 import { SPECIAL_SKILLS, ATTACK_MODES } from "./patterns.js";
+
+function getBossSkillCooldown() {
+  return (
+    BOSS_SPECIAL_COOLDOWN_BASE +
+    Math.random() * BOSS_SPECIAL_COOLDOWN_VARIANCE
+  );
+}
+
+function getBossCastTime(frames) {
+  return Math.ceil(frames * BOSS_SPECIAL_CAST_TIME_MULTIPLIER);
+}
 
 function getBossPhase(boss) {
   if (!boss || !boss.maxHp) return 0;
@@ -303,7 +321,10 @@ export function updateBoss(boss) {
       boss.skillCooldown = 0; // Sang Phase mới là xả chiêu luôn, không chờ đợi!
   }
 
-  const speed = boss.speed * (boss.phases[phaseIdx]?.speedMult || 1.0);
+  const speed =
+    boss.speed *
+    (boss.phases[phaseIdx]?.speedMult || 1.0) *
+    BOSS_MOVE_SPEED_MULTIPLIER;
   boss.x += (boss.moveTargetX - boss.x) * 0.02 * speed;
   boss.y += (boss.moveTargetY - boss.y) * 0.02 * speed;
 
@@ -317,14 +338,14 @@ export function updateBoss(boss) {
         SPECIAL_SKILLS[state.bossSpecial.name](boss);
       state.bossSpecial.name = "";
 
-      boss.skillCooldown = 400 + Math.random() * 100;
+      boss.skillCooldown = getBossSkillCooldown();
     }
     return;
   }
   
   // NẾU GIÁP BỊ PHÁ (chiêu bị hủy, bossSpecial.name === ""): Cần reset lại cooldown để boss bừng tỉnh
   if (boss.skillCooldown <= 0 && state.bossSpecial && state.bossSpecial.name === "") {
-     boss.skillCooldown = 400 + Math.random() * 100;
+     boss.skillCooldown = getBossSkillCooldown();
      state.bossSpecial = null; // Dọn dẹp sạch sẽ
   }
 
@@ -350,10 +371,11 @@ export function updateBoss(boss) {
       const isUlt =
         phase.ultimate === nextSkill ||
         (Array.isArray(phase.ultimate) && phase.ultimate.includes(nextSkill));
+      const castTime = getBossCastTime(isUlt ? 120 : 90);
       state.bossSpecial = {
         name: nextSkill,
-        timer: isUlt ? 120 : 90,
-        duration: isUlt ? 120 : 90,
+        timer: castTime,
+        duration: castTime,
         type: isUlt ? "ULTIMATE" : "SPECIAL",
         color: boss.color,
       };
@@ -365,7 +387,10 @@ export function updateBoss(boss) {
     }
   }
 
-  if (boss.attackTimer % 60 === 0 && state.delayedTasks.length < 5) {
+  if (
+    boss.attackTimer % BOSS_ATTACK_INTERVAL === 0 &&
+    state.delayedTasks.length < 5
+  ) {
     const modes = boss.phases[phaseIdx].attackModes || [0];
     const mode = modes[Math.floor(Math.random() * modes.length)];
     if (ATTACK_MODES[mode]) ATTACK_MODES[mode](boss);

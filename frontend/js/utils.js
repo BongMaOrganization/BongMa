@@ -50,6 +50,8 @@ export function saveGame(state, GHOST_DATA_KEY) {
       characterUpgrades: state.characterUpgrades,
       resources: state.resources || { common: 0, rare: 0, legendary: 0 },
       bossFragments: state.bossFragments || [],
+      maps: state.maps || [],
+      selectedMap: state.selectedMap || "fire",
     }),
   );
 }
@@ -72,6 +74,8 @@ export async function saveGameToServer(state, GHOST_DATA_KEY) {
           characterUpgrades: state.characterUpgrades,
           resources: state.resources || { common: 0, rare: 0, legendary: 0 },
           bossFragments: state.bossFragments || [],
+          maps: state.maps || [],
+          selectedMap: state.selectedMap || "fire",
         },
         coins: state.player?.coins || 0,
         ownedCharacters: state.ownedCharacters,
@@ -79,6 +83,8 @@ export async function saveGameToServer(state, GHOST_DATA_KEY) {
         characterUpgrades: state.characterUpgrades,
         resources: state.resources || { common: 0, rare: 0, legendary: 0 },
         bossFragments: state.bossFragments || [],
+        maps: state.maps || [],
+        selectedMap: state.selectedMap || "fire",
       }),
     });
   } catch (error) {

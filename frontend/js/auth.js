@@ -128,6 +128,8 @@ export async function syncRemoteState() {
                  rootData.resources || { common: 0, rare: 0, legendary: 0 },
       bossFragments: remote.bossFragments || 
                      rootData.bossFragments || [],
+      maps: remote.maps || rootData.maps || state.maps,
+      selectedMap: remote.selectedMap || rootData.selectedMap || state.selectedMap,
     };
 
     localStorage.setItem(GHOST_DATA_KEY, JSON.stringify(saved));
@@ -137,6 +139,8 @@ export async function syncRemoteState() {
     state.characterUpgrades = saved.characterUpgrades;
     state.resources = saved.resources;
     state.bossFragments = saved.bossFragments;
+    state.maps = saved.maps;
+    state.selectedMap = saved.selectedMap;
     
     // Fix coins sync
     const coins = remote.coins !== undefined ? remote.coins : (rootData.coins || 0);

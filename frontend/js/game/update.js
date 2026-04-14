@@ -1,5 +1,9 @@
 import { state } from "../state.js";
-import { FPS } from "../config.js";
+import {
+  FPS,
+  PLAYER_DASH_SPEED_MULTIPLIER,
+  PLAYER_MOVE_SPEED_MULTIPLIER,
+} from "../config.js";
 import { dist } from "../utils.js";
 import { UI, updateHealthUI } from "../ui.js";
 import { updateActiveCharacter } from "../characters/characterRegistry.js";
@@ -76,7 +80,8 @@ export function update(ctx, canvas, changeStateFn) {
   updateActiveCharacter(state, ctx, canvas, buffs, changeStateFn);
 
   // --- 4. Tính toán chỉ số cuối cùng & Di chuyển ---
-  let currentSpeed = player.speed * state.playerSpeedMultiplier;
+  let currentSpeed =
+    player.speed * state.playerSpeedMultiplier * PLAYER_MOVE_SPEED_MULTIPLIER;
 
   // Phạt tốc độ nếu đang sạc trụ Capture Point
   const activeCP = state.capturePoints?.find(
@@ -156,8 +161,8 @@ export function update(ctx, canvas, changeStateFn) {
   }
 
   if (player.dashTimeLeft > 0) {
-    player.x += player.dashDx * (currentSpeed * 3);
-    player.y += player.dashDy * (currentSpeed * 3);
+    player.x += player.dashDx * (currentSpeed * PLAYER_DASH_SPEED_MULTIPLIER);
+    player.y += player.dashDy * (currentSpeed * PLAYER_DASH_SPEED_MULTIPLIER);
     if (player.dashEffect) player.dashEffect();
     player.dashTimeLeft--;
     player.isInvincible = player.dashTimeLeft > 2;

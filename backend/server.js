@@ -4,6 +4,7 @@ import cors from "cors";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import "dotenv/config";
+import { User } from "./models/User.js";
 
 const app = express();
 app.use(cors());
@@ -11,26 +12,6 @@ app.use(express.json());
 
 await mongoose.connect(process.env.MONGODB_URI);
 console.log("Đã kết nối thành công!");
-
-const UserSchema = new mongoose.Schema(
-  {
-    username: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    coins: { type: Number, default: 0 },
-    selectedCharacter: { type: String, default: "speedster" },
-    ownedCharacters: { type: [String], default: ["speedster"] },
-    characterUpgrades: { type: mongoose.Schema.Types.Mixed, default: {} },
-    resources: {
-      type: mongoose.Schema.Types.Mixed,
-      default: { common: 0, rare: 0, legendary: 0 },
-    },
-    bossFragments: { type: [String], default: [] },
-    gameState: { type: mongoose.Schema.Types.Mixed, default: {} },
-  },
-  { timestamps: true },
-);
-
-const User = mongoose.model("User", UserSchema);
 
 // Middleware to verify JWT
 const authenticateToken = (req, res, next) => {
@@ -85,6 +66,8 @@ app.post("/api/save", authenticateToken, async (req, res) => {
     characterUpgrades,
     resources,
     bossFragments,
+    selectedMap,
+    maps,
   } = req.body;
   const user = await User.findByIdAndUpdate(
     req.user.id,
@@ -96,8 +79,10 @@ app.post("/api/save", authenticateToken, async (req, res) => {
       characterUpgrades,
       resources: resources || { common: 0, rare: 0, legendary: 0 },
       bossFragments: bossFragments || [],
+      selectedMap: selectedMap || gameState?.selectedMap || "fire",
+      maps: maps || gameState?.maps || [{ id: "fire", unlocked: true }],
     },
-    { new: true },
+    { returnDocument: "after" },
   );
   res.json(user);
 });

@@ -1,4 +1,5 @@
 import { state } from "../../state.js";
+import { drawSpeedsterPlayer } from "../../characters/common/speedster.js";
 
 // ===== SKILL RANGE INDICATORS =====
 export function drawSkillIndicators(ctx) {
@@ -51,11 +52,17 @@ export function drawPlayer(ctx) {
   const { player, activeBuffs } = state;
   const buffs = activeBuffs || { q: 0, e: 0, r: 0 };
   const char = player?.characterId;
+  if (!player) return;
 
   let isInvulnSkill =
     (buffs.e > 0 &&
       (char === "tank" || char === "ghost" || char === "reaper")) ||
     (buffs.q > 0 && (char === "warden" || char === "frost"));
+
+  if (char === "speedster") {
+    drawSpeedsterPlayer(ctx, state, buffs, isInvulnSkill);
+    return;
+  }
 
   if (player.dashTimeLeft > 0 || isInvulnSkill) {
     ctx.beginPath();
