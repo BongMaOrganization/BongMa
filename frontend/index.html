@@ -113,42 +113,51 @@
 
       <!-- UI Screens -->
       <div id="screen-main" class="overlay">
-        <div class="panel">
-          <h2 id="main-title" class="title-main text-cyan">BẮT ĐẦU VÒNG LẶP</h2>
-          <p id="main-desc" class="desc">
-            Sinh tồn qua những ảo ảnh của chính mình. Cứ 5 màn sẽ có Boss. Nâng
-            cấp khi thanh XP đầy.
-          </p>
-          <button id="btn-start">VÀO TRẬN</button>
-          <br /><br />
-          <button id="btn-select-character">CHỌN NHÂN VẬT</button>
-          <button id="btn-shop">CỬA HÀNG</button>
-          <button id="btn-map-select">🗺️ CHỌN BẢN ĐỒ</button>
-          <button id="btn-boss-arena" style="background: #ff4444; color: #fff">
-            ⚔️ BOSS ARENA
-          </button>
-          <br /><br />
-          <button
-            id="btn-logout"
-            style="
-              background: #ff4444;
-              color: #fff;
-              font-size: 12px;
-              padding: 8px;
-            "
-          >
-            Đăng Xuất
+        <div class="panel main-menu-panel">
+          <div class="menu-header">
+            <h2 id="main-title" class="title-main text-cyan glitch-text" data-text="TRẠM KHÔNG GIAN">TRẠM KHÔNG GIAN</h2>
+            <p id="main-desc" class="desc">
+              Hành trình đối mặt với những ảo ảnh của chính bạn. Hãy lựa chọn điểm đến tiếp theo.
+            </p>
+          </div>
+
+          <div class="menu-btn-group">
+            <button id="btn-map-select" class="menu-btn-epic">
+              <div class="btn-content">
+                <span class="btn-icon">🗺️</span>
+                <span class="btn-text">CHỌN BẢN ĐỒ</span>
+                <span class="btn-subtext">Khám phá và sinh tồn các thế giới</span>
+              </div>
+            </button>
+            <button id="btn-boss-arena" class="menu-btn-epic btn-danger">
+              <div class="btn-content">
+                <span class="btn-icon">⚔️</span>
+                <span class="btn-text">BOSS ARENA</span>
+                <span class="btn-subtext">Khiêu chiến thu thập mảnh ghép Mythical</span>
+              </div>
+            </button>
+            
+            <div class="menu-btn-row">
+              <button id="btn-select-character" class="menu-btn-utility">👥 NHÂN VẬT</button>
+              <button id="btn-shop" class="menu-btn-utility">🛒 CỬA HÀNG</button>
+            </div>
+          </div>
+          
+          <button id="btn-start" style="display: none; width: 100%; margin-top: 15px;" class="menu-btn-epic btn-restart">LÀM LẠI TỪ ĐẦU</button>
+
+          <button id="btn-logout" class="menu-btn-logout">
+            🚪 Đăng Xuất
           </button>
         </div>
       </div>
       <div id="screen-map-select" class="overlay hidden">
-        <div class="panel">
-          <h2 class="title-main text-cyan">CHỌN BẢN ĐỒ</h2>
-          <p class="desc">Đánh bại boss để mở khóa map mới</p>
+        <div class="panel" style="max-width: 800px;">
+          <h2 class="title-main text-cyan" style="text-shadow: 0 0 15px cyan;">CHỌN BẢN ĐỒ</h2>
+          <p class="desc">Đánh bại boss để mở khóa map mới. Chọn chiến trường của bạn.</p>
 
-          <div id="map-list"></div>
+          <div id="map-list" class="premium-card-container"></div>
 
-          <button id="btn-map-back">Quay Lại</button>
+          <button id="btn-map-back" class="menu-btn-utility" style="margin-top: 25px; padding: 10px 40px;">Quay Lại</button>
         </div>
       </div>
       <div id="screen-upgrade" class="overlay hidden">
@@ -250,14 +259,13 @@
       </div>
     </div>
     <div id="screen-boss-arena" class="overlay hidden">
-      <div class="panel">
-        <h2 class="title-main" style="color: #ff4444">⚔️ BOSS ARENA</h2>
+      <div class="panel" style="max-width: 900px;">
+        <h2 class="title-main" style="color: #ff4444; text-shadow: 0 0 15px #ff4444;">⚔️ BOSS ARENA</h2>
         <p class="desc">
-          Chọn boss để đấu! Hạ gục boss để nhận phần thưởng và nguyên liệu ghép
-          nhân vật MYTHICAL.
+          Đấu trường sinh tử vô tận. Hạ gục Boss để nhận mảnh ghép Mythical.
         </p>
-        <div class="card-container" id="boss-arena-cards"></div>
-        <button id="btn-arena-back">Quay Lại</button>
+        <div class="premium-card-container" id="boss-arena-cards"></div>
+        <button id="btn-arena-back" class="menu-btn-utility" style="margin-top: 25px; padding: 10px 40px;">Quay Lại</button>
       </div>
     </div>
     <div id="fragment-drop-overlay" class="overlay hidden">

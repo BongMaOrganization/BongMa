@@ -326,24 +326,32 @@ export function renderMapSelect(onSelect) {
   container.innerHTML = "";
 
   state.maps.forEach((map) => {
-    const btn = document.createElement("button");
+    const btn = document.createElement("div");
+    btn.className = "premium-card map-select-card";
 
-    btn.innerText = map.id.toUpperCase();
-    btn.style.margin = "8px";
-
-    if (!map.unlocked) {
-      btn.disabled = true;
-      btn.innerText += " 🔒";
+    if (map.id === "omni") {
+      btn.style.setProperty("--theme-color", "#ffd700");
+    } else if (map.id === "void") {
+      btn.style.setProperty("--theme-color", "#aa00ff");
+    } else {
+      btn.style.setProperty("--theme-color", "#00ffff");
     }
 
-    btn.onclick = () => {
-      state.selectedMap = map.id;
+    btn.innerHTML = `
+      <div class="premium-card-icon">🌍</div>
+      <div class="premium-card-title">${map.id}</div>
+      <div class="premium-card-subtitle">${map.unlocked ? 'Tín hiệu khả dụng' : 'Chưa thu thập đủ dữ liệu 🔒'}</div>
+    `;
 
-      // 🔥 vào game luôn
-      document.getElementById("screen-map-select").classList.add("hidden");
-
-      onSelect(); // startGame()
-    };
+    if (!map.unlocked) {
+      btn.classList.add("locked");
+    } else {
+      btn.onclick = () => {
+        state.selectedMap = map.id;
+        document.getElementById("screen-map-select").classList.add("hidden");
+        onSelect(); 
+      };
+    }
 
     container.appendChild(btn);
   });

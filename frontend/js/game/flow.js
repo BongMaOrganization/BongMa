@@ -385,12 +385,13 @@ export function nextStage(gameLoopFn) {
   }
 }
 
-function tryBossFragmentDrop() {
-  if (Math.random() >= BOSS_FRAGMENT_DROP_RATE) return;
+function tryBossFragmentDrop(isArenaMode = false) {
+  let droppedFragment = null;
+  if (Math.random() >= BOSS_FRAGMENT_DROP_RATE) return droppedFragment;
 
   // Determine which boss was killed to drop the correct fragment
-  const bossType = state.currentBossType || state.boss?.bossType;
-  if (!bossType) return;
+  const bossType = state.currentBossType || state.boss?.bossType || state.bossArenaType;
+  if (!bossType) return droppedFragment;
 
   if (bossType === "omni") {
     if (Math.random() < 0.2) {
@@ -405,28 +406,30 @@ function tryBossFragmentDrop() {
 
       if (gotNew) {
         state.lastDroppedFragment = { icon: "🌟", name: "TRỌN BỘ 5 NGUYÊN TỐ" };
+        droppedFragment = state.lastDroppedFragment;
         playSound("fragment");
         if (typeof UI !== "undefined" && UI.showFragmentToast) {
           UI.showFragmentToast(state.lastDroppedFragment);
         }
         saveGame(state, GHOST_DATA_KEY);
         persistState();
-        showFragmentDrop(state.lastDroppedFragment);
+        if (!isArenaMode) showFragmentDrop(state.lastDroppedFragment);
       }
     }
-    return; // Nếu xịt 20% thì về tay không
+    return droppedFragment; // Nếu xịt 20% thì về tay không
   }
 
   // Find the fragment that corresponds to this boss type
   const fragment = BOSS_FRAGMENTS.find((f) => f.bossType === bossType);
-  if (!fragment) return;
+  if (!fragment) return droppedFragment;
 
   const owned = state.bossFragments || [];
   // Only drop if player doesn't already have this fragment
-  if (owned.includes(fragment.id)) return;
+  if (owned.includes(fragment.id)) return droppedFragment;
 
   state.bossFragments.push(fragment.id);
   state.lastDroppedFragment = fragment;
+  droppedFragment = fragment;
   playSound("fragment");
 
   // Also show a toast if possible
@@ -438,7 +441,9 @@ function tryBossFragmentDrop() {
   persistState();
 
   // Show drop notification
-  showFragmentDrop(fragment);
+  if (!isArenaMode) showFragmentDrop(fragment);
+
+  return droppedFragment;
 }
 
 function showFragmentDrop(fragment) {
@@ -484,14 +489,14 @@ export async function openBossArena(changeStateFn, gameLoopFn) {
     const owned = (state.bossFragments || []).includes(frag?.id);
 
     const card = document.createElement("div");
-    card.className = "boss-arena-card";
-    card.style.borderColor = cfg.color;
+    card.className = "premium-card boss-arena-card";
+    card.style.setProperty("--theme-color", cfg.color);
     card.innerHTML = `
-      <div class="boss-arena-icon">${cfg.icon || "👹"}</div>
-      <div class="boss-arena-name" style="color:${cfg.color}">${cfg.name}</div>
-      <div class="boss-arena-drop">${frag ? `${frag.icon} ${frag.name} ${owned ? "✅" : ""}` : ""}</div>
-      <div class="boss-arena-reward">💰 ${reward.coins} | 🎟️ ${Math.round(reward.rareTicket * 100)}%</div>
-      <div style="font-size:10px;color:#666;margin-top:4px;">${cfg.phaseCount || 2} Phase | HP: ${cfg.hp}</div>
+      <div class="premium-card-icon" style="color:${cfg.color};text-shadow:0 0 15px ${cfg.color}">${cfg.icon || "👹"}</div>
+      <div class="premium-card-title">${cfg.name}</div>
+      <div class="premium-card-subtitle">${cfg.phaseCount || 2} Phase | HP: ${cfg.hp}</div>
+      <div class="premium-card-drop">${frag ? `${frag.icon} ${frag.name} ${owned ? "✅" : "❌"}` : ""}</div>
+      <div class="premium-card-reward">💰 ${reward.coins} | 🎟️ ${Math.round(reward.rareTicket * 100)}%</div>
     `;
 
     card.onclick = () => {
@@ -550,6 +555,9 @@ export function handleBossArenaReward(gameLoopFn) {
     gotTicket = true;
   }
 
+  checkOmniBossUnlock(); // <--- THÊM DÒNG NÀY VÀO ĐÂY
+  const droppedFragment = tryBossFragmentDrop(true);
+
   // Cập nhật UI Thưởng
   document.getElementById("arena-coins-reward").innerText =
     `💰 +${reward.coins} Tiền`;
@@ -561,8 +569,8 @@ export function handleBossArenaReward(gameLoopFn) {
   const fragInfo = document.getElementById("arena-fragment-reward") || {
     innerText: "",
   };
-  if (state.lastDroppedFragment) {
-    fragInfo.innerText = `✨ NHẬN ĐƯỢC: ${state.lastDroppedFragment.icon} ${state.lastDroppedFragment.name}`;
+  if (droppedFragment) {
+    fragInfo.innerText = `✨ NHẬN ĐƯỢC: ${droppedFragment.icon} ${droppedFragment.name}`;
     fragInfo.style.color = "#00ffff";
   } else {
     fragInfo.innerText = "";
@@ -579,9 +587,6 @@ export function handleBossArenaReward(gameLoopFn) {
     persistState();
     window.location.reload();
   };
-
-  checkOmniBossUnlock(); // <--- THÊM DÒNG NÀY VÀO ĐÂY
-  tryBossFragmentDrop();
 }
 
 /**

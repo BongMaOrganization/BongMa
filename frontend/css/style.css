@@ -464,6 +464,187 @@ button:disabled {
   transform: none;
 }
 
+/* ===============================
+   NEW MAIN MENU STYLES
+   =============================== */
+.main-menu-panel {
+  max-width: 600px;
+  background: rgba(10, 10, 15, 0.95);
+  border: 1px solid rgba(0, 255, 204, 0.3);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(0, 255, 204, 0.1) inset;
+  backdrop-filter: blur(10px);
+}
+
+.menu-header {
+  margin-bottom: 30px;
+}
+
+.glitch-text {
+  position: relative;
+  display: inline-block;
+  font-size: 36px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 0 15px rgba(0, 255, 204, 0.8);
+}
+
+.menu-btn-group {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.menu-btn-row {
+  display: flex;
+  gap: 15px;
+  margin-top: 5px;
+}
+
+.menu-btn-epic {
+  position: relative;
+  width: 100%;
+  padding: 15px 20px;
+  background: linear-gradient(135deg, rgba(0, 255, 204, 0.1) 0%, rgba(0, 170, 255, 0.1) 100%);
+  border: 1px solid rgba(0, 255, 204, 0.4);
+  border-radius: 8px;
+  color: #fff;
+  text-transform: none;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+}
+
+.menu-btn-epic::before {
+  content: '';
+  position: absolute;
+  top: 0; left: -100%;
+  width: 50%; height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+  transition: left 0.5s ease;
+  transform: skewX(-20deg);
+}
+
+.menu-btn-epic:hover {
+  transform: translateY(-3px) scale(1.02);
+  background: linear-gradient(135deg, rgba(0, 255, 204, 0.2) 0%, rgba(0, 170, 255, 0.3) 100%);
+  border-color: #00ffcc;
+  box-shadow: 0 10px 25px rgba(0, 255, 204, 0.4), 0 0 15px rgba(0, 255, 204, 0.5) inset;
+}
+
+.menu-btn-epic:hover::before {
+  left: 150%;
+}
+
+.menu-btn-epic .btn-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-left: 10px;
+}
+
+.menu-btn-epic .btn-icon {
+  position: absolute;
+  right: 20px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 32px;
+  opacity: 0.7;
+  transition: 0.3s ease;
+}
+
+.menu-btn-epic:hover .btn-icon {
+  transform: translateY(-50%) rotate(10deg) scale(1.2);
+  opacity: 1;
+}
+
+.menu-btn-epic .btn-text {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #00ffcc;
+  margin-bottom: 4px;
+}
+
+.menu-btn-epic .btn-subtext {
+  font-size: 13px;
+  color: #aaa;
+  font-weight: 500;
+}
+
+.menu-btn-epic.btn-danger {
+  background: linear-gradient(135deg, rgba(255, 68, 68, 0.1) 0%, rgba(255, 0, 85, 0.1) 100%);
+  border-color: rgba(255, 68, 68, 0.4);
+}
+
+.menu-btn-epic.btn-danger .btn-text {
+  color: #ff4444;
+}
+
+.menu-btn-epic.btn-danger:hover {
+  background: linear-gradient(135deg, rgba(255, 68, 68, 0.2) 0%, rgba(255, 0, 85, 0.3) 100%);
+  border-color: #ff4444;
+  box-shadow: 0 10px 25px rgba(255, 68, 68, 0.4), 0 0 15px rgba(255, 68, 68, 0.5) inset;
+}
+
+.menu-btn-utility {
+  flex: 1;
+  background: rgba(30, 30, 40, 0.8);
+  border: 1px solid #444;
+  color: #fff;
+  padding: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  border-radius: 6px;
+  margin: 0;
+}
+
+.menu-btn-utility:hover {
+  background: rgba(40, 40, 55, 0.9);
+  border-color: #00aaff;
+  color: #00aaff;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 170, 255, 0.3);
+}
+
+.menu-btn-logout {
+  background: transparent;
+  border: 1px solid #ff4444;
+  color: #ff4444;
+  padding: 8px 20px;
+  font-size: 13px;
+  margin-top: 25px;
+  border-radius: 4px;
+  transition: 0.2s;
+  width: auto;
+}
+
+.menu-btn-logout:hover {
+  background: rgba(255, 68, 68, 0.15);
+  color: #ff6666;
+  border-color: #ff6666;
+  box-shadow: 0 0 10px rgba(255, 68, 68, 0.3);
+}
+
+.btn-restart {
+  background: transparent;
+  border: 2px solid #00ffcc;
+  justify-content: center;
+  margin-top: 15px;
+  padding: 12px;
+  font-size: 18px;
+  font-weight: 900;
+  color: #00ffcc;
+}
+
+/* ===============================
+   END MAIN MENU STYLES
+   =============================== */
+
 .auth-input {
   width: 100%;
   padding: 12px 15px;
@@ -1193,4 +1374,129 @@ button:disabled {
 
 .fragment-check {
   font-size: 12px;
+}
+/* ===============================
+   PREMIUM CARDS (MAP & BOSS)
+   =============================== */
+
+.premium-card-container {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+  padding: 10px;
+}
+
+.premium-card {
+  position: relative;
+  width: 250px;
+  padding: 20px 15px;
+  background: rgba(15, 15, 20, 0.9) !important;
+  border-radius: 12px;
+  border: 2px solid var(--theme-color, #444);
+  cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 0 15px rgba(0,0,0,0.8), inset 0 0 15px transparent;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.premium-card::before {
+  content: '';
+  position: absolute;
+  top: -50%; left: -50%;
+  width: 200%; height: 200%;
+  background: conic-gradient(transparent, var(--theme-color, #fff), transparent 30%);
+  animation: rotateAura 4s linear infinite;
+  opacity: 0.2;
+  z-index: 0;
+  border-radius: 50%;
+}
+
+.premium-card::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  background: inherit;
+  border-radius: 10px;
+  z-index: 0;
+}
+
+@keyframes rotateAura {
+  100% { transform: rotate(360deg); }
+}
+
+.premium-card:hover {
+  transform: translateY(-10px) scale(1.05);
+  box-shadow: 0 15px 30px rgba(0,0,0,0.9), inset 0 0 25px var(--theme-color, transparent), 0 0 30px var(--theme-color, transparent);
+}
+
+.premium-card:hover::before {
+  opacity: 0.8;
+  animation-duration: 2s;
+}
+
+.premium-card > div {
+  position: relative;
+  z-index: 1;
+}
+
+.premium-card-icon {
+  font-size: 48px;
+  margin-bottom: 15px;
+  filter: drop-shadow(0 0 10px var(--theme-color, #fff));
+  transition: 0.3s;
+}
+
+.premium-card:hover .premium-card-icon {
+  transform: scale(1.2);
+}
+
+.premium-card-title {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--theme-color, #fff);
+  margin-bottom: 8px;
+}
+
+.premium-card-subtitle {
+  font-size: 13px;
+  color: #bbb;
+  margin-bottom: 10px;
+}
+
+.premium-card-drop {
+  margin-top: 10px;
+  font-size: 14px;
+  color: var(--theme-color, #fff);
+  font-weight: bold;
+  background: rgba(0,0,0,0.5);
+  padding: 5px 10px;
+  border-radius: 4px;
+}
+
+.premium-card-reward {
+  margin-top: 10px;
+  font-size: 14px;
+  color: #ffd700;
+}
+
+.premium-card.locked {
+  filter: grayscale(100%);
+  opacity: 0.6;
+  cursor: not-allowed;
+  --theme-color: #555 !important;
+}
+
+.premium-card.locked:hover {
+  transform: none;
+  box-shadow: none;
+}
+.premium-card.locked::before {
+  display: none;
 }
