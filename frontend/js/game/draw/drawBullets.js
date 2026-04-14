@@ -95,6 +95,91 @@ function drawSpeedsterBullet(ctx, b) {
   ctx.restore();
 }
 
+function drawGhostBullet(ctx, b) {
+  const speed = Math.hypot(b.vx, b.vy) || 1;
+  const nx = b.vx / speed;
+  const ny = b.vy / speed;
+  const px = -ny;
+  const py = nx;
+  const len = Math.max(16, b.radius * 5.5);
+  const pulse = (Math.sin(state.frameCount * 0.24 + b.x * 0.01) + 1) * 0.5;
+
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  ctx.translate(b.x, b.y);
+  ctx.rotate(Math.atan2(b.vy, b.vx));
+
+  if (state.frameCount % 3 === 0) {
+    state.particles.push({
+      x: b.x - nx * b.radius * 2 + px * (Math.random() - 0.5) * b.radius,
+      y: b.y - ny * b.radius * 2 + py * (Math.random() - 0.5) * b.radius,
+      vx: -nx * 0.45 + (Math.random() - 0.5) * 0.45,
+      vy: -ny * 0.45 - Math.random() * 0.35,
+      life: 24,
+      color: Math.random() > 0.35 ? "#d8d8ff" : "#9f7cff",
+      size: 2 + Math.random() * 3,
+    });
+  }
+
+  const aura = ctx.createRadialGradient(0, 0, 0, 0, 0, len * 0.9);
+  aura.addColorStop(0, "rgba(255, 255, 255, 0.8)");
+  aura.addColorStop(0.38, "rgba(185, 165, 255, 0.36)");
+  aura.addColorStop(1, "rgba(50, 20, 110, 0)");
+  ctx.beginPath();
+  ctx.ellipse(0, 0, len * 0.65, b.radius * (2.2 + pulse * 0.5), 0, 0, Math.PI * 2);
+  ctx.fillStyle = aura;
+  ctx.shadowBlur = 24 + pulse * 12;
+  ctx.shadowColor = "#b8a8ff";
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(len * 0.48, 0);
+  ctx.bezierCurveTo(
+    len * 0.08,
+    -b.radius * (2.2 + pulse),
+    -len * 0.36,
+    -b.radius * (1.2 + pulse * 0.5),
+    -len * 0.62,
+    0,
+  );
+  ctx.bezierCurveTo(
+    -len * 0.36,
+    b.radius * (1.2 + pulse * 0.5),
+    len * 0.08,
+    b.radius * (2.2 + pulse),
+    len * 0.48,
+    0,
+  );
+  ctx.closePath();
+  ctx.fillStyle = "rgba(170, 145, 255, 0.58)";
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.ellipse(len * 0.12, 0, b.radius * (1.1 + pulse * 0.25), b.radius * 0.7, 0, 0, Math.PI * 2);
+  ctx.fillStyle = "#f7fbff";
+  ctx.shadowBlur = 18;
+  ctx.shadowColor = "#ffffff";
+  ctx.fill();
+
+  ctx.lineCap = "round";
+  for (let i = 0; i < 3; i++) {
+    const y = (i - 1) * b.radius * 0.85;
+    const wave = Math.sin(state.frameCount * 0.18 + i) * b.radius * 0.8;
+    ctx.beginPath();
+    ctx.moveTo(-len * 0.1, y);
+    ctx.quadraticCurveTo(-len * 0.45, y + wave, -len * 0.86, y * 0.3);
+    ctx.strokeStyle = i === 1
+      ? "rgba(245, 250, 255, 0.62)"
+      : "rgba(155, 125, 255, 0.44)";
+    ctx.lineWidth = i === 1 ? 2 : 1.4;
+    ctx.shadowBlur = 14;
+    ctx.shadowColor = "#9f7cff";
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
 // ===== BULLETS (14+ styles) =====
 export function drawBullets(ctx) {
   const { bullets, player } = state;
@@ -171,6 +256,11 @@ export function drawBullets(ctx) {
 
     if (b.isPlayer && b.visualStyle === "speedster_lightning") {
       drawSpeedsterBullet(ctx, b);
+      continue;
+    }
+
+    if (b.isPlayer && b.visualStyle === "ghost_wisp") {
+      drawGhostBullet(ctx, b);
       continue;
     }
 
