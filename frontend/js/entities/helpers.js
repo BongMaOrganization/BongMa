@@ -16,7 +16,12 @@ export function spawnBullet(sx, sy, tx, ty, isPlayer, style = 0, source = "enemy
         style,
         damage,
         ownerCharacter,
-        visualStyle: ownerCharacter === "speedster" ? "speedster_lightning" : null,
+        visualStyle:
+            ownerCharacter === "speedster"
+                ? "speedster_lightning"
+                : ownerCharacter === "ghost"
+                  ? "ghost_wisp"
+                  : null,
         bounces: isPlayer ? state.player.bounces || 0 : 0,
         pierce: isPlayer ? state.player.pierce || false : false,
     });

@@ -1,4 +1,5 @@
 import { state } from "../../state.js";
+import { drawGhostPlayer } from "../../characters/common/ghost.js";
 import { drawSpeedsterPlayer } from "../../characters/common/speedster.js";
 
 // ===== SKILL RANGE INDICATORS =====
@@ -61,6 +62,11 @@ export function drawPlayer(ctx) {
 
   if (char === "speedster") {
     drawSpeedsterPlayer(ctx, state, buffs, isInvulnSkill);
+    return;
+  }
+
+  if (char === "ghost") {
+    drawGhostPlayer(ctx, state, buffs, isInvulnSkill);
     return;
   }
 
