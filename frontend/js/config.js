@@ -1,6 +1,13 @@
 export const FPS = 60;
 export const GHOST_DATA_KEY = "AsynchronousEchoes_V4";
 export const BOSS_FRAGMENT_DROP_RATE = 1; // 100% chance
+export const PLAYER_MOVE_SPEED_MULTIPLIER = 0.85;
+export const PLAYER_DASH_SPEED_MULTIPLIER = 2.5;
+export const BOSS_MOVE_SPEED_MULTIPLIER = 0.75;
+export const BOSS_ATTACK_INTERVAL = 75;
+export const BOSS_SPECIAL_CAST_TIME_MULTIPLIER = 1.15;
+export const BOSS_SPECIAL_COOLDOWN_BASE = 520;
+export const BOSS_SPECIAL_COOLDOWN_VARIANCE = 140;
 
 export const BOSS_FRAGMENTS = [
   { id: "frag_fire", name: "Mảnh Lửa", icon: "🔥", desc: "Mảnh nguyên liệu từ Fire Lord", bossType: "fire" },
