@@ -587,6 +587,105 @@ function drawBrawlerBullet(ctx, b) {
   ctx.restore();
 }
 
+function drawMedicBullet(ctx, b) {
+  const speed = Math.hypot(b.vx, b.vy) || 1;
+  const nx = b.vx / speed;
+  const ny = b.vy / speed;
+  const px = -ny;
+  const py = nx;
+  const angle = Math.atan2(b.vy, b.vx);
+  const pulse = (Math.sin(state.frameCount * 0.26 + b.y * 0.01) + 1) * 0.5;
+  const R = Math.max(7, b.radius * 2.1);
+
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+
+  if (state.frameCount % 2 === 0) {
+    state.particles.push({
+      x: b.x - nx * R * 1.2 + px * (Math.random() - 0.5) * R,
+      y: b.y - ny * R * 1.2 + py * (Math.random() - 0.5) * R,
+      vx: -nx * 0.55 + (Math.random() - 0.5) * 0.35,
+      vy: -ny * 0.55 + (Math.random() - 0.5) * 0.35,
+      life: 18,
+      color: Math.random() > 0.25 ? "#00ffcc" : "#00ffaa",
+      size: 1.8 + Math.random() * 2.4,
+    });
+  }
+
+  const tail = ctx.createLinearGradient(
+    b.x - nx * R * 3.4,
+    b.y - ny * R * 3.4,
+    b.x + nx * R,
+    b.y + ny * R,
+  );
+  tail.addColorStop(0, "rgba(0, 255, 204, 0)");
+  tail.addColorStop(0.45, "rgba(0, 255, 170, 0.28)");
+  tail.addColorStop(1, "rgba(255, 255, 255, 0.72)");
+  ctx.beginPath();
+  ctx.moveTo(b.x + nx * R * 1.1, b.y + ny * R * 1.1);
+  ctx.lineTo(b.x - nx * R * 3.0 + px * R * 0.6, b.y - ny * R * 3.0 + py * R * 0.6);
+  ctx.lineTo(b.x - nx * R * 2.55 - px * R * 0.6, b.y - ny * R * 2.55 - py * R * 0.6);
+  ctx.closePath();
+  ctx.fillStyle = tail;
+  ctx.shadowBlur = 18;
+  ctx.shadowColor = "#00ffcc";
+  ctx.fill();
+
+  ctx.translate(b.x, b.y);
+  ctx.rotate(angle);
+
+  const aura = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 2.1);
+  aura.addColorStop(0, "rgba(255, 255, 255, 0.92)");
+  aura.addColorStop(0.34, "rgba(0, 255, 204, 0.52)");
+  aura.addColorStop(1, "rgba(0, 55, 55, 0)");
+  ctx.beginPath();
+  ctx.ellipse(0, 0, R * (1.55 + pulse * 0.18), R * (1.05 + pulse * 0.12), 0, 0, Math.PI * 2);
+  ctx.fillStyle = aura;
+  ctx.shadowBlur = 24;
+  ctx.shadowColor = "#00ffaa";
+  ctx.fill();
+
+  ctx.save();
+  ctx.rotate(state.frameCount * 0.08);
+  ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
+  ctx.strokeStyle = "rgba(0, 255, 204, 0.9)";
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.roundRect(-R * 0.78, -R * 0.42, R * 1.56, R * 0.84, R * 0.26);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.roundRect(R * 0.12, -R * 0.35, R * 0.72, R * 0.7, R * 0.22);
+  ctx.fillStyle = "rgba(0, 255, 204, 0.42)";
+  ctx.fill();
+
+  ctx.restore();
+
+  ctx.save();
+  ctx.rotate(-state.frameCount * 0.1);
+  ctx.strokeStyle = "rgba(255, 51, 85, 0.9)";
+  ctx.lineWidth = 2.6;
+  ctx.shadowBlur = 16;
+  ctx.shadowColor = "#ff3355";
+  ctx.beginPath();
+  ctx.moveTo(-R * 0.22, 0);
+  ctx.lineTo(R * 0.22, 0);
+  ctx.moveTo(0, -R * 0.22);
+  ctx.lineTo(0, R * 0.22);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.beginPath();
+  ctx.arc(-R * 0.18, -R * 0.08, R * 0.26, 0, Math.PI * 2);
+  ctx.fillStyle = "#ffffff";
+  ctx.shadowBlur = 18;
+  ctx.shadowColor = "#ffffff";
+  ctx.fill();
+
+  ctx.restore();
+}
+
 // ===== BULLETS (14+ styles) =====
 export function drawBullets(ctx) {
   const { bullets, player } = state;
@@ -688,6 +787,11 @@ export function drawBullets(ctx) {
 
     if (b.isPlayer && b.visualStyle === "brawler_impact") {
       drawBrawlerBullet(ctx, b);
+      continue;
+    }
+
+    if (b.isPlayer && b.visualStyle === "medic_serum") {
+      drawMedicBullet(ctx, b);
       continue;
     }
 
