@@ -29,6 +29,8 @@ export function spawnBullet(sx, sy, tx, ty, isPlayer, style = 0, source = "enemy
                         ? "druid_seed"
                         : ownerCharacter === "brawler"
                           ? "brawler_impact"
+                          : ownerCharacter === "medic"
+                            ? "medic_serum"
                   : null,
         bounces: isPlayer ? state.player.bounces || 0 : 0,
         pierce: isPlayer ? state.player.pierce || false : false,
