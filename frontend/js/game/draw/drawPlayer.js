@@ -5,6 +5,7 @@ import { drawEngineerPlayer } from "../../characters/common/engineer.js";
 import { drawGhostPlayer } from "../../characters/common/ghost.js";
 import { drawMedicPlayer } from "../../characters/common/medic.js";
 import { drawSpeedsterPlayer } from "../../characters/common/speedster.js";
+import { drawTankPlayer } from "../../characters/rare/tank.js";
 import { drawWardenPlayer } from "../../characters/common/warden.js";
 
 // ===== SKILL RANGE INDICATORS =====
@@ -169,6 +170,11 @@ export function drawPlayer(ctx) {
 
   if (char === "medic") {
     drawMedicPlayer(ctx, state, buffs, isInvulnSkill);
+    return;
+  }
+
+  if (char === "tank") {
+    drawTankPlayer(ctx, state, buffs, isInvulnSkill);
     return;
   }
 

@@ -31,6 +31,8 @@ export function spawnBullet(sx, sy, tx, ty, isPlayer, style = 0, source = "enemy
                           ? "brawler_impact"
                           : ownerCharacter === "medic"
                             ? "medic_serum"
+                            : ownerCharacter === "tank"
+                              ? "tank_fortress"
                   : null,
         bounces: isPlayer ? state.player.bounces || 0 : 0,
         pierce: isPlayer ? state.player.pierce || false : false,

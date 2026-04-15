@@ -686,6 +686,103 @@ function drawMedicBullet(ctx, b) {
   ctx.restore();
 }
 
+function drawTankBullet(ctx, b) {
+  const speed = Math.hypot(b.vx, b.vy) || 1;
+  const nx = b.vx / speed;
+  const ny = b.vy / speed;
+  const px = -ny;
+  const py = nx;
+  const angle = Math.atan2(b.vy, b.vx);
+  const pulse = (Math.sin(state.frameCount * 0.22 + b.x * 0.01) + 1) * 0.5;
+  const R = Math.max(8, b.radius * 2.25);
+
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+
+  if (state.frameCount % 2 === 0) {
+    state.particles.push({
+      x: b.x - nx * R * 1.3 + px * (Math.random() - 0.5) * R,
+      y: b.y - ny * R * 1.3 + py * (Math.random() - 0.5) * R,
+      vx: -nx * 0.75 + (Math.random() - 0.5) * 0.55,
+      vy: -ny * 0.75 + (Math.random() - 0.5) * 0.55,
+      life: 20,
+      color: Math.random() > 0.35 ? "#bdf6ff" : "#00ffcc",
+      size: 2 + Math.random() * 2.8,
+    });
+  }
+
+  const tail = ctx.createLinearGradient(
+    b.x - nx * R * 4.2,
+    b.y - ny * R * 4.2,
+    b.x + nx * R,
+    b.y + ny * R,
+  );
+  tail.addColorStop(0, "rgba(0, 255, 204, 0)");
+  tail.addColorStop(0.42, "rgba(189, 246, 255, 0.28)");
+  tail.addColorStop(1, "rgba(255, 255, 255, 0.62)");
+  ctx.beginPath();
+  ctx.moveTo(b.x + nx * R * 1.25, b.y + ny * R * 1.25);
+  ctx.lineTo(b.x - nx * R * 3.6 + px * R * 0.7, b.y - ny * R * 3.6 + py * R * 0.7);
+  ctx.lineTo(b.x - nx * R * 3.0 - px * R * 0.7, b.y - ny * R * 3.0 - py * R * 0.7);
+  ctx.closePath();
+  ctx.fillStyle = tail;
+  ctx.shadowBlur = 22;
+  ctx.shadowColor = "#00ffcc";
+  ctx.fill();
+
+  ctx.translate(b.x, b.y);
+  ctx.rotate(angle);
+
+  const aura = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 2.2);
+  aura.addColorStop(0, "rgba(255, 255, 255, 0.92)");
+  aura.addColorStop(0.34, "rgba(189, 246, 255, 0.52)");
+  aura.addColorStop(0.66, "rgba(0, 255, 204, 0.36)");
+  aura.addColorStop(1, "rgba(0, 30, 45, 0)");
+  ctx.beginPath();
+  ctx.ellipse(0, 0, R * (1.65 + pulse * 0.16), R * (1.05 + pulse * 0.1), 0, 0, Math.PI * 2);
+  ctx.fillStyle = aura;
+  ctx.shadowBlur = 26;
+  ctx.shadowColor = "#bdf6ff";
+  ctx.fill();
+
+  ctx.save();
+  ctx.rotate(state.frameCount * 0.08);
+  ctx.fillStyle = "rgba(6, 22, 26, 0.88)";
+  ctx.strokeStyle = "rgba(189, 246, 255, 0.85)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(-R * 0.92, -R * 0.46, R * 1.84, R * 0.92, R * 0.22);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.roundRect(R * 0.12, -R * 0.34, R * 0.78, R * 0.68, R * 0.18);
+  ctx.fillStyle = "rgba(0, 255, 204, 0.22)";
+  ctx.fill();
+  ctx.restore();
+
+  ctx.strokeStyle = "rgba(0, 255, 204, 0.75)";
+  ctx.lineWidth = 2;
+  ctx.shadowBlur = 16;
+  ctx.shadowColor = "#00ffcc";
+  for (let i = 0; i < 6; i++) {
+    const a = -Math.PI / 2 + (i / 6) * Math.PI * 2 + state.frameCount * 0.06;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * R * 0.7, Math.sin(a) * R * 0.7);
+    ctx.lineTo(Math.cos(a) * R * (1.35 + pulse * 0.1), Math.sin(a) * R * (1.35 + pulse * 0.1));
+    ctx.stroke();
+  }
+
+  ctx.beginPath();
+  ctx.arc(-R * 0.18, -R * 0.06, R * 0.26, 0, Math.PI * 2);
+  ctx.fillStyle = "#ffffff";
+  ctx.shadowBlur = 18;
+  ctx.shadowColor = "#ffffff";
+  ctx.fill();
+
+  ctx.restore();
+}
+
 // ===== BULLETS (14+ styles) =====
 export function drawBullets(ctx) {
   const { bullets, player } = state;
@@ -792,6 +889,11 @@ export function drawBullets(ctx) {
 
     if (b.isPlayer && b.visualStyle === "medic_serum") {
       drawMedicBullet(ctx, b);
+      continue;
+    }
+
+    if (b.isPlayer && b.visualStyle === "tank_fortress") {
+      drawTankBullet(ctx, b);
       continue;
     }
 
