@@ -4,7 +4,7 @@ import { dist } from "../utils.js";
 import { UI, updateHealthUI, updateXPUI } from "../ui.js";
 import { playSound } from "./audio.js";
 import { spawnSatelliteDrone } from "../world/element.js";
-import { spawnHazard } from "../entities/helpers.js";
+import { spawnBullet, spawnHazard } from "../entities/helpers.js";
 import { spawnElementalZone } from "../game/elementalZone.js";
 
 export function playerTakeDamage(ctx, canvas, changeStateFn, amount = 1) {
@@ -34,16 +34,32 @@ export function playerTakeDamage(ctx, canvas, changeStateFn, amount = 1) {
     playSound("damage");
 
     if (state.player.characterId === "frost" && buffs.e > 0) {
-      import("../entities.js").then((module) => {
-        for (let i = 0; i < Math.PI * 2; i += Math.PI / 4) {
-          module.spawnBullet(
-            state.player.x,
-            state.player.y,
-            state.player.x + Math.cos(i),
-            state.player.y + Math.sin(i),
-            true,
-          );
-        }
+      const oldLen = state.bullets.length;
+      for (let i = 0; i < Math.PI * 2; i += Math.PI / 4) {
+        spawnBullet(
+          state.player.x,
+          state.player.y,
+          state.player.x + Math.cos(i),
+          state.player.y + Math.sin(i),
+          true,
+        );
+      }
+      for (let i = oldLen; i < state.bullets.length; i++) {
+        state.bullets[i].radius = 7;
+        state.bullets[i].damage = 1.4;
+        state.bullets[i].life = 95;
+        state.bullets[i].isFrostArmorShard = true;
+        state.bullets[i].visualStyle = "frost_crystal";
+      }
+      if (!state.frostBursts) state.frostBursts = [];
+      state.frostBursts.push({
+        type: "e",
+        x: state.player.x,
+        y: state.player.y,
+        radius: 155,
+        life: 38,
+        maxLife: 38,
+        seed: Math.random() * Math.PI * 2,
       });
       state.activeBuffs.e = 0;
     }

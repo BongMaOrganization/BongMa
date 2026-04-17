@@ -10,6 +10,7 @@ const PLAYER_BULLET_VISUALS = {
     mage: "mage_fire",
     assassin: "assassin_blade",
     hunter: "hunter_bolt",
+    frost: "frost_crystal",
     oracle: "oracle_eye",
     medic: "medic_serum",
     tank: "tank_fortress",

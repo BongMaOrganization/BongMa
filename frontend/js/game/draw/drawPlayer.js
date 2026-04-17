@@ -4,6 +4,7 @@ import { drawDruidPlayer } from "../../characters/common/druid.js";
 import { drawEngineerPlayer } from "../../characters/common/engineer.js";
 import { drawGhostPlayer } from "../../characters/common/ghost.js";
 import { drawAssassinPlayer } from "../../characters/rare/assassin.js";
+import { drawFrostPlayer } from "../../characters/rare/frost.js";
 import { drawHunterPlayer } from "../../characters/rare/hunter.js";
 import { drawMagePlayer } from "../../characters/rare/mage.js";
 import { drawMedicPlayer } from "../../characters/common/medic.js";
@@ -179,6 +180,11 @@ export function drawPlayer(ctx) {
 
   if (char === "hunter") {
     drawHunterPlayer(ctx, state, buffs, isInvulnSkill);
+    return;
+  }
+
+  if (char === "frost") {
+    drawFrostPlayer(ctx, state, buffs, isInvulnSkill);
     return;
   }
 
