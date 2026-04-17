@@ -2407,6 +2407,148 @@ function drawStormBullet(ctx, b) {
   ctx.restore();
 }
 
+function drawReaperBullet(ctx, b) {
+  const speed = Math.hypot(b.vx, b.vy) || 1;
+  const nx = b.vx / speed;
+  const ny = b.vy / speed;
+  const px = -ny;
+  const py = nx;
+  const angle = Math.atan2(b.vy, b.vx);
+  const pulse = (Math.sin(state.frameCount * 0.28 + b.x * 0.01) + 1) * 0.5;
+  const crescent = !!b.reaperCrescent;
+  const ghost = !!b.reaperGhost;
+  const judgement = !!b.reaperJudgement;
+  const R = Math.max(8, b.radius * (judgement ? 2.4 : crescent ? 2.2 : 1.85));
+  const crimson = judgement ? "#ff2448" : crescent ? "#ff3b62" : "#c90f33";
+  const soul = ghost ? "#baffde" : "#d8fff1";
+  const bone = "#efe6cd";
+
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+
+  if (state.frameCount % (judgement || crescent ? 1 : 2) === 0) {
+    state.particles.push({
+      x: b.x - nx * R * 1.25 + px * (Math.random() - 0.5) * R,
+      y: b.y - ny * R * 1.25 + py * (Math.random() - 0.5) * R,
+      vx: -nx * 0.42 + (Math.random() - 0.5) * 0.38,
+      vy: -ny * 0.42 + (Math.random() - 0.5) * 0.38,
+      life: judgement ? 22 : 17,
+      color: Math.random() > 0.42 ? crimson : soul,
+      size: 1.8 + Math.random() * 2.8,
+    });
+  }
+
+  const trail = ctx.createLinearGradient(
+    b.x - nx * R * 4.3,
+    b.y - ny * R * 4.3,
+    b.x + nx * R,
+    b.y + ny * R,
+  );
+  trail.addColorStop(0, "rgba(4, 0, 6, 0)");
+  trail.addColorStop(0.28, "rgba(60, 0, 16, 0.28)");
+  trail.addColorStop(0.63, ghost ? "rgba(186, 255, 222, 0.28)" : "rgba(201, 15, 51, 0.34)");
+  trail.addColorStop(1, "rgba(255, 36, 72, 0.72)");
+  ctx.beginPath();
+  ctx.moveTo(b.x + nx * R * 1.1, b.y + ny * R * 1.1);
+  ctx.quadraticCurveTo(
+    b.x - nx * R * 1.8 + px * R * (0.7 + pulse * 0.18),
+    b.y - ny * R * 1.8 + py * R * (0.7 + pulse * 0.18),
+    b.x - nx * R * 3.75,
+    b.y - ny * R * 3.75,
+  );
+  ctx.quadraticCurveTo(
+    b.x - nx * R * 1.55 - px * R * (0.46 + pulse * 0.14),
+    b.y - ny * R * 1.55 - py * R * (0.46 + pulse * 0.14),
+    b.x + nx * R * 1.1,
+    b.y + ny * R * 1.1,
+  );
+  ctx.fillStyle = trail;
+  ctx.shadowBlur = judgement ? 26 : 18;
+  ctx.shadowColor = crimson;
+  ctx.fill();
+
+  ctx.translate(b.x, b.y);
+  ctx.rotate(angle);
+
+  const aura = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 2.25);
+  aura.addColorStop(0, ghost ? "rgba(216, 255, 241, 0.7)" : "rgba(255, 255, 255, 0.42)");
+  aura.addColorStop(0.34, ghost ? "rgba(98, 255, 190, 0.34)" : "rgba(255, 36, 72, 0.34)");
+  aura.addColorStop(1, "rgba(5, 0, 8, 0)");
+  ctx.beginPath();
+  ctx.ellipse(0, 0, R * (1.25 + pulse * 0.1), R * (0.82 + pulse * 0.1), 0, 0, Math.PI * 2);
+  ctx.fillStyle = aura;
+  ctx.fill();
+
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.shadowBlur = judgement ? 24 : 16;
+  ctx.shadowColor = ghost ? soul : crimson;
+  ctx.strokeStyle = "rgba(6, 0, 9, 0.92)";
+  ctx.lineWidth = R * 0.42;
+  ctx.beginPath();
+  ctx.moveTo(-R * 0.9, R * 0.55);
+  ctx.quadraticCurveTo(R * 0.2, -R * 1.05, R * 1.18, -R * 0.12);
+  ctx.stroke();
+
+  ctx.strokeStyle = crimson;
+  ctx.lineWidth = R * 0.24;
+  ctx.beginPath();
+  ctx.moveTo(-R * 0.72, R * 0.42);
+  ctx.quadraticCurveTo(R * 0.08, -R * 0.82, R * 0.98, -R * 0.14);
+  ctx.stroke();
+
+  ctx.strokeStyle = bone;
+  ctx.lineWidth = 2;
+  ctx.shadowBlur = 10;
+  ctx.shadowColor = bone;
+  ctx.beginPath();
+  ctx.moveTo(-R * 0.52, R * 0.28);
+  ctx.quadraticCurveTo(R * 0.1, -R * 0.58, R * 0.66, -R * 0.18);
+  ctx.stroke();
+
+  ctx.fillStyle = "rgba(3, 0, 6, 0.95)";
+  ctx.beginPath();
+  ctx.moveTo(-R * 0.92, -R * 0.12);
+  ctx.lineTo(-R * 0.16, -R * 0.08);
+  ctx.lineTo(R * 0.24, R * 0.1);
+  ctx.lineTo(-R * 0.28, R * 0.26);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.strokeStyle = ghost ? "rgba(186, 255, 222, 0.58)" : "rgba(255, 36, 72, 0.5)";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.arc(-R * 0.2, 0, R * (0.52 + pulse * 0.08), -Math.PI * 0.1, Math.PI * 1.22);
+  ctx.stroke();
+
+  if (ghost || judgement) {
+    ctx.save();
+    ctx.rotate(state.frameCount * (judgement ? -0.13 : 0.08));
+    ctx.strokeStyle = ghost ? "rgba(186, 255, 222, 0.48)" : "rgba(255, 36, 72, 0.46)";
+    ctx.lineWidth = 1.2;
+    ctx.setLineDash([5, 6]);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, R * (1.02 + pulse * 0.08), R * 0.46, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  if (judgement) {
+    ctx.strokeStyle = "rgba(239, 230, 205, 0.6)";
+    ctx.lineWidth = 1.3;
+    for (let i = 0; i < 3; i++) {
+      const a = state.frameCount * 0.11 + i * (Math.PI * 2 / 3);
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * R * 0.3, Math.sin(a) * R * 0.3);
+      ctx.lineTo(Math.cos(a) * R * 1.25, Math.sin(a) * R * 1.25);
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
+}
+
 // ===== BULLETS (14+ styles) =====
 export function drawBullets(ctx) {
   const { bullets, player } = state;
@@ -2588,6 +2730,11 @@ export function drawBullets(ctx) {
 
     if (b.isPlayer && b.visualStyle === "storm_bolt") {
       drawStormBullet(ctx, b);
+      continue;
+    }
+
+    if (b.isPlayer && b.visualStyle === "reaper_soul") {
+      drawReaperBullet(ctx, b);
       continue;
     }
 

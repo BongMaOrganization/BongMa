@@ -22,6 +22,7 @@ const PLAYER_BULLET_VISUALS = {
     timekeeper: "timekeeper_space",
     void: "void_shard",
     storm: "storm_bolt",
+    reaper: "reaper_soul",
     medic: "medic_serum",
     tank: "tank_fortress",
 };
