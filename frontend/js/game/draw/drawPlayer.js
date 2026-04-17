@@ -12,6 +12,7 @@ import { drawKnightPlayer } from "../../characters/rare/knight.js";
 import { drawMagePlayer } from "../../characters/rare/mage.js";
 import { drawMedicPlayer } from "../../characters/common/medic.js";
 import { drawOraclePlayer } from "../../characters/rare/oracle.js";
+import { drawReaperPlayer } from "../../characters/legendary/reaper.js";
 import { drawSharpshooterPlayer } from "../../characters/legendary/sharpshooter.js";
 import { drawSniperPlayer } from "../../characters/legendary/sniper.js";
 import { drawSpeedsterPlayer } from "../../characters/common/speedster.js";
@@ -265,6 +266,11 @@ export function drawPlayer(ctx) {
 
   if (char === "storm") {
     drawStormPlayer(ctx, state, buffs, isInvulnSkill);
+    return;
+  }
+
+  if (char === "reaper") {
+    drawReaperPlayer(ctx, state, buffs, isInvulnSkill);
     return;
   }
 
