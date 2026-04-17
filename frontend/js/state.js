@@ -202,6 +202,15 @@ export const state = {
   pendingBossType: null,      // boss sẽ spawn sau
   elementalZones: [], // zone của quái (KHÔNG liên quan boss)
   elementalEnemies: [], // quái có yếu tố (để render hiệu ứng)
+
+  // ===== Multiplayer State =====
+  isMultiplayer: false,
+  isHost: false,
+  mpRoomCode: null,
+  mpPlayerCount: 1,
+  remotePlayers: [],   // [{ id, username, characterId, isHost, x, y, hp, maxHp, isDead }]
+  reviveZones: [],     // [{ deadPlayerId, x, y, radius, progress, reviverId, isLocalPlayer }]
+  _mpBossKilledSent: false,
 };
 
 export function resetGlitchState() {

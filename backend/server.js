@@ -1,14 +1,23 @@
 import express from "express";
+import { createServer } from "http";
+import { Server as SocketIOServer } from "socket.io";
 import mongoose from "mongoose";
 import cors from "cors";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import "dotenv/config";
 import { User } from "./models/User.js";
+import { setupSocketIO } from "./socket_handler.js";
 
 const app = express();
-app.use(cors());
+app.use(cors({ origin: "*" }));
 app.use(express.json());
+
+const httpServer = createServer(app);
+const io = new SocketIOServer(httpServer, {
+  cors: { origin: "*", methods: ["GET", "POST"] },
+});
+setupSocketIO(io);
 
 await mongoose.connect(process.env.MONGODB_URI);
 console.log("Đã kết nối thành công!");
@@ -93,4 +102,5 @@ app.get("/api/load", authenticateToken, async (req, res) => {
   res.json(user);
 });
 
-app.listen(3000, () => console.log("Server running on :3000"));
+httpServer.listen(3000, "0.0.0.0", () => console.log("Server running on :3000 (LAN accessible)"));
+

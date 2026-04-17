@@ -25,10 +25,22 @@ import { startBossFight } from "./flow.js";
 import { spawnBullet } from "../entities/helpers.js";
 import { spawnCrate, spawnCrystal } from "../world/element.js";
 import { ATTACK_MODES, SPECIAL_SKILLS } from "../entities/bosses/patterns.js";
+import { updateMultiplayer } from "../multiplayer/mpFlow.js";
 
 export function update(ctx, canvas, changeStateFn) {
   const { player, boss, keys, mouse, activeBuffs } = state;
   const buffs = activeBuffs || { q: 0, e: 0, r: 0 };
+
+  // === MULTIPLAYER: update revive zones, check all dead ===
+  updateMultiplayer(changeStateFn);
+
+  // === MULTIPLAYER: Skip normal update if local player is dead (wait for revive) ===
+  if (state.isMultiplayer && state.player?.isDead) {
+    // Still update boss (host) so others see the fight
+    if (state.isHost && boss && !boss.entityPhase) updateBoss(boss);
+    return null;
+  }
+
   updateElementalZones(state.player);
   updateElementalEnemies(state.player);
   // --- 1. Quản lý Camera & Boundaries ---
@@ -287,10 +299,12 @@ export function update(ctx, canvas, changeStateFn) {
   }
 
   // --- 6. XỬ LÝ QUÁI THÚ VÀ BOSS CHẾT ---
-  // ... (Code Shield với Stun của bạn giữ nguyên)
-
+  // Only HOST runs boss AI logic in multiplayer
+  // Non-host receives boss state via socket sync
   if (boss && !boss.entityPhase) {
-    updateBoss(boss);
+    if (!state.isMultiplayer || state.isHost) {
+      updateBoss(boss);
+    }
   }
 
   // XỬ LÝ BOSS CHẾT (Dành cho MỌI LOẠI BOSS)
@@ -315,7 +329,10 @@ export function update(ctx, canvas, changeStateFn) {
 
     if (boss.deathTimer <= 0) {
       // Animation xong — dọn sạch hoàn toàn
-      state.player.coins = (state.player.coins || 0) + 100;
+      // In MP, non-host still gets coin but host already handled boss kill
+      if (!state.isMultiplayer || state.isHost) {
+        state.player.coins = (state.player.coins || 0) + 100;
+      }
       state.boss = null;
       state.isBossLevel = false;
       return "BOSS_KILLED";

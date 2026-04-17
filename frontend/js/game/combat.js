@@ -95,12 +95,18 @@ export function playerTakeDamage(ctx, canvas, changeStateFn, amount = 1) {
 
       // 🎨 trigger effect
       state.phoenixReviveFx = 20;
+    } else if (state.isMultiplayer) {
+      // === MULTIPLAYER: Kích hoạt revive zone thay vì game over ===
+      import("../multiplayer/mpFlow.js").then(({ onMultiplayerPlayerDead }) => {
+        onMultiplayerPlayerDead();
+      });
     } else {
       changeStateFn("GAME_OVER");
     }
 
     return;
   }
+
 }
 
 export function addExperience(amount, changeStateFn) {
@@ -341,41 +347,40 @@ export function updateBullets(
           }
 
           // 🪨 earth = default
-          // --- Boss Shield/Stance Logic ---
-          if (boss.shieldActive && boss.shield > 0) {
-            boss.shield -= finalDmg * 2; // Shield takes double dmg to encourage aggression
-            if (boss.shield <= 0) {
-              boss.shieldActive = false; // SHIELD BROKEN
-              boss.stunTimer = 180; // 3 seconds stun
-            }
-            // Don't damage HP while shield is up
-            finalDmg = 0;
+          // --- Send damage via socket if non-host in MP ---
+          if (state.isMultiplayer && !state.isHost) {
+            import("../multiplayer/sync.js").then(({ sendDamageToHost }) => {
+              sendDamageToHost(state.mpRoomCode, finalDmg);
+            });
+            // Still update UI locally for responsiveness
+            const hpPercent = Math.max(0, (boss.hp / boss.maxHp) * 100);
+            UI.bossHp.style.width = hpPercent + "%";
+            UI.bossHpTrail.style.width = hpPercent + "%";
           } else {
-            boss.hp -= finalDmg;
-            boss.shieldActive = false; // Always ensure it's off if shield is 0
+            // --- Boss Shield/Stance Logic ---
+            if (boss.shieldActive && boss.shield > 0) {
+              boss.shield -= finalDmg * 2;
+              if (boss.shield <= 0) {
+                boss.shieldActive = false;
+                boss.stunTimer = 180;
+              }
+              finalDmg = 0;
+            } else {
+              boss.hp -= finalDmg;
+              boss.shieldActive = false;
+            }
+
+            const hpPercent = Math.max(0, (boss.hp / boss.maxHp) * 100);
+            UI.bossHp.style.width = hpPercent + "%";
+            UI.bossHpTrail.style.width = hpPercent + "%";
+
+            if (boss.hp < boss.maxHp) {
+              UI.bossUi.classList.remove("boss-shaking");
+              void UI.bossUi.offsetWidth;
+              UI.bossUi.classList.add("boss-shaking");
+            }
           }
 
-          if (
-            state.player.characterId === "hunter" &&
-            state.activeBuffs.e > 0 &&
-            state.hunterMarkTarget === boss &&
-            finalDmg > 0
-          ) {
-            finalDmg *= 2;
-            boss.hp -= finalDmg / 2; // Adjusted since we already subtracted finalDmg
-          }
-
-          const hpPercent = Math.max(0, (boss.hp / boss.maxHp) * 100);
-          UI.bossHp.style.width = hpPercent + "%";
-          UI.bossHpTrail.style.width = hpPercent + "%";
-
-          // Add shake effect to boss UI
-          if (boss.hp < boss.maxHp) {
-            UI.bossUi.classList.remove("boss-shaking");
-            // Force reflow to restart animation
-            void UI.bossUi.offsetWidth; 
-            UI.bossUi.classList.add("boss-shaking");
-          }
 
           if (state.player.characterId === "scout" && buffs.r > 0) {
             if (state.skillsCD.q > 0)

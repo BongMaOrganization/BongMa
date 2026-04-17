@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bóng Ma - Huyết Chiến Thời Gian</title>
     <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/multiplayer.css" />
   </head>
 
   <body>
@@ -134,6 +135,13 @@
                 <span class="btn-icon">⚔️</span>
                 <span class="btn-text">BOSS ARENA</span>
                 <span class="btn-subtext">Khiêu chiến thu thập mảnh ghép Mythical</span>
+              </div>
+            </button>
+            <button id="btn-multiplayer" class="menu-btn-epic" style="background: linear-gradient(135deg,rgba(0,80,60,0.7),rgba(0,40,80,0.7)); border-color: rgba(0,255,180,0.4);">
+              <div class="btn-content">
+                <span class="btn-icon">🌐</span>
+                <span class="btn-text">MULTIPLAYER</span>
+                <span class="btn-subtext">Co-op Boss Arena — LAN 2-4 người</span>
               </div>
             </button>
             
@@ -335,6 +343,101 @@
         <span id="fragment-toast-text">MẢNH GHÉP MỚI!</span>
       </div>
     </div>
+    <!-- ===================== MULTIPLAYER SCREENS ===================== -->
+
+    <!-- Screen: MP main menu -->
+    <div id="screen-multiplayer" class="hidden">
+      <div class="mp-panel">
+        <div class="mp-title">🌐 MULTIPLAYER</div>
+        <div class="mp-subtitle">Co-op Boss Arena · LAN 2-4 người</div>
+
+        <div class="mp-input-group">
+          <label class="mp-input-label">IP Server (máy host)</label>
+          <input id="mp-server-ip" class="mp-input" type="text" value="localhost" placeholder="192.168.x.x" />
+        </div>
+
+        <div class="mp-input-group">
+          <label class="mp-input-label">Tên của bạn</label>
+          <input id="mp-username" class="mp-input" type="text" placeholder="Tên hiển thị" maxlength="16" />
+        </div>
+
+        <button id="btn-mp-create" class="mp-btn mp-btn-primary">🏠 TẠO PHÒNG MỚI</button>
+
+        <div class="mp-divider"><span>HOẶC</span></div>
+
+        <div class="mp-input-group">
+          <label class="mp-input-label">Mã phòng (6 ký tự)</label>
+          <input id="mp-room-code-input" class="mp-input" type="text" placeholder="XXXXXX" maxlength="6"
+            style="text-transform:uppercase; text-align:center; font-size:24px; letter-spacing:8px;" />
+        </div>
+
+        <button id="btn-mp-join" class="mp-btn mp-btn-secondary">🚪 VÀO PHÒNG</button>
+
+        <p id="mp-connect-error" class="mp-error"></p>
+
+        <button id="btn-mp-back" class="mp-btn mp-btn-back">← Quay Lại</button>
+      </div>
+    </div>
+
+    <!-- Screen: MP Lobby -->
+    <div id="screen-mp-lobby" class="hidden">
+      <div class="mp-panel mp-lobby-panel">
+        <div class="mp-title">⚔️ PHÒNG CHỜ</div>
+
+        <div class="mp-room-code-display">
+          <div class="mp-room-code-label">Mã Phòng — Chia sẻ cho bạn bè</div>
+          <div id="mp-room-code-display" class="mp-room-code-value">——</div>
+          <div class="mp-room-code-hint">Vào cùng mạng LAN · Nhập mã để tham gia</div>
+        </div>
+
+        <div class="mp-section-title">Người chơi (<span id="mp-player-count">1</span>/4)</div>
+        <ul id="mp-players-list" class="mp-players-list"></ul>
+
+        <!-- Host-only: chọn boss -->
+        <div id="mp-host-controls" style="display:none;">
+          <div class="mp-section-title">Chọn Boss</div>
+          <div id="mp-boss-select-grid" class="mp-boss-select-grid"></div>
+          <button id="btn-mp-start" class="mp-btn mp-btn-primary" disabled>🏆 BẮT ĐẦU TRẬN</button>
+        </div>
+
+        <!-- Non-host waiting -->
+        <div id="mp-waiting-msg" style="display:none;">
+          <p class="mp-waiting-text">⏳ Đang chờ Host chọn Boss và bắt đầu...</p>
+        </div>
+
+        <p id="mp-lobby-error" class="mp-error"></p>
+        <button id="btn-mp-leave" class="mp-btn mp-btn-back" style="margin-top:8px;">← Rời Phòng</button>
+      </div>
+    </div>
+
+    <div id="screen-lobby" class="overlay hidden">
+      <div class="panel">
+        <h2 class="title-main text-cyan">PHÒNG CHỜ</h2>
+        <p class="desc">Chờ các người chơi khác tham gia...</p>
+
+        <div>
+          <p>Mã phòng: <span id="lobby-room-code" class="text-gold"></span></p>
+        </div>
+
+        <ul id="lobby-player-list" class="player-list">
+          <!-- Danh sách người chơi sẽ được thêm động -->
+        </ul>
+
+        <div class="mode-selection">
+          <label for="game-mode" class="text-cyan">Chọn chế độ:</label>
+          <select id="game-mode" class="dropdown">
+            <option value="normal">Thường</option>
+            <option value="hard">Khó</option>
+            <option value="extreme">Cực Khó</option>
+          </select>
+        </div>
+
+        <button id="btn-lobby-start" class="menu-btn-epic btn-start hidden">BẮT ĐẦU</button>
+        <button id="btn-lobby-leave" class="menu-btn-utility">RỜI PHÒNG</button>
+      </div>
+    </div>
+
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
     <script type="module" src="js/main.js"></script>
   </body>
 </html>

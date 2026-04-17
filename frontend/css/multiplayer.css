@@ -1,0 +1,383 @@
+/* =====================================================
+   multiplayer.css — Styles cho chế độ Multiplayer
+   Bóng Ma | Boss Arena Co-op
+====================================================== */
+
+/* --- Screen MP Main --- */
+#screen-multiplayer,
+#screen-mp-lobby {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 10, 0.92);
+  backdrop-filter: blur(12px);
+  z-index: 20;
+}
+
+#screen-multiplayer.hidden,
+#screen-mp-lobby.hidden {
+  display: none;
+}
+
+/* --- Panel MP --- */
+.mp-panel {
+  background: linear-gradient(135deg, rgba(0, 10, 30, 0.98) 0%, rgba(5, 0, 20, 0.98) 100%);
+  border: 1px solid rgba(0, 255, 204, 0.3);
+  border-radius: 18px;
+  padding: 36px 40px;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 0 40px rgba(0, 255, 204, 0.15), inset 0 0 60px rgba(0, 255, 204, 0.03);
+  position: relative;
+  overflow: hidden;
+}
+
+.mp-panel::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00ffcc, transparent);
+  border-radius: 50%;
+}
+
+.mp-title {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  color: #00ffcc;
+  text-shadow: 0 0 20px #00ffcc, 0 0 40px rgba(0, 255, 204, 0.4);
+  text-align: center;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.mp-subtitle {
+  text-align: center;
+  color: #557;
+  font-size: 13px;
+  margin-bottom: 28px;
+  letter-spacing: 1px;
+}
+
+/* --- IP + Code Input --- */
+.mp-input-group {
+  margin-bottom: 16px;
+}
+
+.mp-input-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #557799;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.mp-input {
+  width: 100%;
+  padding: 12px 16px;
+  background: rgba(0, 255, 204, 0.05);
+  border: 1px solid rgba(0, 255, 204, 0.25);
+  border-radius: 10px;
+  color: #e0fff8;
+  font-size: 16px;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 2px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+}
+
+.mp-input:focus {
+  border-color: #00ffcc;
+  box-shadow: 0 0 12px rgba(0, 255, 204, 0.25);
+}
+
+.mp-input::placeholder {
+  color: #334;
+  letter-spacing: 1px;
+}
+
+/* --- Buttons --- */
+.mp-btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  margin-bottom: 10px;
+}
+
+.mp-btn:active {
+  transform: scale(0.97);
+}
+
+.mp-btn-primary {
+  background: linear-gradient(135deg, #00cc99, #0099cc);
+  color: #000;
+  box-shadow: 0 0 20px rgba(0, 255, 204, 0.3);
+}
+
+.mp-btn-primary:hover {
+  box-shadow: 0 0 30px rgba(0, 255, 204, 0.6);
+  transform: translateY(-1px);
+}
+
+.mp-btn-secondary {
+  background: linear-gradient(135deg, #ff4477, #cc0044);
+  color: #fff;
+  box-shadow: 0 0 20px rgba(255, 68, 119, 0.3);
+}
+
+.mp-btn-secondary:hover {
+  box-shadow: 0 0 30px rgba(255, 68, 119, 0.6);
+  transform: translateY(-1px);
+}
+
+.mp-btn-back {
+  background: rgba(255, 255, 255, 0.05);
+  color: #668;
+  border: 1px solid rgba(255,255,255,0.08);
+}
+
+.mp-btn-back:hover {
+  background: rgba(255,255,255,0.09);
+  color: #99aacc;
+}
+
+.mp-error {
+  color: #ff4477;
+  font-size: 13px;
+  text-align: center;
+  min-height: 18px;
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+/* --- Divider --- */
+.mp-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+}
+.mp-divider::before,
+.mp-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(0, 255, 204, 0.12);
+}
+.mp-divider span {
+  color: #446;
+  font-size: 12px;
+  letter-spacing: 2px;
+}
+
+/* =====================================================
+   LOBBY SCREEN
+====================================================== */
+.mp-lobby-panel {
+  max-width: 520px;
+}
+
+/* Room code display */
+.mp-room-code-display {
+  text-align: center;
+  margin-bottom: 24px;
+  padding: 16px;
+  background: rgba(0, 255, 204, 0.05);
+  border: 1px solid rgba(0, 255, 204, 0.2);
+  border-radius: 12px;
+}
+
+.mp-room-code-label {
+  font-size: 11px;
+  letter-spacing: 3px;
+  color: #557;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.mp-room-code-value {
+  font-size: 38px;
+  font-weight: 900;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 12px;
+  color: #00ffcc;
+  text-shadow: 0 0 20px #00ffcc, 0 0 40px rgba(0,255,204,0.4);
+  animation: mp-code-pulse 2s ease-in-out infinite;
+}
+
+@keyframes mp-code-pulse {
+  0%, 100% { text-shadow: 0 0 20px #00ffcc; }
+  50% { text-shadow: 0 0 40px #00ffcc, 0 0 80px rgba(0,255,204,0.5); }
+}
+
+.mp-room-code-hint {
+  font-size: 12px;
+  color: #446;
+  margin-top: 6px;
+}
+
+/* Players list in lobby */
+.mp-players-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px;
+}
+
+.mp-player-slot {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  transition: border-color 0.25s;
+  animation: mp-slot-in 0.3s ease;
+}
+
+@keyframes mp-slot-in {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.mp-player-slot.is-host {
+  border-color: rgba(0, 255, 204, 0.3);
+  background: rgba(0, 255, 204, 0.04);
+}
+
+.mp-player-slot.empty-slot {
+  opacity: 0.35;
+  border-style: dashed;
+}
+
+.mp-player-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(0, 255, 204, 0.15);
+  border: 2px solid rgba(0,255,204,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.mp-player-name {
+  font-weight: 700;
+  color: #e0fff8;
+  font-size: 14px;
+}
+
+.mp-player-host-badge {
+  font-size: 11px;
+  color: #00ffcc;
+  letter-spacing: 1px;
+}
+
+.mp-player-you-badge {
+  font-size: 11px;
+  color: #ffcc00;
+  font-weight: 800;
+}
+
+.mp-waiting-text {
+  text-align: center;
+  color: #557;
+  font-size: 13px;
+  letter-spacing: 1px;
+  padding: 10px 0;
+  animation: mp-blink 1.4s ease-in-out infinite;
+}
+
+@keyframes mp-blink {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+/* Boss selector in lobby (host only) */
+.mp-boss-select-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.mp-boss-card {
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1.5px solid rgba(255,255,255,0.08);
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.18s;
+}
+
+.mp-boss-card:hover {
+  background: rgba(255,255,255,0.07);
+  transform: translateY(-2px);
+}
+
+.mp-boss-card.selected {
+  border-color: #00ffcc;
+  background: rgba(0, 255, 204, 0.08);
+  box-shadow: 0 0 16px rgba(0,255,204,0.25);
+}
+
+.mp-boss-card-icon {
+  font-size: 28px;
+  margin-bottom: 4px;
+}
+
+.mp-boss-card-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #e0fff8;
+}
+
+.mp-boss-card-hp {
+  font-size: 10px;
+  color: #668;
+  margin-top: 3px;
+}
+
+/* --- Player list separator --- */
+.mp-section-title {
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: #557;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+/* Scrollbar for boss grid */
+.mp-boss-select-grid::-webkit-scrollbar {
+  width: 4px;
+}
+.mp-boss-select-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+.mp-boss-select-grid::-webkit-scrollbar-thumb {
+  background: rgba(0,255,204,0.2);
+  border-radius: 4px;
+}

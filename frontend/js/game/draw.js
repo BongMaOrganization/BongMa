@@ -35,6 +35,7 @@ import {
 } from "./draw/drawHUD.js";
 import { drawMinimap } from "./draw/drawMinimap.js";
 import { drawWorldObjects, drawFloatingTexts } from "./draw/drawWorldObjects.js";
+import { drawRemotePlayers, drawReviveZones, drawMpPlayersHUD } from "./draw/drawRemotePlayers.js";
 
 // Re-export hexToRgba for other modules that may import from draw.js
 export { hexToRgba } from "./draw/drawUtils.js";
@@ -120,6 +121,12 @@ export function draw(ctx, canvas) {
   // --- Player ---
   drawPlayer(ctx);
 
+  // --- Remote players (MP co-op) ---
+  drawRemotePlayers(ctx);
+
+  // --- Revive zones (MP) ---
+  drawReviveZones(ctx);
+
   // --- Character VFX (creator, knight, scout, satellite, god mode) ---
   drawCharacterVFX(ctx);
 
@@ -169,4 +176,8 @@ export function draw(ctx, canvas) {
 
   // --- Nuke flash ---
   drawNukeFlash(ctx, canvas);
+
+  // --- MP Players HUD (screen-space, top-left) ---
+  if (state.isMultiplayer) drawMpPlayersHUD(ctx, canvas);
 }
+
