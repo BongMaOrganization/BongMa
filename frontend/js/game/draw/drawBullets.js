@@ -1068,6 +1068,132 @@ function drawOracleBullet(ctx, b) {
   ctx.restore();
 }
 
+function drawHunterBullet(ctx, b) {
+  const speed = Math.hypot(b.vx, b.vy) || 1;
+  const nx = b.vx / speed;
+  const ny = b.vy / speed;
+  const px = -ny;
+  const py = nx;
+  const angle = Math.atan2(b.vy, b.vx);
+  const pulse = (Math.sin(state.frameCount * 0.24 + b.x * 0.012) + 1) * 0.5;
+  const R = b.isHunterHarpoon ? Math.max(22, b.radius * 0.75) : Math.max(8, b.radius * 2.05);
+  const shaft = b.isHunterHarpoon ? R * 2.9 : R * 2.35;
+
+  ctx.save();
+
+  if (state.frameCount % 2 === 0) {
+    state.particles.push({
+      x: b.x - nx * R * 1.1 + px * (Math.random() - 0.5) * R * 0.9,
+      y: b.y - ny * R * 1.1 + py * (Math.random() - 0.5) * R * 0.9,
+      vx: -nx * 0.45 + (Math.random() - 0.5) * 0.5,
+      vy: -ny * 0.45 + (Math.random() - 0.5) * 0.5,
+      life: 18,
+      color: Math.random() > 0.42 ? "#caa36a" : "#9a6b3b",
+      size: 1.8 + Math.random() * (b.isHunterHarpoon ? 3.6 : 2.2),
+    });
+  }
+
+  const trail = ctx.createLinearGradient(
+    b.x - nx * R * 4.1,
+    b.y - ny * R * 4.1,
+    b.x + nx * R,
+    b.y + ny * R,
+  );
+  trail.addColorStop(0, "rgba(32, 22, 15, 0)");
+  trail.addColorStop(0.36, "rgba(107, 69, 40, 0.2)");
+  trail.addColorStop(0.72, "rgba(202, 163, 106, 0.24)");
+  trail.addColorStop(1, "rgba(234, 214, 173, 0.52)");
+  ctx.beginPath();
+  ctx.moveTo(b.x + nx * R * 0.9, b.y + ny * R * 0.9);
+  ctx.lineTo(b.x - nx * R * 3.6 + px * R * 0.44, b.y - ny * R * 3.6 + py * R * 0.44);
+  ctx.lineTo(b.x - nx * R * 3.1 - px * R * 0.44, b.y - ny * R * 3.1 - py * R * 0.44);
+  ctx.closePath();
+  ctx.fillStyle = trail;
+  ctx.fill();
+
+  if (b.isHunterHarpoon) {
+    ctx.strokeStyle = "rgba(234, 214, 173, 0.34)";
+    ctx.lineWidth = 2;
+    ctx.setLineDash([8, 7]);
+    ctx.beginPath();
+    ctx.moveTo(b.x - nx * R * 0.3, b.y - ny * R * 0.3);
+    ctx.quadraticCurveTo(
+      b.x - nx * R * 2.3 + px * Math.sin(state.frameCount * 0.16) * R * 0.28,
+      b.y - ny * R * 2.3 + py * Math.sin(state.frameCount * 0.16) * R * 0.28,
+      b.x - nx * R * 4.8,
+      b.y - ny * R * 4.8,
+    );
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  ctx.translate(b.x, b.y);
+  ctx.rotate(angle);
+
+  const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 1.9);
+  glow.addColorStop(0, "rgba(234, 214, 173, 0.36)");
+  glow.addColorStop(0.5, "rgba(154, 107, 59, 0.18)");
+  glow.addColorStop(1, "rgba(32, 22, 15, 0)");
+  ctx.beginPath();
+  ctx.ellipse(0, 0, R * (1.45 + pulse * 0.08), R * (0.72 + pulse * 0.06), 0, 0, Math.PI * 2);
+  ctx.fillStyle = glow;
+  ctx.fill();
+
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "#20160f";
+  ctx.lineWidth = b.isHunterHarpoon ? 5 : 3;
+  ctx.beginPath();
+  ctx.moveTo(-shaft, 0);
+  ctx.lineTo(R * 0.55, 0);
+  ctx.stroke();
+
+  ctx.strokeStyle = "#9a6b3b";
+  ctx.lineWidth = b.isHunterHarpoon ? 2.8 : 2;
+  ctx.beginPath();
+  ctx.moveTo(-shaft * 0.95, -R * 0.12);
+  ctx.lineTo(R * 0.42, -R * 0.12);
+  ctx.stroke();
+
+  ctx.fillStyle = "#b8aa90";
+  ctx.strokeStyle = "#ead6ad";
+  ctx.lineWidth = 1.8;
+  ctx.shadowBlur = b.isHunterHarpoon ? 18 : 10;
+  ctx.shadowColor = "#caa36a";
+  ctx.beginPath();
+  ctx.moveTo(R * 1.3, 0);
+  ctx.lineTo(R * 0.28, -R * 0.48);
+  ctx.lineTo(R * 0.48, 0);
+  ctx.lineTo(R * 0.28, R * 0.48);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  if (b.isHunterHarpoon) {
+    ctx.fillStyle = "#6b4528";
+    for (let side = -1; side <= 1; side += 2) {
+      ctx.beginPath();
+      ctx.moveTo(R * 0.32, side * R * 0.18);
+      ctx.lineTo(-R * 0.08, side * R * 0.56);
+      ctx.lineTo(R * 0.06, side * R * 0.18);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = "#ead6ad";
+  for (let side = -1; side <= 1; side += 2) {
+    ctx.beginPath();
+    ctx.moveTo(-shaft * 0.92, 0);
+    ctx.lineTo(-shaft * 0.48, side * R * 0.36);
+    ctx.lineTo(-shaft * 0.56, side * R * 0.08);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
 // ===== BULLETS (14+ styles) =====
 export function drawBullets(ctx) {
   const { bullets, player } = state;
@@ -1189,6 +1315,11 @@ export function drawBullets(ctx) {
 
     if (b.isPlayer && b.visualStyle === "assassin_blade") {
       drawAssassinBullet(ctx, b);
+      continue;
+    }
+
+    if (b.isPlayer && b.visualStyle === "hunter_bolt") {
+      drawHunterBullet(ctx, b);
       continue;
     }
 

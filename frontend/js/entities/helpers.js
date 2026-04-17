@@ -1,5 +1,20 @@
 import { state } from "../state.js";
 
+const PLAYER_BULLET_VISUALS = {
+    speedster: "speedster_lightning",
+    ghost: "ghost_wisp",
+    warden: "warden_sigil",
+    engineer: "engineer_plasma",
+    druid: "druid_seed",
+    brawler: "brawler_impact",
+    mage: "mage_fire",
+    assassin: "assassin_blade",
+    hunter: "hunter_bolt",
+    oracle: "oracle_eye",
+    medic: "medic_serum",
+    tank: "tank_fortress",
+};
+
 // Các hàm bổ trợ cốt lõi cho việc tạo vật thể trong game
 export function spawnBullet(sx, sy, tx, ty, isPlayer, style = 0, source = "enemy", damage = 1) {
     const angle = Math.atan2(ty - sy, tx - sx);
@@ -16,30 +31,7 @@ export function spawnBullet(sx, sy, tx, ty, isPlayer, style = 0, source = "enemy
         style,
         damage,
         ownerCharacter,
-        visualStyle:
-            ownerCharacter === "speedster"
-                ? "speedster_lightning"
-                : ownerCharacter === "ghost"
-                  ? "ghost_wisp"
-                  : ownerCharacter === "warden"
-                    ? "warden_sigil"
-                    : ownerCharacter === "engineer"
-                      ? "engineer_plasma"
-                      : ownerCharacter === "druid"
-                        ? "druid_seed"
-                        : ownerCharacter === "brawler"
-                          ? "brawler_impact"
-                          : ownerCharacter === "mage"
-                            ? "mage_fire"
-                            : ownerCharacter === "assassin"
-                              ? "assassin_blade"
-                              : ownerCharacter === "oracle"
-                                ? "oracle_eye"
-                          : ownerCharacter === "medic"
-                            ? "medic_serum"
-                            : ownerCharacter === "tank"
-                              ? "tank_fortress"
-                  : null,
+        visualStyle: PLAYER_BULLET_VISUALS[ownerCharacter] || null,
         bounces: isPlayer ? state.player.bounces || 0 : 0,
         pierce: isPlayer ? state.player.pierce || false : false,
     });
