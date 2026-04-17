@@ -1826,6 +1826,108 @@ function drawSummonerBullet(ctx, b) {
   ctx.restore();
 }
 
+function drawSniperBullet(ctx, b) {
+  const speed = Math.hypot(b.vx, b.vy) || 1;
+  const nx = b.vx / speed;
+  const ny = b.vy / speed;
+  const px = -ny;
+  const py = nx;
+  const angle = Math.atan2(b.vy, b.vx);
+  const pulse = (Math.sin(state.frameCount * 0.3 + b.x * 0.01) + 1) * 0.5;
+  const heavy = !!b.sniperHeavy;
+  const execute = !!b.sniperExecute;
+  const focus = !!b.sniperFocus;
+  const R = Math.max(7, b.radius * (heavy ? 2.2 : execute ? 2 : focus ? 1.85 : 1.65));
+  const mainColor = execute ? "#ff3855" : heavy ? "#ffc45a" : focus ? "#8affc1" : "#62f3ff";
+
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+
+  if (state.frameCount % (heavy || execute ? 1 : 3) === 0) {
+    state.particles.push({
+      x: b.x - nx * R * 1.15 + px * (Math.random() - 0.5) * R * 0.65,
+      y: b.y - ny * R * 1.15 + py * (Math.random() - 0.5) * R * 0.65,
+      vx: -nx * 0.58 + (Math.random() - 0.5) * 0.28,
+      vy: -ny * 0.58 + (Math.random() - 0.5) * 0.28,
+      life: heavy || execute ? 18 : 14,
+      color: Math.random() > 0.42 ? mainColor : "#cbd7e3",
+      size: 1.2 + Math.random() * 2,
+    });
+  }
+
+  const trail = ctx.createLinearGradient(
+    b.x - nx * R * (heavy ? 5.2 : 4.6),
+    b.y - ny * R * (heavy ? 5.2 : 4.6),
+    b.x + nx * R,
+    b.y + ny * R,
+  );
+  trail.addColorStop(0, "rgba(8, 11, 15, 0)");
+  trail.addColorStop(0.35, execute ? "rgba(255, 56, 85, 0.14)" : "rgba(98, 243, 255, 0.12)");
+  trail.addColorStop(0.72, heavy ? "rgba(255, 196, 90, 0.34)" : execute ? "rgba(255, 56, 85, 0.3)" : "rgba(98, 243, 255, 0.26)");
+  trail.addColorStop(1, "rgba(255, 255, 255, 0.72)");
+  ctx.beginPath();
+  ctx.moveTo(b.x + nx * R * 1.18, b.y + ny * R * 1.18);
+  ctx.lineTo(b.x - nx * R * 4.15 + px * R * 0.28, b.y - ny * R * 4.15 + py * R * 0.28);
+  ctx.lineTo(b.x - nx * R * 3.35 - px * R * 0.28, b.y - ny * R * 3.35 - py * R * 0.28);
+  ctx.closePath();
+  ctx.fillStyle = trail;
+  ctx.shadowBlur = heavy || execute ? 22 : 14;
+  ctx.shadowColor = mainColor;
+  ctx.fill();
+
+  ctx.translate(b.x, b.y);
+  ctx.rotate(angle);
+
+  const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 1.75);
+  glow.addColorStop(0, "rgba(255, 255, 255, 0.58)");
+  glow.addColorStop(0.42, heavy ? "rgba(255, 196, 90, 0.32)" : execute ? "rgba(255, 56, 85, 0.28)" : "rgba(98, 243, 255, 0.24)");
+  glow.addColorStop(1, "rgba(8, 11, 15, 0)");
+  ctx.beginPath();
+  ctx.ellipse(0, 0, R * (1.48 + pulse * 0.1), R * (0.48 + pulse * 0.06), 0, 0, Math.PI * 2);
+  ctx.fillStyle = glow;
+  ctx.fill();
+
+  ctx.fillStyle = "#cbd7e3";
+  ctx.strokeStyle = mainColor;
+  ctx.lineWidth = heavy || execute ? 1.8 : 1.4;
+  ctx.shadowBlur = heavy || execute ? 18 : 12;
+  ctx.shadowColor = mainColor;
+  ctx.beginPath();
+  ctx.moveTo(R * 1.32, 0);
+  ctx.lineTo(R * 0.18, -R * 0.24);
+  ctx.lineTo(-R * 1.08, -R * 0.14);
+  ctx.lineTo(-R * 0.7, 0);
+  ctx.lineTo(-R * 1.08, R * 0.14);
+  ctx.lineTo(R * 0.18, R * 0.24);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(8, 11, 15, 0.78)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(-R * 0.62, -R * 0.2);
+  ctx.lineTo(R * 0.74, -R * 0.04);
+  ctx.moveTo(-R * 0.62, R * 0.2);
+  ctx.lineTo(R * 0.52, R * 0.05);
+  ctx.stroke();
+
+  if (focus || heavy || execute) {
+    ctx.save();
+    ctx.rotate(state.frameCount * (execute ? 0.1 : 0.06));
+    ctx.strokeStyle = execute ? "rgba(255, 56, 85, 0.55)" : "rgba(98, 243, 255, 0.44)";
+    ctx.lineWidth = 1.1;
+    ctx.setLineDash([4, 5]);
+    ctx.beginPath();
+    ctx.arc(0, 0, R * (0.86 + pulse * 0.08), 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
 // ===== BULLETS (14+ styles) =====
 export function drawBullets(ctx) {
   const { bullets, player } = state;
@@ -1982,6 +2084,11 @@ export function drawBullets(ctx) {
 
     if (b.isPlayer && b.visualStyle === "summoner_soul") {
       drawSummonerBullet(ctx, b);
+      continue;
+    }
+
+    if (b.isPlayer && b.visualStyle === "sniper_round") {
+      drawSniperBullet(ctx, b);
       continue;
     }
 
