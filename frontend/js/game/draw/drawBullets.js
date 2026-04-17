@@ -1291,6 +1291,107 @@ function drawFrostBullet(ctx, b) {
   ctx.restore();
 }
 
+function drawGunnerBullet(ctx, b) {
+  const speed = Math.hypot(b.vx, b.vy) || 1;
+  const nx = b.vx / speed;
+  const ny = b.vy / speed;
+  const px = -ny;
+  const py = nx;
+  const angle = Math.atan2(b.vy, b.vx);
+  const pulse = (Math.sin(state.frameCount * 0.38 + b.x * 0.01) + 1) * 0.5;
+  const R = Math.max(7, b.radius * 1.95);
+
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+
+  if (state.frameCount % 2 === 0) {
+    state.particles.push({
+      x: b.x - nx * R * 1.15 + px * (Math.random() - 0.5) * R,
+      y: b.y - ny * R * 1.15 + py * (Math.random() - 0.5) * R,
+      vx: -nx * 0.62 + (Math.random() - 0.5) * 0.42,
+      vy: -ny * 0.62 + (Math.random() - 0.5) * 0.42,
+      life: 16,
+      color: Math.random() > 0.38 ? "#ffbf4d" : "#f5f7ff",
+      size: 1.5 + Math.random() * 2.5,
+    });
+  }
+
+  const tracer = ctx.createLinearGradient(
+    b.x - nx * R * 4.2,
+    b.y - ny * R * 4.2,
+    b.x + nx * R,
+    b.y + ny * R,
+  );
+  tracer.addColorStop(0, "rgba(17, 24, 32, 0)");
+  tracer.addColorStop(0.28, "rgba(255, 77, 46, 0.14)");
+  tracer.addColorStop(0.68, "rgba(255, 191, 77, 0.32)");
+  tracer.addColorStop(1, "rgba(245, 247, 255, 0.72)");
+  ctx.beginPath();
+  ctx.moveTo(b.x + nx * R * 1.05, b.y + ny * R * 1.05);
+  ctx.lineTo(b.x - nx * R * 3.85 + px * R * 0.34, b.y - ny * R * 3.85 + py * R * 0.34);
+  ctx.lineTo(b.x - nx * R * 3.25 - px * R * 0.34, b.y - ny * R * 3.25 - py * R * 0.34);
+  ctx.closePath();
+  ctx.fillStyle = tracer;
+  ctx.fill();
+
+  ctx.translate(b.x, b.y);
+  ctx.rotate(angle);
+
+  const glow = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 1.9);
+  glow.addColorStop(0, "rgba(245, 247, 255, 0.62)");
+  glow.addColorStop(0.44, "rgba(255, 191, 77, 0.32)");
+  glow.addColorStop(1, "rgba(17, 24, 32, 0)");
+  ctx.beginPath();
+  ctx.ellipse(0, 0, R * (1.48 + pulse * 0.12), R * (0.62 + pulse * 0.08), 0, 0, Math.PI * 2);
+  ctx.fillStyle = glow;
+  ctx.shadowBlur = 18;
+  ctx.shadowColor = "#ffbf4d";
+  ctx.fill();
+
+  ctx.fillStyle = "#f5f7ff";
+  ctx.strokeStyle = "#ffbf4d";
+  ctx.lineWidth = 1.7;
+  ctx.shadowBlur = 14;
+  ctx.shadowColor = "#ffbf4d";
+  ctx.beginPath();
+  ctx.moveTo(R * 1.18, 0);
+  ctx.lineTo(R * 0.12, -R * 0.34);
+  ctx.lineTo(-R * 0.9, -R * 0.22);
+  ctx.lineTo(-R * 0.58, 0);
+  ctx.lineTo(-R * 0.9, R * 0.22);
+  ctx.lineTo(R * 0.12, R * 0.34);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = "#26313d";
+  ctx.beginPath();
+  ctx.roundRect(-R * 0.54, -R * 0.18, R * 0.9, R * 0.36, 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(245, 247, 255, 0.62)";
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.moveTo(-R * 0.46, -R * 0.04);
+  ctx.lineTo(R * 0.56, -R * 0.04);
+  ctx.moveTo(-R * 0.46, R * 0.08);
+  ctx.lineTo(R * 0.42, R * 0.08);
+  ctx.stroke();
+
+  ctx.save();
+  ctx.rotate(state.frameCount * 0.12);
+  ctx.strokeStyle = "rgba(255, 191, 77, 0.42)";
+  ctx.lineWidth = 1.2;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath();
+  ctx.arc(0, 0, R * (0.96 + pulse * 0.08), 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+
+  ctx.restore();
+}
+
 // ===== BULLETS (14+ styles) =====
 export function drawBullets(ctx) {
   const { bullets, player } = state;
@@ -1422,6 +1523,11 @@ export function drawBullets(ctx) {
 
     if (b.isPlayer && b.visualStyle === "frost_crystal") {
       drawFrostBullet(ctx, b);
+      continue;
+    }
+
+    if (b.isPlayer && b.visualStyle === "gunner_round") {
+      drawGunnerBullet(ctx, b);
       continue;
     }
 
