@@ -29,6 +29,7 @@ const PLAYER_BULLET_VISUALS = {
     necromancer: "necromancer_soul",
     painter: "painter_paint",
     destroyer: "destroyer_ruin",
+    creator: "creator_light",
     medic: "medic_serum",
     tank: "tank_fortress",
 };

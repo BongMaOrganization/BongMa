@@ -179,9 +179,6 @@ export function drawGodMode(ctx) {
 
 // ===== MAIN ENTRY =====
 export function drawCharacterVFX(ctx) {
-  drawCreatorTurrets(ctx);
-  drawCreatorHolyZone(ctx);
-  drawCreatorOrbs(ctx);
   drawKnightCharge(ctx);
   drawKnightShield(ctx);
   drawKnightRage(ctx);
