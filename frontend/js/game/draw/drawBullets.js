@@ -35,6 +35,8 @@ const FAST_BULLET_COLORS = {
   scout_arc: ["#f4ffff", "#43f5ff"],
   necromancer_soul: ["#f0eee2", "#9c35ff"],
   painter_paint: ["#fffdf2", "#ff2ccf"],
+  destroyer_ruin: ["#fff4df", "#ff2448"],
+  creator_light: ["#fffdf0", "#ffd84a"],
 };
 
 function isBulletVisible(b, padding = 160) {
@@ -3239,6 +3241,249 @@ function drawPainterBullet(ctx, b) {
   ctx.restore();
 }
 
+function drawDestroyerBullet(ctx, b) {
+  const speed = Math.hypot(b.vx, b.vy) || 1;
+  const nx = b.vx / speed;
+  const ny = b.vy / speed;
+  const px = -ny;
+  const py = nx;
+  const angle = Math.atan2(b.vy, b.vx);
+  const fc = state.frameCount || 0;
+  const pulse = (Math.sin(fc * 0.34 + b.x * 0.01) + 1) * 0.5;
+  const rift = !!b.destroyerRiftShot;
+  const absorbed = !!b.destroyerAbsorbed || !!b.destroyerConverted;
+  const cataclysm = !!b.destroyerCataclysm;
+  const R = Math.max(9, (b.radius || 4) * (cataclysm ? 2.8 : absorbed ? 2.55 : rift ? 2.35 : 2.15));
+  const edge = cataclysm ? "#ff17c8" : absorbed ? "#7b24ff" : "#ff2448";
+  const core = cataclysm || absorbed ? "#fff4df" : "#ffd23c";
+
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+
+  if ((cataclysm || absorbed || rift) && fc % 3 === 0) {
+    state.particles.push({
+      x: b.x - nx * R * 1.2 + px * (Math.random() - 0.5) * R * 0.7,
+      y: b.y - ny * R * 1.2 + py * (Math.random() - 0.5) * R * 0.7,
+      vx: -nx * 0.55 + (Math.random() - 0.5) * 0.34,
+      vy: -ny * 0.55 + (Math.random() - 0.5) * 0.34,
+      life: cataclysm ? 18 : 14,
+      color: Math.random() > 0.45 ? edge : core,
+      size: 1.8 + Math.random() * 2.6,
+    });
+  }
+
+  const trail = ctx.createLinearGradient(
+    b.x - nx * R * 5.2,
+    b.y - ny * R * 5.2,
+    b.x + nx * R,
+    b.y + ny * R,
+  );
+  trail.addColorStop(0, "rgba(8, 4, 13, 0)");
+  trail.addColorStop(0.24, "rgba(123, 36, 255, 0.18)");
+  trail.addColorStop(0.56, "rgba(255, 36, 72, 0.32)");
+  trail.addColorStop(0.84, cataclysm ? "rgba(255, 23, 200, 0.55)" : "rgba(255, 210, 60, 0.45)");
+  trail.addColorStop(1, "rgba(255, 244, 223, 0.85)");
+
+  ctx.beginPath();
+  ctx.moveTo(b.x + nx * R * 1.16, b.y + ny * R * 1.16);
+  ctx.quadraticCurveTo(
+    b.x - nx * R * 1.75 + px * R * (0.72 + pulse * 0.24),
+    b.y - ny * R * 1.75 + py * R * (0.72 + pulse * 0.24),
+    b.x - nx * R * 4.6,
+    b.y - ny * R * 4.6,
+  );
+  ctx.quadraticCurveTo(
+    b.x - nx * R * 1.55 - px * R * (0.72 + pulse * 0.18),
+    b.y - ny * R * 1.55 - py * R * (0.72 + pulse * 0.18),
+    b.x + nx * R * 1.16,
+    b.y + ny * R * 1.16,
+  );
+  ctx.fillStyle = trail;
+  ctx.shadowBlur = cataclysm ? 30 : 22;
+  ctx.shadowColor = edge;
+  ctx.fill();
+
+  ctx.translate(b.x, b.y);
+  ctx.rotate(angle);
+
+  const aura = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 2.35);
+  aura.addColorStop(0, "rgba(255, 244, 223, 0.82)");
+  aura.addColorStop(0.3, "rgba(255, 210, 60, 0.42)");
+  aura.addColorStop(0.62, cataclysm ? "rgba(255, 23, 200, 0.34)" : "rgba(255, 36, 72, 0.3)");
+  aura.addColorStop(1, "rgba(8, 4, 13, 0)");
+  ctx.beginPath();
+  ctx.ellipse(0, 0, R * (1.24 + pulse * 0.12), R * (0.86 + pulse * 0.08), 0, 0, Math.PI * 2);
+  ctx.fillStyle = aura;
+  ctx.fill();
+
+  const shard = ctx.createLinearGradient(-R, 0, R, 0);
+  shard.addColorStop(0, "rgba(8, 4, 13, 0.2)");
+  shard.addColorStop(0.28, edge);
+  shard.addColorStop(0.64, core);
+  shard.addColorStop(1, "#fff4df");
+
+  ctx.fillStyle = shard;
+  ctx.strokeStyle = "rgba(255, 244, 223, 0.86)";
+  ctx.lineWidth = 1.5;
+  ctx.shadowBlur = cataclysm ? 28 : 20;
+  ctx.shadowColor = core;
+  ctx.beginPath();
+  ctx.moveTo(R * 1.24, 0);
+  ctx.lineTo(-R * 0.34, -R * 0.72);
+  ctx.lineTo(-R * 0.08, -R * 0.16);
+  ctx.lineTo(-R * 0.72, 0);
+  ctx.lineTo(-R * 0.08, R * 0.16);
+  ctx.lineTo(-R * 0.34, R * 0.72);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.strokeStyle = cataclysm ? "rgba(255, 23, 200, 0.76)" : "rgba(8, 4, 13, 0.84)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(-R * 0.58, -R * 0.16);
+  ctx.lineTo(-R * 0.1, -R * 0.02);
+  ctx.lineTo(-R * 0.42, R * 0.3);
+  ctx.lineTo(R * 0.26, R * 0.02);
+  ctx.stroke();
+
+  if (cataclysm || absorbed) {
+    ctx.save();
+    ctx.rotate(-fc * (cataclysm ? 0.12 : 0.08));
+    ctx.strokeStyle = cataclysm ? "rgba(255, 23, 200, 0.66)" : "rgba(123, 36, 255, 0.6)";
+    ctx.lineWidth = 1.3;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, R * 1.08, R * 0.5, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+function drawCreatorBullet(ctx, b) {
+  const speed = Math.hypot(b.vx, b.vy) || 1;
+  const nx = b.vx / speed;
+  const ny = b.vy / speed;
+  const px = -ny;
+  const py = nx;
+  const angle = Math.atan2(b.vy, b.vx);
+  const fc = state.frameCount || 0;
+  const pulse = (Math.sin(fc * 0.32 + b.y * 0.01) + 1) * 0.5;
+  const turret = !!b.creatorTurret;
+  const orb = !!b.creatorOrb;
+  const blessed = !!b.creatorBlessed;
+  const genesis = !!b.creatorGenesis;
+  const R = Math.max(8, (b.radius || 4) * (genesis ? 2.72 : orb ? 2.5 : blessed ? 2.35 : 2.12));
+  const edge = genesis ? "#7dfcff" : blessed ? "#9dff6a" : turret ? "#ffd84a" : "#fffdf0";
+  const core = genesis || orb ? "#fffdf0" : "#fff7c7";
+
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+
+  if ((genesis || orb || blessed) && fc % 3 === 0) {
+    state.particles.push({
+      x: b.x - nx * R * 1.25 + px * (Math.random() - 0.5) * R * 0.7,
+      y: b.y - ny * R * 1.25 + py * (Math.random() - 0.5) * R * 0.7,
+      vx: -nx * 0.48 + (Math.random() - 0.5) * 0.3,
+      vy: -ny * 0.48 + (Math.random() - 0.5) * 0.3,
+      life: genesis ? 18 : 14,
+      color: Math.random() > 0.45 ? edge : core,
+      size: 1.8 + Math.random() * 2.5,
+    });
+  }
+
+  const trail = ctx.createLinearGradient(
+    b.x - nx * R * 5,
+    b.y - ny * R * 5,
+    b.x + nx * R,
+    b.y + ny * R,
+  );
+  trail.addColorStop(0, "rgba(8, 21, 26, 0)");
+  trail.addColorStop(0.24, "rgba(125, 252, 255, 0.18)");
+  trail.addColorStop(0.56, "rgba(255, 216, 74, 0.34)");
+  trail.addColorStop(0.84, genesis ? "rgba(157, 255, 106, 0.48)" : "rgba(255, 253, 240, 0.58)");
+  trail.addColorStop(1, "rgba(255, 253, 240, 0.88)");
+
+  ctx.beginPath();
+  ctx.moveTo(b.x + nx * R * 1.05, b.y + ny * R * 1.05);
+  ctx.quadraticCurveTo(
+    b.x - nx * R * 1.65 + px * R * (0.72 + pulse * 0.24),
+    b.y - ny * R * 1.65 + py * R * (0.72 + pulse * 0.24),
+    b.x - nx * R * 4.55,
+    b.y - ny * R * 4.55,
+  );
+  ctx.quadraticCurveTo(
+    b.x - nx * R * 1.52 - px * R * (0.62 + pulse * 0.2),
+    b.y - ny * R * 1.52 - py * R * (0.62 + pulse * 0.2),
+    b.x + nx * R * 1.05,
+    b.y + ny * R * 1.05,
+  );
+  ctx.fillStyle = trail;
+  ctx.shadowBlur = genesis ? 30 : 22;
+  ctx.shadowColor = edge;
+  ctx.fill();
+
+  ctx.translate(b.x, b.y);
+  ctx.rotate(angle);
+
+  const aura = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 2.35);
+  aura.addColorStop(0, "rgba(255, 253, 240, 0.86)");
+  aura.addColorStop(0.3, "rgba(255, 216, 74, 0.42)");
+  aura.addColorStop(0.62, genesis ? "rgba(125, 252, 255, 0.3)" : "rgba(157, 255, 106, 0.24)");
+  aura.addColorStop(1, "rgba(8, 21, 26, 0)");
+  ctx.beginPath();
+  ctx.ellipse(0, 0, R * (1.16 + pulse * 0.12), R * (0.82 + pulse * 0.08), 0, 0, Math.PI * 2);
+  ctx.fillStyle = aura;
+  ctx.fill();
+
+  const shard = ctx.createLinearGradient(-R, 0, R, 0);
+  shard.addColorStop(0, "rgba(125, 252, 255, 0.2)");
+  shard.addColorStop(0.3, edge);
+  shard.addColorStop(0.66, "#ffd84a");
+  shard.addColorStop(1, core);
+  ctx.fillStyle = shard;
+  ctx.strokeStyle = "rgba(255, 253, 240, 0.86)";
+  ctx.lineWidth = 1.5;
+  ctx.shadowBlur = genesis ? 28 : 20;
+  ctx.shadowColor = core;
+  ctx.beginPath();
+  ctx.moveTo(R * 1.18, 0);
+  ctx.lineTo(-R * 0.14, -R * 0.52);
+  ctx.lineTo(-R * 0.42, 0);
+  ctx.lineTo(-R * 0.14, R * 0.52);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(255, 253, 240, 0.74)";
+  ctx.lineWidth = 1.2;
+  for (let i = 0; i < 4; i++) {
+    const a = i * (Math.PI / 2) + fc * 0.05;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * R * 0.42, Math.sin(a) * R * 0.42);
+    ctx.lineTo(Math.cos(a) * R * 1.0, Math.sin(a) * R * 1.0);
+    ctx.stroke();
+  }
+
+  if (genesis || orb) {
+    ctx.save();
+    ctx.rotate(fc * (genesis ? 0.12 : 0.08));
+    ctx.strokeStyle = genesis ? "rgba(125, 252, 255, 0.68)" : "rgba(255, 216, 74, 0.62)";
+    ctx.lineWidth = 1.3;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, R * 1.1, R * 0.48, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
 // ===== BULLETS (14+ styles) =====
 export function drawBullets(ctx) {
   const { bullets } = state;
@@ -3468,6 +3713,16 @@ export function drawBullets(ctx) {
 
     if (b.isPlayer && b.visualStyle === "painter_paint") {
       drawPainterBullet(ctx, b);
+      continue;
+    }
+
+    if (b.isPlayer && b.visualStyle === "destroyer_ruin") {
+      drawDestroyerBullet(ctx, b);
+      continue;
+    }
+
+    if (b.isPlayer && b.visualStyle === "creator_light") {
+      drawCreatorBullet(ctx, b);
       continue;
     }
 
