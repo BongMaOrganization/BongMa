@@ -32,6 +32,7 @@ const FAST_BULLET_COLORS = {
   storm_bolt: ["#f4ffff", "#27d7ff"],
   reaper_soul: ["#efe6cd", "#ff2448"],
   phoenix_fire: ["#fffdf0", "#ff4b18"],
+  scout_arc: ["#f4ffff", "#43f5ff"],
 };
 
 function isBulletVisible(b, padding = 160) {
@@ -2913,11 +2914,128 @@ function drawPhoenixBullet(ctx, b) {
   ctx.restore();
 }
 
+function drawScoutBullet(ctx, b) {
+  const speed = Math.hypot(b.vx, b.vy) || 1;
+  const nx = b.vx / speed;
+  const ny = b.vy / speed;
+  const px = -ny;
+  const py = nx;
+  const angle = Math.atan2(b.vy, b.vx);
+  const fc = state.frameCount || 0;
+  const pulse = (Math.sin(fc * 0.34 + b.x * 0.012) + 1) * 0.5;
+  const scan = !!b.scoutScan;
+  const hook = !!b.scoutHookCharge;
+  const overdrive = !!b.scoutOverdrive;
+  const R = Math.max(8, b.radius * (overdrive ? 2.65 : hook ? 2.35 : scan ? 2.25 : 2.0));
+  const edge = overdrive ? "#ff22d8" : scan ? "#b526ff" : "#43f5ff";
+  const core = overdrive || hook ? "#f4ffff" : "#d7fdff";
+
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+
+  if ((overdrive || hook || scan) && fc % 3 === 0) {
+    state.particles.push({
+      x: b.x - nx * R * 1.2 + px * (Math.random() - 0.5) * R * 0.7,
+      y: b.y - ny * R * 1.2 + py * (Math.random() - 0.5) * R * 0.7,
+      vx: -nx * 0.55 + (Math.random() - 0.5) * 0.32,
+      vy: -ny * 0.55 + (Math.random() - 0.5) * 0.32,
+      life: overdrive ? 18 : 14,
+      color: Math.random() > 0.45 ? edge : "#f4ffff",
+      size: 1.8 + Math.random() * 2.4,
+    });
+  }
+
+  const trail = ctx.createLinearGradient(
+    b.x - nx * R * 5.4,
+    b.y - ny * R * 5.4,
+    b.x + nx * R,
+    b.y + ny * R,
+  );
+  trail.addColorStop(0, "rgba(5, 18, 29, 0)");
+  trail.addColorStop(0.25, "rgba(181, 38, 255, 0.14)");
+  trail.addColorStop(0.58, "rgba(67, 245, 255, 0.28)");
+  trail.addColorStop(0.84, overdrive ? "rgba(255, 34, 216, 0.5)" : "rgba(67, 245, 255, 0.48)");
+  trail.addColorStop(1, "rgba(244, 255, 255, 0.82)");
+
+  ctx.beginPath();
+  ctx.moveTo(b.x + nx * R * 1.15, b.y + ny * R * 1.15);
+  ctx.quadraticCurveTo(
+    b.x - nx * R * 1.8 + px * R * (0.75 + pulse * 0.24),
+    b.y - ny * R * 1.8 + py * R * (0.75 + pulse * 0.24),
+    b.x - nx * R * 4.8,
+    b.y - ny * R * 4.8,
+  );
+  ctx.quadraticCurveTo(
+    b.x - nx * R * 1.65 - px * R * (0.6 + pulse * 0.2),
+    b.y - ny * R * 1.65 - py * R * (0.6 + pulse * 0.2),
+    b.x + nx * R * 1.15,
+    b.y + ny * R * 1.15,
+  );
+  ctx.fillStyle = trail;
+  ctx.shadowBlur = overdrive ? 28 : 20;
+  ctx.shadowColor = edge;
+  ctx.fill();
+
+  ctx.translate(b.x, b.y);
+  ctx.rotate(angle);
+
+  const aura = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 2.25);
+  aura.addColorStop(0, "rgba(244, 255, 255, 0.78)");
+  aura.addColorStop(0.3, "rgba(67, 245, 255, 0.42)");
+  aura.addColorStop(0.62, overdrive ? "rgba(255, 34, 216, 0.3)" : "rgba(29, 143, 255, 0.24)");
+  aura.addColorStop(1, "rgba(5, 18, 29, 0)");
+  ctx.beginPath();
+  ctx.ellipse(0, 0, R * (1.18 + pulse * 0.12), R * (0.78 + pulse * 0.08), 0, 0, Math.PI * 2);
+  ctx.fillStyle = aura;
+  ctx.fill();
+
+  ctx.shadowBlur = overdrive ? 26 : 18;
+  ctx.shadowColor = core;
+  const coreGrad = ctx.createLinearGradient(-R, 0, R, 0);
+  coreGrad.addColorStop(0, "rgba(181, 38, 255, 0.18)");
+  coreGrad.addColorStop(0.3, edge);
+  coreGrad.addColorStop(0.68, "#43f5ff");
+  coreGrad.addColorStop(1, core);
+  ctx.fillStyle = coreGrad;
+  ctx.strokeStyle = "rgba(244, 255, 255, 0.82)";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(R * 1.18, 0);
+  ctx.lineTo(-R * 0.48, -R * 0.55);
+  ctx.lineTo(-R * 0.2, 0);
+  ctx.lineTo(-R * 0.48, R * 0.55);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.strokeStyle = overdrive ? "rgba(255, 34, 216, 0.78)" : "rgba(244, 255, 255, 0.7)";
+  ctx.lineWidth = 1.3;
+  ctx.beginPath();
+  ctx.moveTo(-R * 0.55, -R * 0.78);
+  ctx.lineTo(-R * 0.12, -R * 0.28);
+  ctx.lineTo(-R * 0.52, R * 0.05);
+  ctx.lineTo(-R * 0.08, R * 0.52);
+  ctx.stroke();
+
+  if (scan || overdrive) {
+    ctx.save();
+    ctx.rotate(fc * (overdrive ? 0.16 : 0.09));
+    ctx.strokeStyle = overdrive ? "rgba(255, 34, 216, 0.65)" : "rgba(67, 245, 255, 0.62)";
+    ctx.lineWidth = 1.2;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, R * 1.1, R * 0.45, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
 // ===== BULLETS (14+ styles) =====
 export function drawBullets(ctx) {
-  const { bullets, player } = state;
-  const isScoutQ = player?.characterId === "scout" && (state.activeBuffs?.q || 0) > 0;
-  const isFrostR = player?.characterId === "frost" && (state.activeBuffs?.r || 0) > 0;
+  const { bullets } = state;
   const fastBulletLoad = shouldUseFastBulletDraw(state, bullets.length);
   const extremeBulletLoad = shouldUseExtremeBulletDraw(bullets.length);
   const restoreParticlePush = withParticleSpawnBudget(state);
@@ -3129,6 +3247,11 @@ export function drawBullets(ctx) {
 
     if (b.isPlayer && b.visualStyle === "phoenix_fire") {
       drawPhoenixBullet(ctx, b);
+      continue;
+    }
+
+    if (b.isPlayer && b.visualStyle === "scout_arc") {
+      drawScoutBullet(ctx, b);
       continue;
     }
 
