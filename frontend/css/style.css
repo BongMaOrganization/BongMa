@@ -1500,3 +1500,22 @@ button:disabled {
 .premium-card.locked::before {
   display: none;
 }
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0d0d11;
+  border-left: 1px solid #222;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #00ffcc;
+}

@@ -53,7 +53,7 @@ export function initGame(isNextLevel = false) {
     // ĐỒNG BỘ CHỈ SỐ GỐC CỦA NHÂN VẬT VÀO THANH NÂNG CẤP KHI BẮT ĐẦU MÀN 1
     // Đã sửa: Gán thẳng số tia đạn và số lần nảy gốc của nhân vật vào mức nâng cấp ban đầu
     state.upgrades = {
-      spd: 0,
+      cdr: 0,
       fire: 0,
       multi: state.player.multiShot || 1, // 1 tia đạn = 1/5, Phù thủy 3 tia = 3/5
       bounce: state.player.bounces || 0, // Pháo đài 1 nảy = 1/5
@@ -64,7 +64,7 @@ export function initGame(isNextLevel = false) {
     };
 
     state.evolutions = {
-      spd: false,
+      cdr: false,
       fire: false,
       multi: false,
       bounce: false,

@@ -98,7 +98,8 @@ function triggerSkill(key, canvas, changeStateFn) {
 
   // 2. Nếu kích hoạt thành công (hoặc mặc định), bắt đầu tính Cooldown
   if (success !== false) {
-    state.skillsCD[key] = cd;
+    const cdrMultiplier = state.player.cdr || 1.0;
+    state.skillsCD[key] = Math.floor(cd * cdrMultiplier);
   }
 }
 

@@ -31,7 +31,7 @@ export const BOSS_ARENA_REWARDS = {
 };
 
 export const UPGRADES = [
-  { id: "spd", name: "Giày Gió", desc: "+10% Tốc độ di chuyển", action: (p) => (p.speed *= 1.1) },
+  { id: "cdr", name: "Đồng Hồ Cát", desc: "Giảm 10% hồi chiêu kỹ năng", action: (p) => { p.cdr = (p.cdr || 1.0) * 0.9; } },
   { id: "fire", name: "Kích Thích", desc: "Giảm 20% thời gian nạp đạn", action: (p) => (p.fireRate = Math.max(5, p.fireRate * 0.8)) },
   { id: "multi", name: "Đạn Kép", desc: "Bắn thêm 1 tia đạn (Tối đa 5)", action: (p) => (p.multiShot = Math.min(10, p.multiShot + 1)) },
   { id: "bounce", name: "Đạn Nẩy", desc: "Đạn nẩy vào tường 1 lần", action: (p) => p.bounces++ },

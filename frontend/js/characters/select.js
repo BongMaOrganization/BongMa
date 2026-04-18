@@ -165,14 +165,12 @@ export function renderCharacterSelect() {
 
     let upg = state.characterUpgrades[char.id] || {
       hp: 0,
-      speed: 0,
+      cdr: 0,
       fireRate: 0,
     };
     let actualHp = char.baseStats.hp + (upg.hp || 0);
-    let actualSpeed = (
-      char.baseStats.speed *
-      (1 + (upg.speed || 0) * 0.05)
-    ).toFixed(1);
+    // Tính CDR: Cấp 0 = 100%, Cấp 10 = 50%
+    let cdrPercent = ((1 - (upg.cdr || 0) * 0.05) * 100).toFixed(0);
 
     let rColor = rarityColors[char.rarity] || "#fff";
     let rLabel = (char.rarity || "common").toUpperCase();
@@ -191,7 +189,7 @@ export function renderCharacterSelect() {
       
       <div style="width: 100%; background: rgba(0,0,0,0.5); padding: 8px; border-radius: 6px; margin-bottom: 10px; font-size: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
         <span style="color:#ffaa00; font-weight:bold;">HP:</span> ${actualHp} | 
-        <span style="color:#00ffcc; font-weight:bold;">SPD:</span> ${actualSpeed}<br>
+        <span style="color:#00ffcc; font-weight:bold;">CD:</span> ${cdrPercent}%<br>
         <span style="color:#ff5555; font-weight:bold;">TIA:</span> ${char.baseStats.multiShot} | 
         <span style="color:#bb88ff; font-weight:bold;">NẢY:</span> ${char.baseStats.bounces || 0}
       </div>
@@ -254,7 +252,7 @@ export function renderCharacterSelect() {
 
 export function renderUpgradeDetail(charId) {
   let char = CHARACTERS.find((c) => c.id === charId);
-  let upg = state.characterUpgrades[charId] || { hp: 0, speed: 0, fireRate: 0 };
+  let upg = state.characterUpgrades[charId] || { hp: 0, cdr: 0, fireRate: 0 };
 
   document.getElementById("upg-detail-title").innerText =
     `NÂNG CẤP: ${char.name.toUpperCase()}`;
@@ -272,10 +270,10 @@ export function renderUpgradeDetail(charId) {
       effect: "+1 HP / Cấp",
     },
     {
-      key: "speed",
-      name: "Tốc độ chạy",
-      current: upg.speed || 0,
-      effect: "+5% Tốc độ / Cấp",
+      key: "cdr",
+      name: "Hồi chiêu kỹ năng",
+      current: upg.cdr || 0,
+      effect: "-5% Hồi chiêu / Cấp",
     },
     {
       key: "fireRate",
@@ -317,7 +315,7 @@ export function renderUpgradeDetail(charId) {
       if (state.player.coins >= cost && !isMax) {
         state.player.coins -= cost;
         if (!state.characterUpgrades[charId]) {
-          state.characterUpgrades[charId] = { hp: 0, speed: 0, fireRate: 0 };
+          state.characterUpgrades[charId] = { hp: 0, cdr: 0, fireRate: 0 };
         }
         state.characterUpgrades[charId][stat.key] = stat.current + 1;
         saveGame(state, GHOST_DATA_KEY);

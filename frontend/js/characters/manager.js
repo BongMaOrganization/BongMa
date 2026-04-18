@@ -14,14 +14,15 @@ export function applyCharacterToPlayer(characterId) {
   let data = getCharacterConfig(characterId);
   let upp = state.characterUpgrades[characterId] || {
     hp: 0,
-    speed: 0,
+    cdr: 0,
     fireRate: 0,
   };
   let base = getInitialPlayerState();
 
   base.hp = data.baseStats.hp + (upp.hp || 0);
   base.maxHp = base.hp;
-  base.speed = data.baseStats.speed * (1 + (upp.speed || 0) * 0.1);
+  base.speed = data.baseStats.speed; // Tốc độ giữ nguyên theo nhân vật
+  base.cdr = 1.0 - (upp.cdr || 0) * 0.05; // Mỗi cấp giảm 5% hồi chiêu (Max 50%)
   base.fireRate = Math.max(5, data.baseStats.fireRate - (upp.fireRate || 0));
   base.multiShot = data.baseStats.multiShot;
   base.bounces = data.baseStats.bounces;
