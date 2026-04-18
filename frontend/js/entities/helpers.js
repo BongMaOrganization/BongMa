@@ -24,6 +24,7 @@ const PLAYER_BULLET_VISUALS = {
     void: "void_shard",
     storm: "storm_bolt",
     reaper: "reaper_soul",
+    phoenix: "phoenix_fire",
     medic: "medic_serum",
     tank: "tank_fortress",
 };
