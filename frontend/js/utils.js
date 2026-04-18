@@ -1,5 +1,5 @@
 export const TOKEN_KEY = "auth_token";
-const API = "http://localhost:3000";
+import { API_BASE_URL } from "./config.js";
 
 export function dist(x1, y1, x2, y2) {
   return Math.hypot(x2 - x1, y2 - y1);
@@ -14,7 +14,7 @@ function authHeaders() {
 }
 
 export async function register(username, password) {
-  const res = await fetch(`${API}/api/register`, {
+  const res = await fetch(`${API_BASE_URL}/api/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
@@ -25,7 +25,7 @@ export async function register(username, password) {
 }
 
 export async function login(username, password) {
-  const res = await fetch(`${API}/api/login`, {
+  const res = await fetch(`${API_BASE_URL}/api/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
@@ -61,7 +61,7 @@ export async function saveGameToServer(state, GHOST_DATA_KEY) {
   saveGame(state, GHOST_DATA_KEY);
 
   try {
-    await fetch(`${API}/api/save`, {
+    await fetch(`${API_BASE_URL}/api/save`, {
       method: "POST",
       headers: authHeaders(),
       body: JSON.stringify({
@@ -94,7 +94,7 @@ export async function saveGameToServer(state, GHOST_DATA_KEY) {
 
 export async function loadGameFromServer() {
   try {
-    const res = await fetch(`${API}/api/load`, {
+    const res = await fetch(`${API_BASE_URL}/api/load`, {
       headers: authHeaders(),
     });
     if (!res.ok) return null;

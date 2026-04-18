@@ -102,5 +102,6 @@ app.get("/api/load", authenticateToken, async (req, res) => {
   res.json(user);
 });
 
-httpServer.listen(3000, "0.0.0.0", () => console.log("Server running on :3000 (LAN accessible)"));
+const PORT = process.env.PORT || 3000;
+httpServer.listen(PORT, "0.0.0.0", () => console.log(`Server running on :${PORT} (LAN accessible)`));
 
