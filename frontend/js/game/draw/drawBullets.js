@@ -2694,6 +2694,151 @@ function drawAlchemistBullet(ctx, b) {
   ctx.restore();
 }
 
+function drawPhoenixBullet(ctx, b) {
+  const speed = Math.hypot(b.vx, b.vy) || 1;
+  const nx = b.vx / speed;
+  const ny = b.vy / speed;
+  const px = -ny;
+  const py = nx;
+  const angle = Math.atan2(b.vy, b.vx);
+  const fc = state.frameCount || 0;
+  const pulse = (Math.sin(fc * 0.36 + b.x * 0.01) + 1) * 0.5;
+  const sacred = !!b.phoenixSacred;
+  const ash = !!b.phoenixAsh;
+  const rebirth = !!b.phoenixRebirth;
+  const R = Math.max(9, b.radius * (rebirth ? 2.85 : sacred ? 2.45 : 2.1));
+  const ember = rebirth ? "#ff2f6d" : ash ? "#ff4b18" : "#ff6a18";
+  const gold = sacred || rebirth ? "#fff1ad" : "#ffd45a";
+  const core = rebirth ? "#fffdf0" : sacred ? "#fff8cc" : "#ffe08a";
+
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+
+  if (!state.particles) state.particles = [];
+  if (fc % (rebirth || sacred ? 1 : 2) === 0) {
+    state.particles.push({
+      x: b.x - nx * R * 1.3 + px * (Math.random() - 0.5) * R,
+      y: b.y - ny * R * 1.3 + py * (Math.random() - 0.5) * R,
+      vx: -nx * 0.65 + (Math.random() - 0.5) * 0.46,
+      vy: -ny * 0.65 + (Math.random() - 0.5) * 0.46,
+      life: rebirth ? 24 : 18,
+      color: Math.random() > 0.42 ? ember : gold,
+      size: 2 + Math.random() * 3.4,
+    });
+  }
+
+  const trail = ctx.createLinearGradient(
+    b.x - nx * R * 5,
+    b.y - ny * R * 5,
+    b.x + nx * R,
+    b.y + ny * R,
+  );
+  trail.addColorStop(0, "rgba(42, 17, 16, 0)");
+  trail.addColorStop(0.24, "rgba(255, 75, 24, 0.18)");
+  trail.addColorStop(0.55, ash ? "rgba(110, 36, 28, 0.35)" : "rgba(255, 138, 24, 0.32)");
+  trail.addColorStop(0.82, rebirth ? "rgba(255, 47, 109, 0.56)" : "rgba(255, 212, 90, 0.48)");
+  trail.addColorStop(1, "rgba(255, 253, 240, 0.82)");
+
+  ctx.beginPath();
+  ctx.moveTo(b.x + nx * R * 1.06, b.y + ny * R * 1.06);
+  ctx.quadraticCurveTo(
+    b.x - nx * R * 1.85 + px * R * (0.9 + pulse * 0.22),
+    b.y - ny * R * 1.85 + py * R * (0.9 + pulse * 0.22),
+    b.x - nx * R * 4.4,
+    b.y - ny * R * 4.4,
+  );
+  ctx.quadraticCurveTo(
+    b.x - nx * R * 1.7 - px * R * (0.72 + pulse * 0.18),
+    b.y - ny * R * 1.7 - py * R * (0.72 + pulse * 0.18),
+    b.x + nx * R * 1.06,
+    b.y + ny * R * 1.06,
+  );
+  ctx.fillStyle = trail;
+  ctx.shadowBlur = rebirth ? 34 : 24;
+  ctx.shadowColor = ember;
+  ctx.fill();
+
+  ctx.translate(b.x, b.y);
+  ctx.rotate(angle);
+
+  const aura = ctx.createRadialGradient(0, 0, 0, 0, 0, R * 2.55);
+  aura.addColorStop(0, "rgba(255, 253, 240, 0.82)");
+  aura.addColorStop(0.28, sacred ? "rgba(255, 241, 173, 0.48)" : "rgba(255, 212, 90, 0.4)");
+  aura.addColorStop(0.62, rebirth ? "rgba(255, 47, 109, 0.32)" : "rgba(255, 75, 24, 0.28)");
+  aura.addColorStop(1, "rgba(42, 17, 16, 0)");
+  ctx.beginPath();
+  ctx.ellipse(0, 0, R * (1.28 + pulse * 0.14), R * (0.95 + pulse * 0.1), 0, 0, Math.PI * 2);
+  ctx.fillStyle = aura;
+  ctx.fill();
+
+  ctx.shadowBlur = rebirth ? 30 : 20;
+  ctx.shadowColor = core;
+
+  const feather = ctx.createLinearGradient(-R, 0, R, 0);
+  feather.addColorStop(0, "rgba(255, 75, 24, 0.2)");
+  feather.addColorStop(0.28, ember);
+  feather.addColorStop(0.62, gold);
+  feather.addColorStop(1, core);
+  ctx.fillStyle = feather;
+  ctx.strokeStyle = "rgba(255, 253, 240, 0.88)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(R * 1.22, 0);
+  ctx.quadraticCurveTo(R * 0.2, -R * 1.02, -R * 1.0, -R * 0.24);
+  ctx.quadraticCurveTo(-R * 0.46, -R * 0.06, -R * 0.18, R * 0.18);
+  ctx.quadraticCurveTo(-R * 0.64, R * 0.22, -R * 1.02, R * 0.58);
+  ctx.quadraticCurveTo(R * 0.2, R * 0.88, R * 1.22, 0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.strokeStyle = "rgba(255, 253, 240, 0.72)";
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(R * 0.86, 0);
+  ctx.quadraticCurveTo(R * 0.05, -R * 0.1, -R * 0.72, R * 0.4);
+  ctx.stroke();
+
+  for (let i = -1; i <= 1; i += 2) {
+    ctx.save();
+    ctx.scale(1, i);
+    ctx.strokeStyle = i < 0 ? "rgba(255, 212, 90, 0.72)" : "rgba(255, 75, 24, 0.64)";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(R * 0.28, 0);
+    ctx.quadraticCurveTo(-R * 0.1, R * 0.32, -R * 0.72, R * 0.22);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  if (sacred || rebirth) {
+    ctx.save();
+    ctx.rotate(fc * (rebirth ? 0.14 : 0.08));
+    ctx.strokeStyle = rebirth ? "rgba(255, 47, 109, 0.72)" : "rgba(255, 241, 173, 0.68)";
+    ctx.lineWidth = 1.4;
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, R * (1.12 + pulse * 0.1), R * 0.52, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  if (rebirth) {
+    for (let i = 0; i < 6; i++) {
+      const a = fc * 0.12 + i * (Math.PI * 2 / 6);
+      ctx.strokeStyle = i % 2 === 0 ? "rgba(255, 253, 240, 0.7)" : "rgba(255, 47, 109, 0.58)";
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * R * 0.46, Math.sin(a) * R * 0.46);
+      ctx.lineTo(Math.cos(a) * R * 1.35, Math.sin(a) * R * 1.35);
+      ctx.stroke();
+    }
+  }
+
+  ctx.restore();
+}
+
 // ===== BULLETS (14+ styles) =====
 export function drawBullets(ctx) {
   const { bullets, player } = state;
@@ -2890,6 +3035,11 @@ export function drawBullets(ctx) {
 
     if (b.isPlayer && b.visualStyle === "alchemist_flask") {
       drawAlchemistBullet(ctx, b);
+      continue;
+    }
+
+    if (b.isPlayer && b.visualStyle === "phoenix_fire") {
+      drawPhoenixBullet(ctx, b);
       continue;
     }
 
