@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  bongma-server:
+    image: ${DOCKERHUB_USER}/bongma-backend:latest
+    ports:
+      - "3000:3000"
+    env_file:        
+      - .env     
+    restart: always
+
+  bongma-client:
+    image: ${DOCKERHUB_USER}/bongma-frontend:latest
+    ports:
+      - "80:80"
+    restart: always
