@@ -11,5 +11,5 @@ services:
   bongma-client:
     image: ${DOCKERHUB_USER}/bongma-frontend:latest
     ports:
-      - "80:25566"
+      - "25566:80"
     restart: always
