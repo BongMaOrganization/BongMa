@@ -4,6 +4,7 @@ export const API_BASE_URL = "https://bongma.storyoftri.xyz";
 export const BOSS_FRAGMENT_DROP_RATE = 1; // 100% chance
 export const PLAYER_MOVE_SPEED_MULTIPLIER = 0.85;
 export const PLAYER_DASH_SPEED_MULTIPLIER = 2.5;
+export const PLAYER_MAX_PROJECTILES_PER_SECOND = 18;
 export const BOSS_MOVE_SPEED_MULTIPLIER = 0.75;
 export const BOSS_ATTACK_INTERVAL = 75;
 export const BOSS_SPECIAL_CAST_TIME_MULTIPLIER = 1.15;

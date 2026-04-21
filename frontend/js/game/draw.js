@@ -36,6 +36,7 @@ import {
 import { drawMinimap } from "./draw/drawMinimap.js";
 import { drawWorldObjects, drawFloatingTexts } from "./draw/drawWorldObjects.js";
 import { drawRemotePlayers, drawReviveZones, drawMpPlayersHUD } from "./draw/drawRemotePlayers.js";
+import { shouldSkipCharacterVfxFrame } from "./vfxBudget.js";
 
 // Re-export hexToRgba for other modules that may import from draw.js
 export { hexToRgba } from "./draw/drawUtils.js";
@@ -128,7 +129,9 @@ export function draw(ctx, canvas) {
   drawReviveZones(ctx);
 
   // --- Character VFX (creator, knight, scout, satellite, god mode) ---
-  drawCharacterVFX(ctx);
+  if (!shouldSkipCharacterVfxFrame(state)) {
+    drawCharacterVFX(ctx);
+  }
 
   // --- Ground effects (warnings, storm, wind, icicles) ---
   drawGroundEffects(ctx, canvas);

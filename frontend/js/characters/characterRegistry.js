@@ -38,6 +38,7 @@ import { creator } from "./mythical/creator.js";
 import { elementalist } from "./mythical/elementalist.js";
 import { painter } from "./mythical/painter.js";
 import { scout } from "./mythical/scout.js";
+import { shouldSkipCharacterVfxFrame } from "../game/vfxBudget.js";
 
 export const Characters = {
     assassin,
@@ -95,6 +96,7 @@ export function updateActiveCharacter(state, ctx, canvas, buffs, changeStateFn) 
 export function drawActiveCharacter(state, ctx, canvas, buffs) {
     const charId = state.player.characterId;
     const char = Characters[charId];
+    if (shouldSkipCharacterVfxFrame(state)) return;
     if (char && typeof char.draw === "function") {
         char.draw(state, ctx, canvas, buffs);
     }

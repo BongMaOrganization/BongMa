@@ -52,6 +52,29 @@ function getNearbyGhosts(buckets, x, y, out) {
   return out;
 }
 
+function isBulletNearSimulationArea(bullet, player, padding = 520) {
+  const cam = state.camera;
+  if (!cam) return true;
+  const width = cam.width || 0;
+  const height = cam.height || 0;
+
+  const inCameraBounds =
+    bullet.x >= cam.x - padding &&
+    bullet.x <= cam.x + width + padding &&
+    bullet.y >= cam.y - padding &&
+    bullet.y <= cam.y + height + padding;
+
+  if (inCameraBounds) return true;
+
+  return withinRadiusSq(
+    bullet.x,
+    bullet.y,
+    player.x,
+    player.y,
+    Math.max(width, height) + padding,
+  );
+}
+
 export function playerTakeDamage(ctx, canvas, changeStateFn, amount = 1) {
   if (state.player.isInvincible) return; // FIX I-FRAMES
   let player = state.player;
@@ -217,6 +240,7 @@ export function updateBullets(
   let isHunterE = player.characterId === "hunter" && buffs.e > 0;
   const ghostBuckets = buildGhostBuckets(ghosts);
   const nearbyGhosts = [];
+  const vortexHazards = (state.hazards || []).filter((h) => h.type === "vortex");
 
   if (state.windForce.timer > 0) {
     const fx = state.windForce.x;
@@ -258,6 +282,14 @@ export function updateBullets(
   for (let i = bullets.length - 1; i >= 0; i--) {
     let b = bullets[i];
     let isSpiritE = player.characterId === "spirit" && buffs.e > 0;
+
+    if (!b.isMeteor && !isBulletNearSimulationArea(b, player)) {
+      b.x += b.vx || 0;
+      b.y += b.vy || 0;
+      b.life -= b.isPlayer ? 3 : 4;
+      if (b.life <= 0) bullets.splice(i, 1);
+      continue;
+    }
 
     if (isSpiritE && !b.isPlayer) {
       if (withinRadiusSq(b.x, b.y, player.x, player.y, 200)) {
@@ -316,9 +348,9 @@ export function updateBullets(
       }
 
       // Wind Vortex pulls Fire Bullets and Player Bullets
-      if (b.isPlayer || b.style === 1) {
+      if ((b.isPlayer || b.style === 1) && vortexHazards.length > 0) {
         // Player or Fire
-        state.hazards.forEach((h) => {
+        vortexHazards.forEach((h) => {
           if (h.type === "vortex") {
             const dxv = h.x - b.x,
               dyv = h.y - b.y;

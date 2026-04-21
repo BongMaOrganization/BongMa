@@ -2,6 +2,7 @@ import { state } from "../state.js";
 import {
   FPS,
   PLAYER_DASH_SPEED_MULTIPLIER,
+  PLAYER_MAX_PROJECTILES_PER_SECOND,
   PLAYER_MOVE_SPEED_MULTIPLIER,
 } from "../config.js";
 import { dist } from "../utils.js";
@@ -27,6 +28,29 @@ import { spawnCrate, spawnCrystal } from "../world/element.js";
 import { ATTACK_MODES, SPECIAL_SKILLS } from "../entities/bosses/patterns.js";
 import { updateMultiplayer } from "../multiplayer/mpFlow.js";
 import { enforceBulletBudget, enforceVfxBudget } from "./vfxBudget.js";
+
+function applyPlayerShotCompression(
+  startIndex,
+  bounceCount,
+  damageMultiplier = 1,
+  radiusMultiplier = 1,
+) {
+  for (let i = startIndex; i < state.bullets.length; i++) {
+    const bullet = state.bullets[i];
+    if (!bullet?.isPlayer) continue;
+
+    bullet.bounces = bounceCount;
+
+    if (damageMultiplier > 1) {
+      bullet.damage = (bullet.damage || 1) * damageMultiplier;
+      bullet.radius = Math.min(
+        10,
+        Math.max(4, (bullet.radius || 4) * radiusMultiplier),
+      );
+      bullet.fireRateCompressed = true;
+    }
+  }
+}
 
 export function update(ctx, canvas, changeStateFn) {
   const { player, boss, keys, mouse, activeBuffs } = state;
@@ -120,8 +144,25 @@ export function update(ctx, canvas, changeStateFn) {
   );
   if (fireRateBuff) currentFireRate = Math.max(2, currentFireRate * 0.5);
 
-  let currentMultiShot = state.playerMultiShotModifier;
+  let currentMultiShot = Math.max(
+    1,
+    Math.round(state.playerMultiShotModifier || 1),
+  );
   let currentBounces = state.playerBouncesModifier;
+  let shotDamageMultiplier = 1;
+  let shotRadiusMultiplier = 1;
+
+  const projectedProjectilesPerSecond =
+    (currentMultiShot * FPS) / Math.max(1, currentFireRate);
+  if (projectedProjectilesPerSecond > PLAYER_MAX_PROJECTILES_PER_SECOND) {
+    const optimizedFireRate = Math.ceil(
+      (currentMultiShot * FPS) / PLAYER_MAX_PROJECTILES_PER_SECOND,
+    );
+    shotDamageMultiplier = optimizedFireRate / Math.max(1, currentFireRate);
+    shotRadiusMultiplier =
+      1 + Math.min(0.35, (shotDamageMultiplier - 1) * 0.1);
+    currentFireRate = optimizedFireRate;
+  }
 
   // Timers: Grace, Shield, Dash
   if (player.gracePeriod > 0) player.gracePeriod--;
@@ -258,8 +299,13 @@ export function update(ctx, canvas, changeStateFn) {
       for (let i = oldLen; i < state.bullets.length; i++) {
         state.bullets[i].damage = 2;
         state.bullets[i].radius = 8;
-        state.bullets[i].bounces = currentBounces;
       }
+      applyPlayerShotCompression(
+        oldLen,
+        currentBounces,
+        shotDamageMultiplier,
+        shotRadiusMultiplier,
+      );
     } else {
       // Bắn thường
       let baseAngle = Math.atan2(mouse.y - player.y, mouse.x - player.x);
@@ -283,8 +329,12 @@ export function update(ctx, canvas, changeStateFn) {
           state.bullets[i].style = 1;
         }
       }
-      for (let i = oldLen; i < state.bullets.length; i++)
-        state.bullets[i].bounces = currentBounces;
+      applyPlayerShotCompression(
+        oldLen,
+        currentBounces,
+        shotDamageMultiplier,
+        shotRadiusMultiplier,
+      );
     }
 
     player.cooldown = currentFireRate;

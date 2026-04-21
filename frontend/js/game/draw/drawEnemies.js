@@ -1,5 +1,6 @@
 import { state } from "../../state.js";
 import { dist } from "../../utils.js";
+import { shouldUseMinimalEnemyDraw } from "../vfxBudget.js";
 
 function isVisible(x, y, radius = 0, padding = 180) {
   const cam = state.camera;
@@ -19,6 +20,7 @@ export function drawEnemies(ctx) {
   const { ghosts, activeBuffs, player } = state;
   const buffs = activeBuffs || { q: 0, e: 0, r: 0 };
   const char = player?.characterId;
+  const minimalDraw = shouldUseMinimalEnemyDraw(state);
 
   for (let g of ghosts) {
     if (g.x < 0) continue;
@@ -56,7 +58,7 @@ export function drawEnemies(ctx) {
         8 * g.speedRate;
 
     // Trail
-    if (g.historyPath && g.historyPath.length > 0 && g.isStunned <= 0) {
+    if (!minimalDraw && g.historyPath && g.historyPath.length > 0 && g.isStunned <= 0) {
       ctx.beginPath();
       ctx.moveTo(g.historyPath[0].x, g.historyPath[0].y);
       for (let p of g.historyPath) ctx.lineTo(p.x, p.y);
@@ -69,7 +71,7 @@ export function drawEnemies(ctx) {
     }
 
     // Fire styling
-    if (g.style === 1) {
+    if (!minimalDraw && g.style === 1) {
       ctx.shadowBlur = 15;
       ctx.shadowColor = "#ff4400";
       if (state.frameCount % 4 === 0 && (state.particles?.length || 0) < 160) {
@@ -86,7 +88,7 @@ export function drawEnemies(ctx) {
     }
 
     // Wind styling
-    if (g.style === 4) {
+    if (!minimalDraw && g.style === 4) {
       ctx.strokeStyle = "rgba(200, 255, 255, 0.8)";
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -114,7 +116,7 @@ export function drawEnemies(ctx) {
     ctx.fill();
     ctx.globalAlpha = 1.0;
 
-    if (g.isStunned <= 0) {
+    if (!minimalDraw && g.isStunned <= 0) {
       ctx.strokeStyle = isDashing ? "#00ffcc" : "#ff0000";
       ctx.lineWidth = 2;
       ctx.stroke();
@@ -163,8 +165,10 @@ export function drawEnemies(ctx) {
     if (!isVisible(e.x, e.y, e.radius || 15)) return;
     ctx.save();
 
-    ctx.shadowBlur = 15;
-    ctx.shadowColor = state.elementColors[e.element];
+    if (!minimalDraw) {
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = state.elementColors[e.element];
+    }
 
     ctx.beginPath();
     ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);

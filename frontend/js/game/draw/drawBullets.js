@@ -59,14 +59,14 @@ function drawFastBullet(ctx, b) {
   const ny = b.vy / speed;
   const colors = FAST_BULLET_COLORS[b.visualStyle] || (b.isPlayer ? ["#eaffff", "#00ffcc"] : ["#ffd0d0", "#ff4d4d"]);
   const r = Math.max(3, Math.min(8, b.radius || 4));
-  const trail = Math.max(12, r * 4);
+  const trail = Math.max(8, r * 3);
 
   ctx.save();
-  ctx.globalCompositeOperation = b.isPlayer ? "lighter" : "source-over";
+  ctx.globalCompositeOperation = "source-over";
   ctx.lineCap = "round";
   ctx.strokeStyle = colors[1];
   ctx.lineWidth = Math.max(2, r * 0.8);
-  ctx.globalAlpha = 0.68;
+  ctx.globalAlpha = 0.55;
   ctx.beginPath();
   ctx.moveTo(b.x - nx * trail, b.y - ny * trail);
   ctx.lineTo(b.x, b.y);
@@ -3707,6 +3707,11 @@ export function drawBullets(ctx) {
       ctx.stroke();
 
       ctx.restore();
+      continue;
+    }
+
+    if (b.isPlayer) {
+      drawFastBullet(ctx, b);
       continue;
     }
 
