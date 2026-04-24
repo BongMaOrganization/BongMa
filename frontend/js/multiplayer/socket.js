@@ -3,7 +3,7 @@
  * WAN mode: kết nối tới api.bongma.storyoftri.xyz
  */
 
-const SERVER_URL = "https://api.bongma.storyoftri.xyz";
+const SERVER_URL = "https://bongma.storyoftri.xyz";
 
 let socket = null;
 
