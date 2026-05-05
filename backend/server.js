@@ -9,13 +9,33 @@ import "dotenv/config";
 import { User } from "./models/User.js";
 import { setupSocketIO } from "./socket_handler.js";
 
+const corsOptions = {
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "Authorization"],
+  exposedHeaders: ["Authorization"],
+  optionsSuccessStatus: 204,
+};
+
 const app = express();
-app.use(cors({ origin: "*" }));
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", corsOptions.methods.join(", "));
+  res.header("Access-Control-Allow-Headers", corsOptions.allowedHeaders.join(", "));
+  res.header("Access-Control-Expose-Headers", corsOptions.exposedHeaders.join(", "));
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(corsOptions.optionsSuccessStatus);
+  }
+
+  next();
+});
+app.use(cors(corsOptions));
 app.use(express.json());
 
 const httpServer = createServer(app);
 const io = new SocketIOServer(httpServer, {
-  cors: { origin: "*", methods: ["GET", "POST"] },
+  cors: corsOptions,
 });
 setupSocketIO(io);
 
