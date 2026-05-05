@@ -1,6 +1,28 @@
 export const FPS = 60;
 export const GHOST_DATA_KEY = "AsynchronousEchoes_V4";
-export const API_BASE_URL = "https://bongma.storyoftri.xyz";
+const API_OVERRIDE_KEY = "BONGMA_API_BASE_URL";
+const LOCAL_FRONTEND_HOSTS = new Set(["127.0.0.1", "localhost"]);
+
+function normalizeApiBaseUrl(url) {
+  return String(url || "").trim().replace(/\/+$/, "");
+}
+
+function resolveApiBaseUrl() {
+  if (typeof window !== "undefined") {
+    const override = normalizeApiBaseUrl(
+      window.localStorage?.getItem(API_OVERRIDE_KEY),
+    );
+    if (override) return override;
+
+    if (LOCAL_FRONTEND_HOSTS.has(window.location.hostname)) {
+      return "http://127.0.0.1:3000";
+    }
+  }
+
+  return "https://bongma.storyoftri.xyz";
+}
+
+export const API_BASE_URL = resolveApiBaseUrl();
 export const BOSS_FRAGMENT_DROP_RATE = 1; // 100% chance
 export const PLAYER_MOVE_SPEED_MULTIPLIER = 0.85;
 export const PLAYER_DASH_SPEED_MULTIPLIER = 2.5;
