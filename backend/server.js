@@ -9,19 +9,33 @@ import "dotenv/config";
 import { User } from "./models/User.js";
 import { setupSocketIO } from "./socket_handler.js";
 
-const app = express();
-const ALLOWED_ORIGINS = [
-  "https://bongma.storyoftri.xyz",
-  "http://localhost:25566", // dev only
-  "http://localhost:5500",  // dev only
-];
+const corsOptions = {
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "Authorization"],
+  exposedHeaders: ["Authorization"],
+  optionsSuccessStatus: 204,
+};
 
-app.use(cors({ origin: ALLOWED_ORIGINS, credentials: true }));
+const app = express();
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", corsOptions.methods.join(", "));
+  res.header("Access-Control-Allow-Headers", corsOptions.allowedHeaders.join(", "));
+  res.header("Access-Control-Expose-Headers", corsOptions.exposedHeaders.join(", "));
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(corsOptions.optionsSuccessStatus);
+  }
+
+  next();
+});
+app.use(cors(corsOptions));
 app.use(express.json());
 
 const httpServer = createServer(app);
 const io = new SocketIOServer(httpServer, {
-  cors: { origin: ALLOWED_ORIGINS, methods: ["GET", "POST"], credentials: true },
+  cors: corsOptions,
 });
 setupSocketIO(io);
 

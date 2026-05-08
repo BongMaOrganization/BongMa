@@ -326,6 +326,8 @@ export async function onCardSelected(gameLoopFn) {
 }
 
 export async function startGame(gameLoopFn) {
+  saveGame(state, GHOST_DATA_KEY);
+  persistState();
   initGame(false);
   changeState("PLAYING", gameLoopFn);
 }
