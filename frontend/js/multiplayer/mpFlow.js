@@ -157,7 +157,6 @@ export function startMultiplayerBossArena(bossType, hpScale, players, changeStat
   playBGM("BOSS_" + 1);
 
   changeStateFn("PLAYING");
-  if (gameLoopFn) gameLoopFn();
 }
 
 // ==============================
