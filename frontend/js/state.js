@@ -55,6 +55,8 @@ export const state = {
   prevKeys: {},
   mouse: { x: 0, y: 0, screenX: 0, screenY: 0, clicked: false },
   loopId: null,
+  loopTimeoutId: null,
+  lastLoopTimestamp: 0,
 
   // Hàng đợi các tác vụ trì hoãn (thay thế cho setTimeout)
   delayedTasks: [],

@@ -22,6 +22,7 @@ import { setupMenuButtons } from "./characters/select.js";
 import { evolve } from "./game/evolutions.js";
 import { handleSkillsUpdate } from "./game/skills.js";
 import { updateBossUI } from "./ui.js";
+import { FPS } from "./config.js";
 
 // === MULTIPLAYER imports ===
 import { connectSocket, disconnectSocket } from "./multiplayer/socket.js";
@@ -34,6 +35,20 @@ import { CHARACTERS } from "./characters/data.js";
 
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
+const FRAME_INTERVAL_MS = 1000 / FPS;
+
+function scheduleNextFrame(frameStartedAt) {
+  if (state.gameState !== "PLAYING") return;
+
+  const frameCost = performance.now() - frameStartedAt;
+  const delay = Math.max(0, FRAME_INTERVAL_MS - frameCost);
+
+  state.loopTimeoutId = window.setTimeout(() => {
+    if (state.gameState === "PLAYING") {
+      state.loopId = requestAnimationFrame(gameLoop);
+    }
+  }, delay);
+}
 
 document.addEventListener("click", (event) => {
   if (event.target.closest("button")) {
@@ -49,8 +64,20 @@ function nextStageBound() {
   nextStage(gameLoop);
 }
 
-function gameLoop() {
+function gameLoop(timestamp = performance.now()) {
   if (state.gameState !== "PLAYING") return;
+
+  if (!state.lastLoopTimestamp) {
+    state.lastLoopTimestamp = timestamp - FRAME_INTERVAL_MS;
+  }
+
+  const elapsed = timestamp - state.lastLoopTimestamp;
+  if (elapsed < FRAME_INTERVAL_MS) {
+    scheduleNextFrame(timestamp);
+    return;
+  }
+
+  state.lastLoopTimestamp = timestamp;
 
   handleSkillsUpdate(canvas, changeStateBound);
 
@@ -73,7 +100,7 @@ function gameLoop() {
 
   if (state.gameState === "PLAYING") {
     draw(ctx, canvas);
-    state.loopId = requestAnimationFrame(gameLoop);
+    scheduleNextFrame(timestamp);
   }
 }
 
