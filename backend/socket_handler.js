@@ -189,13 +189,12 @@ export function setupSocketIO(io) {
     // ==============================
     // HOST BROADCAST BOSS STATE
     // ==============================
-    socket.on("boss_state", ({ roomCode, x, y, hp, maxHp, phase, bossSpecial, deathTimer }) => {
+    socket.on("boss_state", (data) => {
+      const { roomCode, ...bossData } = data;
       const room = rooms.get(roomCode);
       if (!room || room.hostId !== socket.id) return;
 
-      socket.to(roomCode).emit("boss_state_update", {
-        x, y, hp, maxHp, phase, bossSpecial, deathTimer,
-      });
+      socket.to(roomCode).emit("boss_state_update", bossData);
     });
 
     // ==============================

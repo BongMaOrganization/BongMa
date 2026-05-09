@@ -57,16 +57,45 @@ export function setupGameListeners(socket) {
 
   // Non-host nhận boss state từ host
   if (!mpState.isHost) {
-    socket.on("boss_state_update", ({ x, y, hp, maxHp, phase, bossSpecial, deathTimer }) => {
+    socket.on("boss_state_update", (data) => {
       if (!state.boss) return;
+      const { 
+        x, y, hp, maxHp, phase, bossSpecial, deathTimer, 
+        bullets, beams, hazards, warnings, safeZones,
+        entityPhase, ultimatePhase, cinematic, glitch, globalHazard 
+      } = data;
+
       state.boss.x = x;
       state.boss.y = y;
       state.boss.hp = hp;
       state.boss.maxHp = maxHp;
       if (deathTimer !== undefined) state.boss.deathTimer = deathTimer;
-      if (bossSpecial !== undefined) state.bossSpecial = bossSpecial;
+      if (bossSpecial !== undefined) {
+        state.bossSpecial = bossSpecial;
+        state.boss.special = bossSpecial; // Gán cả 2 nơi cho chắc
+      }
+      if (phase !== undefined) state.boss.currentPhaseIndex = phase;
+      
+      // Sync Phase States
+      state.boss.entityPhase = !!entityPhase;
+      state.boss.ultimatePhase = !!ultimatePhase;
 
-      // Cập nhật UI boss HP — static import, không dynamic (tránh lag 30fps)
+      // Sync Visual Elements
+      if (bullets) {
+        const playerBullets = state.bullets.filter(b => b.isPlayer);
+        state.bullets = [...playerBullets, ...bullets.map(b => ({ ...b, isPlayer: false }))];
+      }
+      if (beams) state.bossBeams = beams;
+      if (hazards) state.hazards = hazards;
+      if (warnings) state.groundWarnings = warnings;
+      if (safeZones) state.safeZones = safeZones;
+
+      // Sync Global Effects
+      if (cinematic) state.cinematicEffects = { ...state.cinematicEffects, ...cinematic };
+      if (glitch) state.glitch = { ...state.glitch, ...glitch };
+      if (globalHazard) state.globalHazard = globalHazard;
+
+      // Cập nhật UI boss HP
       const pct = Math.max(0, (hp / maxHp) * 100);
       if (UI.bossHp) UI.bossHp.style.width = pct + "%";
       if (UI.bossHpTrail) UI.bossHpTrail.style.width = pct + "%";
@@ -165,14 +194,42 @@ export function startBossSync(roomCode) {
   if (bossSyncInterval) clearInterval(bossSyncInterval);
   bossSyncInterval = setInterval(() => {
     if (!state.boss) return;
+
+    // 1. Thu thập đạn boss (enemy bullets)
+    const bossBullets = state.bullets
+      .filter(b => !b.isPlayer)
+      .slice(0, 80) // Giảm xuống 80 để dành chỗ cho data khác
+      .map(b => ({
+        x: b.x, y: b.y, vx: b.vx, vy: b.vy,
+        radius: b.radius, style: b.style, visualStyle: b.visualStyle,
+        life: b.life, damage: b.damage
+      }));
+
+    // 2. Thu thập warnings/hazards/safezones
+    const warnings = (state.groundWarnings || []).slice(0, 40);
+    const hazards = (state.hazards || []).slice(0, 30);
+    const safeZones = (state.safeZones || []).slice(0, 10);
+
     emitBossState(roomCode, {
       x: state.boss.x,
       y: state.boss.y,
       hp: state.boss.hp,
       maxHp: state.boss.maxHp,
       phase: state.boss.currentPhaseIndex || 0,
-      bossSpecial: state.bossSpecial || null,
+      bossSpecial: state.bossSpecial || state.boss.special || null,
       deathTimer: state.boss.deathTimer || 0,
+      
+      bullets: bossBullets,
+      beams: state.bossBeams || [],
+      warnings,
+      hazards,
+      safeZones,
+      
+      entityPhase: !!state.boss.entityPhase,
+      ultimatePhase: !!state.boss.ultimatePhase,
+      cinematic: state.cinematicEffects,
+      glitch: state.glitch,
+      globalHazard: state.globalHazard
     });
 
     // Kiểm tra boss chết → broadcast
