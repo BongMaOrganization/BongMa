@@ -229,6 +229,11 @@ export function changeState(newGameState, gameLoopFn) {
   UI.upgrade.classList.add("hidden");
   UI.bossReward.classList.add("hidden");
 
+  if (state.loopId) cancelAnimationFrame(state.loopId);
+  if (state.loopTimeoutId) clearTimeout(state.loopTimeoutId);
+  state.loopId = null;
+  state.loopTimeoutId = null;
+
   if (newGameState === "PLAYING") {
     if (state.isBossLevel) {
       playBGM(`BOSS_${state.currentLevel}`);
@@ -236,8 +241,8 @@ export function changeState(newGameState, gameLoopFn) {
       playBGM("PLAYING");
     }
 
-    if (state.loopId) cancelAnimationFrame(state.loopId);
-    if (gameLoopFn) gameLoopFn();
+    state.lastLoopTimestamp = 0;
+    if (gameLoopFn) state.loopId = requestAnimationFrame(gameLoopFn);
   } else if (newGameState === "MENU" || newGameState === "GAME_OVER") {
     if (newGameState === "MENU") playBGM("MENU");
     if (newGameState === "GAME_OVER") {
