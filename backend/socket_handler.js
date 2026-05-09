@@ -287,11 +287,9 @@ export function setupSocketIO(io) {
           io.to(code).emit("player_list_update", remaining);
 
           if (wasHost) {
-            // Chuyển host cho người tiếp theo
-            const newHostId = room.players.keys().next().value;
-            room.hostId = newHostId;
-            rooms.delete(code); // Game kết thúc nếu host thoát khi đang chơi
+            // Thông báo cho tất cả BEFORE xoá phòng
             io.to(code).emit("host_left");
+            rooms.delete(code);
             console.log(`[Room] Host phòng ${code} đã thoát. Game kết thúc.`);
           }
         }

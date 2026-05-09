@@ -426,3 +426,62 @@ export function drawPlayer(ctx) {
     }
   }
 }
+
+// ===== REMOTE PLAYER DRAW (dùng cho multiplayer) =====
+const CHAR_DRAW_MAP = {
+  speedster: drawSpeedsterPlayer,
+  ghost: drawGhostPlayer,
+  warden: drawWardenPlayer,
+  engineer: drawEngineerPlayer,
+  druid: drawDruidPlayer,
+  brawler: drawBrawlerPlayer,
+  medic: drawMedicPlayer,
+  assassin: drawAssassinPlayer,
+  hunter: drawHunterPlayer,
+  frost: drawFrostPlayer,
+  gunner: drawGunnerPlayer,
+  knight: drawKnightPlayer,
+  mage: drawMagePlayer,
+  oracle: drawOraclePlayer,
+  tank: drawTankPlayer,
+  sharpshooter: drawSharpshooterPlayer,
+  alchemist: drawAlchemistPlayer,
+  berserker: drawBerserkerPlayer,
+  summoner: drawSummonerPlayer,
+  sniper: drawSniperPlayer,
+  spirit: drawSpiritPlayer,
+  timekeeper: drawTimekeeperPlayer,
+  void: drawVoidPlayer,
+  storm: drawStormPlayer,
+  reaper: drawReaperPlayer,
+  phoenix: drawPhoenixPlayer,
+  scout: drawScoutPlayer,
+  necromancer: drawNecromancerPlayer,
+  painter: drawPainterPlayer,
+  destroyer: drawDestroyerPlayer,
+  creator: drawCreatorPlayer,
+  elementalist: drawElementalistPlayer,
+};
+
+/**
+ * Vẽ nhân vật theo charId với fakeState — dùng cho remote players trong Multiplayer.
+ */
+export function drawPlayerByCharId(ctx, charId, fakeState, buffs, isInvulnSkill) {
+  const fn = CHAR_DRAW_MAP[charId];
+  if (!fn) return;
+  try {
+    fn(ctx, fakeState, buffs, isInvulnSkill);
+  } catch (_e) {
+    const p = fakeState.player;
+    if (!p) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.radius || 14, 0, Math.PI * 2);
+    ctx.fillStyle = p.color || "#00ffcc";
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = p.color || "#00ffcc";
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+}

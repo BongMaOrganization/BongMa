@@ -148,13 +148,6 @@ export function startMultiplayerBossArena(bossType, hpScale, players, changeStat
     startBossSync(mpState.roomCode);
   }
 
-  // Luxa nghe sự kiện hồi sinh bản thân
-  socket.on("remote_player_revived", ({ deadPlayerId }) => {
-    if (deadPlayerId === mpState.playerId) {
-      onLocalPlayerRevived();
-    }
-  });
-
   playSound("start");
   playBGM("BOSS_" + 1);
 

@@ -758,18 +758,14 @@ export function updateBullets(
       const hitRadius = b.style === 5 ? 25 : b.radius + player.radius; // Larger hit for spears
 
       if (withinRadiusSq(b.x, b.y, player.x, player.y, hitRadius)) {
-        if (state.player.gracePeriod <= 0) {
-          playerTakeDamage(ctx, canvas, changeStateFn, b.damage || 1);
-          state.player.gracePeriod = 20;
-        }
         // Apply Element-Specific Debuffs
         if (b.style === 2 || b.style === 5) state.playerStatus.slowTimer = 90; // Ice Slow
         if (b.style === 3) state.playerStatus.stunTimer = 15; // Thunder Stun
 
-        playerTakeDamage(ctx, canvas, changeStateFn, b.damage || 1);
+        if (state.player.gracePeriod <= 0) {
+          playerTakeDamage(ctx, canvas, changeStateFn, b.damage || 1);
+        }
 
-        // SỬA LỖI Ở ĐÂY: Nếu là Thiên Thạch (isMeteor), KHÔNG XÓA NÓ ĐI!
-        // Để nó tiếp tục rơi đè qua người và nổ tung trên mặt đất
         if (!b.isMeteor) {
           bullets.splice(i, 1);
         }
