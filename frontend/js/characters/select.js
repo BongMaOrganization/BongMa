@@ -17,6 +17,9 @@ style.innerHTML = `
   .filter-btn.active[data-rarity="rare"] { background: #60a5fa; color: #000; border-color: #60a5fa; box-shadow: 0 0 10px #60a5fa; }
   .filter-btn.active[data-rarity="legendary"] { background: #c084fc; color: #000; border-color: #c084fc; box-shadow: 0 0 15px #c084fc; }
   .filter-btn.active[data-rarity="mythical"] { background: linear-gradient(90deg, #ff0088, #00ffff); color: #fff; border: none; box-shadow: 0 0 15px #ff0088; }
+  .char-dev-controls { display: flex; justify-content: center; margin: 0 0 12px; }
+  .dev-unlock-btn { padding: 8px 18px; border-radius: 6px; border: 1px solid rgba(255, 215, 0, 0.55); background: rgba(80, 58, 0, 0.75); color: #ffd700; cursor: pointer; font-weight: 800; letter-spacing: 0; }
+  .dev-unlock-btn:hover { background: rgba(120, 88, 0, 0.9); box-shadow: 0 0 12px rgba(255, 215, 0, 0.35); }
 
   /* Premium Card Styles */
   .char-card-premium { position: relative; overflow: hidden; transition: transform 0.3s, box-shadow 0.3s; border-radius: 12px; background: rgba(20,20,20,0.85); padding: 15px; display: flex; flex-direction: column; align-items: center; border: 2px solid #444; }
@@ -67,10 +70,23 @@ document.head.appendChild(style);
 
 // Biến lưu trữ trạng thái bộ lọc hiện tại
 let currentRarityFilter = "all";
+const DEV_UNLOCK_ALL_CHARACTERS_ENABLED = true;
 
 // ==========================================
 // CÁC HÀM XỬ LÝ CHÍNH
 // ==========================================
+
+function unlockAllCharactersForDev() {
+  state.ownedCharacters = CHARACTERS.map((char) => char.id);
+
+  if (!state.selectedCharacter || !state.ownedCharacters.includes(state.selectedCharacter)) {
+    state.selectedCharacter = state.ownedCharacters[0] || "speedster";
+  }
+
+  saveGame(state, GHOST_DATA_KEY);
+  saveGameToServer(state, GHOST_DATA_KEY);
+  renderCharacterSelect();
+}
 
 export function openCharacterSelect(changeStateFn) {
   changeStateFn("MENU");
@@ -90,7 +106,25 @@ export function renderCharacterSelect() {
 
   // Tạo thanh Filter nếu chưa có
   let selectScreen = document.getElementById("screen-char-select");
+  let devControls = document.getElementById("char-dev-controls");
   let filterContainer = document.getElementById("char-filter-container");
+
+  if (DEV_UNLOCK_ALL_CHARACTERS_ENABLED && !devControls) {
+    devControls = document.createElement("div");
+    devControls.id = "char-dev-controls";
+    devControls.className = "char-dev-controls";
+
+    let unlockAllBtn = document.createElement("button");
+    unlockAllBtn.id = "btn-dev-unlock-all-characters";
+    unlockAllBtn.className = "dev-unlock-btn";
+    unlockAllBtn.innerText = "DEV: Mở khóa tất cả nhân vật";
+    unlockAllBtn.onclick = unlockAllCharactersForDev;
+
+    devControls.appendChild(unlockAllBtn);
+    container.parentNode.insertBefore(devControls, container);
+  } else if (!DEV_UNLOCK_ALL_CHARACTERS_ENABLED && devControls) {
+    devControls.remove();
+  }
 
   if (!filterContainer) {
     filterContainer = document.createElement("div");
