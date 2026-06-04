@@ -62,6 +62,7 @@ export const state = {
   delayedTasks: [],
 
   skillsCD: { q: 0, e: 0, r: 0 },
+  skillsUiDirty: false,
   activeBuffs: { q: 0, e: 0, r: 0 },
 
   phoenixTrails: [],

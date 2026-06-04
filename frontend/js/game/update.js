@@ -52,6 +52,24 @@ function applyPlayerShotCompression(
   }
 }
 
+function setTextIfChanged(el, text) {
+  if (!el) return;
+  const value = String(text);
+  if (el.textContent !== value) el.textContent = value;
+}
+
+function setStyleIfChanged(el, prop, value) {
+  if (!el) return;
+  if (el.style[prop] !== value) el.style[prop] = value;
+}
+
+let coinsCountEl = null;
+
+function getCoinsCountEl() {
+  if (!coinsCountEl) coinsCountEl = document.getElementById("coins-count");
+  return coinsCountEl;
+}
+
 export function update(ctx, canvas, changeStateFn) {
   const { player, boss, keys, mouse, activeBuffs } = state;
   const buffs = activeBuffs || { q: 0, e: 0, r: 0 };
@@ -177,11 +195,11 @@ export function update(ctx, canvas, changeStateFn) {
 
   // Cập nhật UI Dash
   if (player.dashCooldownTimer <= 0) {
-    UI.dash.innerText = "Lướt: SẴN SÀNG";
-    UI.dash.style.color = "#00ffcc";
+    setTextIfChanged(UI.dash, "Lướt: SẴN SÀNG");
+    setStyleIfChanged(UI.dash, "color", "#00ffcc");
   } else {
-    UI.dash.innerText = `Lướt: ${(player.dashCooldownTimer / 60).toFixed(1)}s`;
-    UI.dash.style.color = "#888";
+    setTextIfChanged(UI.dash, `Lướt: ${(player.dashCooldownTimer / 60).toFixed(1)}s`);
+    setStyleIfChanged(UI.dash, "color", "#888");
   }
 
   // Input di chuyển
@@ -476,9 +494,10 @@ export function update(ctx, canvas, changeStateFn) {
     }
 
     // Kiểm tra quái chết
+    const hasDeadHp =
+      g.hp !== undefined && (!Number.isFinite(g.hp) || g.hp <= 0);
     let isHit =
-      (g.hp !== undefined && g.hp <= 0) ||
-      (!g.isSubBoss && !g.isMiniBoss && g.isStunned > 0);
+      hasDeadHp || (!g.isSubBoss && !g.isMiniBoss && g.isStunned > 0);
     if (isHit && !g.isRespawning) {
       if (g.parentZoneId) {
         const zone = state.swarmZones.find((sz) => sz.id === g.parentZoneId);
@@ -959,23 +978,17 @@ export function update(ctx, canvas, changeStateFn) {
       }
     }
   }
-  if (state.particles) {
-    state.particles = state.particles.filter((p) => {
-      p.x += p.vx || 0;
-      p.y += p.vy || 0;
-      p.life--;
-      return p.life > 0;
-    });
-  }
 
   // Cập nhật UI Text
-  UI.ghosts.innerText = state.isBossLevel
+  setTextIfChanged(UI.ghosts, state.isBossLevel
     ? boss?.ghostsActive
       ? `Quái đợt này: ${activeGhosts}`
       : `Boss triệu hồi (${Math.ceil(boss?.summonCooldown / FPS || 0)}s)...`
-    : `Quái: ${activeGhosts}`;
-  document.getElementById("coins-count").innerText =
-    `Tiền: ${state.player?.coins || 0}`;
+    : `Quái: ${activeGhosts}`);
+  setTextIfChanged(
+    getCoinsCountEl(),
+    `Tiền: ${state.player?.coins || 0}`,
+  );
 
   // Kiểm tra qua màn: player bước vào cổng dịch chuyển
   if (!state.isBossLevel && state.stagePortal?.active) {
