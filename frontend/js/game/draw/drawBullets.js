@@ -1,6 +1,5 @@
 import { state } from "../../state.js";
 import {
-  shouldUseExtremeBulletDraw,
   shouldUseFastBulletDraw,
   withParticleSpawnBudget,
 } from "../vfxBudget.js";
@@ -3627,7 +3626,6 @@ function drawElementalistBullet(ctx, b) {
 export function drawBullets(ctx) {
   const { bullets } = state;
   const fastBulletLoad = shouldUseFastBulletDraw(state, bullets.length);
-  const extremeBulletLoad = shouldUseExtremeBulletDraw(bullets.length);
   const restoreParticlePush = withParticleSpawnBudget(state);
 
   try {
@@ -3636,8 +3634,7 @@ export function drawBullets(ctx) {
     if (
       fastBulletLoad &&
       !b.isMeteor &&
-      !b.isShuriken &&
-      (extremeBulletLoad || b.isPlayer || b.visualStyle)
+      !b.isShuriken
     ) {
       drawFastBullet(ctx, b);
       continue;

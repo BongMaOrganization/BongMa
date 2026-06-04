@@ -43,6 +43,24 @@ export function getCooldown(charId, skillIndex) {
   };
 }
 
+function setTextIfChanged(el, value) {
+  if (!el) return;
+  const text = String(value);
+  if (el.textContent !== text) el.textContent = text;
+}
+
+function setStyleIfChanged(el, prop, value) {
+  if (!el) return;
+  if (el.style[prop] !== value) el.style[prop] = value;
+}
+
+function setSlotState(slot, stateName) {
+  if (!slot || slot.dataset.state === stateName) return;
+  slot.dataset.state = stateName;
+  slot.classList.remove("ready", "active");
+  if (stateName) slot.classList.add(stateName);
+}
+
 export function initSkills() {
   ensureSkillsUI();
   let charId = state.player?.characterId || "speedster";
@@ -53,6 +71,7 @@ export function initSkills() {
   };
   state.activeBuffs = { q: 0, e: 0, r: 0 };
   state.prevKeys = {};
+  state.skillsUiDirty = true;
   updateSkillsUI();
 }
 
@@ -67,19 +86,17 @@ export function updateSkillsUI() {
     let text = document.getElementById(`cd-text-${key}`);
 
     if (state.skillsCD[key] > 0) {
-      slot.classList.remove("ready", "active");
+      setSlotState(slot, "");
       let percent = (state.skillsCD[key] / maxCd) * 100;
-      overlay.style.height = `${Math.min(100, percent)}%`;
-      text.innerText = Math.ceil(state.skillsCD[key] / FPS);
+      setStyleIfChanged(overlay, "height", `${Math.min(100, percent)}%`);
+      setTextIfChanged(text, Math.ceil(state.skillsCD[key] / FPS));
     } else {
-      overlay.style.height = "0%";
-      text.innerText = "";
+      setStyleIfChanged(overlay, "height", "0%");
+      setTextIfChanged(text, "");
       if (state.activeBuffs[key] > 0) {
-        slot.classList.add("active");
-        slot.classList.remove("ready");
+        setSlotState(slot, "active");
       } else {
-        slot.classList.add("ready");
-        slot.classList.remove("active");
+        setSlotState(slot, "ready");
       }
     }
   });
@@ -100,6 +117,7 @@ function triggerSkill(key, canvas, changeStateFn) {
   if (success !== false) {
     const cdrMultiplier = state.player.cdr || 1.0;
     state.skillsCD[key] = Math.floor(cd * cdrMultiplier);
+    state.skillsUiDirty = true;
   }
 }
 
@@ -112,6 +130,9 @@ export function handleSkillsUpdate(canvas, changeStateFn) {
     if (state.skillsCD[key] > 0) state.skillsCD[key]--;
     if (state.activeBuffs[key] > 0) state.activeBuffs[key]--;
   });
-  updateSkillsUI();
+  if (state.skillsUiDirty || (state.frameCount || 0) % 6 === 0) {
+    updateSkillsUI();
+    state.skillsUiDirty = false;
+  }
   state.prevKeys = { ...state.keys };
 }

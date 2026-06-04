@@ -1,8 +1,8 @@
 export const VFX_BUDGET = {
-  MAX_PARTICLES: 90,
-  PARTICLES_PER_DRAW_PASS: 3,
-  FAST_BULLET_THRESHOLD: 14,
-  EXTREME_BULLET_THRESHOLD: 28,
+  MAX_PARTICLES: 48,
+  PARTICLES_PER_DRAW_PASS: 1,
+  FAST_BULLET_THRESHOLD: 6,
+  EXTREME_BULLET_THRESHOLD: 16,
   MAX_PLAYER_BULLETS: 78,
   MAX_ENEMY_BULLETS: 120,
   MAX_TOTAL_BULLETS: 150,
@@ -114,9 +114,29 @@ function trimArray(arr, max) {
   }
 }
 
+const GAMEPLAY_EFFECT_KEYS = new Set([
+  "creatorTurrets",
+  "creatorOrbs",
+  "destroyerRifts",
+  "gunnerMines",
+  "hunterTraps",
+  "painterZones",
+  "stormLightnings",
+  "voidBlackholes",
+  "windTornadoes",
+  "icicles",
+]);
+
+function getLightweightLimit(key, max) {
+  if (GAMEPLAY_EFFECT_KEYS.has(key)) return max;
+  if (key === "floatingTexts") return Math.min(max, 18);
+  if (key === "explosions") return Math.min(max, 10);
+  return Math.max(6, Math.floor(max * 0.55));
+}
+
 export function enforceVfxBudget(state) {
   for (const [key, max] of Object.entries(VFX_ARRAY_LIMITS)) {
-    trimArray(state[key], max);
+    trimArray(state[key], getLightweightLimit(key, max));
   }
 }
 
@@ -180,8 +200,7 @@ export function withParticleSpawnBudget(state, maxSpawned = VFX_BUDGET.PARTICLES
   const particles = state.particles;
   const bulletLoad = state.bullets?.length || 0;
   let effectiveMax = maxSpawned;
-  if (bulletLoad > 60) effectiveMax = Math.min(effectiveMax, 1);
-  else if (bulletLoad > 30) effectiveMax = Math.min(effectiveMax, 2);
+  if (bulletLoad > 24) effectiveMax = Math.min(effectiveMax, 1);
   const originalPush = particles.push;
   let spawned = 0;
 
@@ -217,11 +236,11 @@ export function shouldSkipCharacterVfxFrame(state) {
   const managed = getManagedVfxCount(state);
   const frame = state.frameCount || 0;
 
-  if (bullets > 55 || particles > 70 || managed > 160) {
-    return frame % 3 !== 0;
+  if (bullets > 40 || particles > 42 || managed > 110) {
+    return frame % 4 !== 0;
   }
 
-  if (bullets > 28 || particles > 36 || managed > 90) {
+  if (bullets > 16 || particles > 20 || managed > 52) {
     return frame % 2 !== 0;
   }
 
@@ -232,13 +251,13 @@ export function isPerformanceMode(state) {
   const bullets = state.bullets?.length || 0;
   const particles = state.particles?.length || 0;
   const managed = getManagedVfxCount(state);
-  return bullets > 28 || particles > 36 || managed > 90;
+  return bullets > 14 || particles > 18 || managed > 48;
 }
 
 export function shouldUseMinimalEnemyDraw(state) {
   const bullets = state.bullets?.length || 0;
   const particles = state.particles?.length || 0;
-  return bullets > 24 || particles > 28;
+  return bullets > 12 || particles > 14;
 }
 
 export function shouldSkipParticleDrawFrame(state) {
@@ -246,7 +265,7 @@ export function shouldSkipParticleDrawFrame(state) {
   const particles = state.particles?.length || 0;
   const frame = state.frameCount || 0;
 
-  if (bullets > 55 || particles > 70) return frame % 3 !== 0;
-  if (bullets > 24 || particles > 28) return frame % 2 !== 0;
+  if (bullets > 36 || particles > 36) return frame % 4 !== 0;
+  if (bullets > 12 || particles > 14) return frame % 2 !== 0;
   return false;
 }

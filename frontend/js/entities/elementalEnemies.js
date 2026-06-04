@@ -46,7 +46,7 @@ export function updateElementalEnemies(player) {
     }
 
     // ===== DEATH =====
-    if (e.hp <= 0) {
+    if (!Number.isFinite(e.hp) || e.hp <= 0) {
       spawnElementalZone(e); // dùng system zone bạn đã làm
       state.elementalEnemies.splice(i, 1);
     }
