@@ -13,6 +13,29 @@ function withinRadiusSq(x1, y1, x2, y2, radius) {
   return dx * dx + dy * dy < radius * radius;
 }
 
+function setStyleIfChanged(el, prop, value) {
+  if (!el) return;
+  if (el.style[prop] !== value) el.style[prop] = value;
+}
+
+function updateBossHpBars(boss) {
+  if (!boss?.maxHp) return;
+  const hpPercent = Math.max(0, (boss.hp / boss.maxHp) * 100);
+  const width = `${hpPercent.toFixed(1)}%`;
+  setStyleIfChanged(UI.bossHp, "width", width);
+  setStyleIfChanged(UI.bossHpTrail, "width", width);
+}
+
+function pulseBossHitUi(boss) {
+  if (!boss || boss.hp >= boss.maxHp) return;
+  const frame = state.frameCount || 0;
+  if (frame - (boss.lastHitShakeFrame || 0) < 10) return;
+  boss.lastHitShakeFrame = frame;
+  UI.bossUi.classList.remove("boss-shaking");
+  void UI.bossUi.offsetWidth;
+  UI.bossUi.classList.add("boss-shaking");
+}
+
 const GHOST_BUCKET_SIZE = 220;
 
 function ghostBucketKey(cx, cy) {
@@ -446,9 +469,7 @@ export function updateBullets(
               sendDamageToHost(state.mpRoomCode, finalDmg);
             });
             // Still update UI locally for responsiveness
-            const hpPercent = Math.max(0, (boss.hp / boss.maxHp) * 100);
-            UI.bossHp.style.width = hpPercent + "%";
-            UI.bossHpTrail.style.width = hpPercent + "%";
+            updateBossHpBars(boss);
           } else {
             // --- Boss Shield/Stance Logic ---
             if (boss.shieldActive && boss.shield > 0) {
@@ -463,15 +484,8 @@ export function updateBullets(
               boss.shieldActive = false;
             }
 
-            const hpPercent = Math.max(0, (boss.hp / boss.maxHp) * 100);
-            UI.bossHp.style.width = hpPercent + "%";
-            UI.bossHpTrail.style.width = hpPercent + "%";
-
-            if (boss.hp < boss.maxHp) {
-              UI.bossUi.classList.remove("boss-shaking");
-              void UI.bossUi.offsetWidth;
-              UI.bossUi.classList.add("boss-shaking");
-            }
+            updateBossHpBars(boss);
+            pulseBossHitUi(boss);
           }
 
 
@@ -777,13 +791,8 @@ export function updateBullets(
   if (isSummonerQ && Math.random() < 0.15) {
     if (boss && dist(player.x, player.y, boss.x, boss.y) < boss.radius + 45) {
       boss.hp -= 1;
-      const hpPercent = Math.max(0, (boss.hp / boss.maxHp) * 100);
-      UI.bossHp.style.width = hpPercent + "%";
-      UI.bossHpTrail.style.width = hpPercent + "%";
-      
-      UI.bossUi.classList.remove("boss-shaking");
-      void UI.bossUi.offsetWidth; 
-      UI.bossUi.classList.add("boss-shaking");
+      updateBossHpBars(boss);
+      pulseBossHitUi(boss);
 
       if (boss.hp <= 0) {
         if (boss.bossType === "glitch" && !boss._phase2) {

@@ -280,22 +280,23 @@ export function updateBossUI() {
       bossUI.classList.add("phase-transition");
       setTimeout(() => bossUI.classList.remove("phase-transition"), 300);
     }
+
+    const current = boss.phaseColors[phase];
+
+    // Update CSS variables for boss UI only when phase changes.
+    root.style.setProperty("--boss-name-color", current.end);
+    root.style.setProperty("--boss-name-shadow", current.start);
+    root.style.setProperty("--boss-hp-start", current.start);
+    root.style.setProperty("--boss-hp-end", current.end);
   }
-
-  const current = boss.phaseColors[phase];
-
-  // Update CSS variables for boss UI
-  root.style.setProperty("--boss-name-color", current.end);
-  root.style.setProperty("--boss-name-shadow", current.start);
-  root.style.setProperty("--boss-hp-start", current.start);
-  root.style.setProperty("--boss-hp-end", current.end);
 
   // Glitch boss special effect
   if (bossThemeClass === "boss-theme-glitch" && ratio < 0.3) {
+      if ((state.frameCount || 0) % 12 !== 0) return;
       const glitchedNames = ["!@#*&^", "E R R O R", "0x000F", boss.name];
-      document.getElementById("boss-name").innerText = glitchedNames[Math.floor(Math.random() * glitchedNames.length)];
+      UI.bossName.innerText = glitchedNames[Math.floor(Math.random() * glitchedNames.length)];
   } else {
-      document.getElementById("boss-name").innerText = boss.name;
+      if (UI.bossName.textContent !== boss.name) UI.bossName.textContent = boss.name;
   }
 }
 

@@ -331,7 +331,10 @@ export function updateBoss(boss) {
   // nhường cho file update.js lo việc văng tiền hoặc hóa The Entity
   if (boss.hp <= 0) return;
 
-  if (boss.stunTimer > 0) return;
+  if (boss.stunTimer > 0) {
+    boss.stunTimer--;
+    return;
+  }
 
   boss.attackTimer++;
   boss.moveTimer++;
