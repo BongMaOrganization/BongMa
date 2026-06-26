@@ -1,21 +1,18 @@
-/**
- * socket.js — Quản lý kết nối Socket.io client
- * Import socket.io từ CDN đã được inject vào HTML
- */
+import { API_BASE_URL } from "../config.js";
 
 let socket = null;
 
-/**
- * Kết nối đến server. serverIp là IP LAN của máy host.
- * VD: "192.168.1.5" hoặc "localhost"
- */
+const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost"]);
+
 export function connectSocket(serverIp = "localhost") {
   if (socket && socket.connected) return socket;
 
-  // socket.io được load qua CDN script tag trong index.html
-  // eslint-disable-next-line no-undef
-  socket = io(`http://${serverIp}:3005`, {
-    transports: ["websocket"],
+  const isLocal =
+    typeof window !== "undefined" && LOCAL_HOSTS.has(window.location.hostname);
+  const url = isLocal ? `http://${serverIp}:3005` : API_BASE_URL;
+
+  socket = io(url, {
+    transports: ["websocket", "polling"],
     reconnectionAttempts: 3,
   });
 
@@ -40,10 +37,6 @@ export function disconnectSocket() {
     socket = null;
   }
 }
-
-// ==============================
-// EMIT HELPERS
-// ==============================
 
 export function emitPlayerUpdate(roomCode, playerData) {
   if (!socket) return;
