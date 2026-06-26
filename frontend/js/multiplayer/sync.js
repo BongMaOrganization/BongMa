@@ -310,8 +310,14 @@ export function updateReviveZones(roomCode) {
       emitReviveUpdate(roomCode, zone.deadPlayerId, zone.progress);
 
       if (zone.progress >= 100) {
-        emitPlayerRevived(roomCode, zone.deadPlayerId);
-        state.reviveZones = state.reviveZones.filter((z) => z !== zone);
+        // Re-emit định kỳ tới khi server xác nhận (remote_player_revived sẽ
+        // xoá zone). Tránh mất 1 gói khiến người chết không hồi sinh dù thanh
+        // tiến độ đã đầy.
+        zone._reviveEmitCd = (zone._reviveEmitCd || 0) - 1;
+        if (zone._reviveEmitCd <= 0) {
+          emitPlayerRevived(roomCode, zone.deadPlayerId);
+          zone._reviveEmitCd = 20; // ~3 lần/giây @60fps cho tới khi xác nhận
+        }
       }
     } else {
       // Ra ngoài → reset progress từ từ
