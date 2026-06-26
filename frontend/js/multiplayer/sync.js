@@ -132,9 +132,11 @@ export function setupGameListeners(socket) {
     // Xóa revive zone
     state.reviveZones = state.reviveZones.filter((z) => z.deadPlayerId !== deadPlayerId);
 
-    // Nếu là bản thân → hồi sinh local player
+    // Nếu là bản thân → hồi sinh local player.
+    // onLocalPlayerRevived định nghĩa NGAY trong file này, gọi thẳng.
+    // (Trước import từ mpFlow.js — file đó không export → undefined → crash.)
     if (deadPlayerId === mpState.playerId) {
-      import("./mpFlow.js").then(({ onLocalPlayerRevived }) => onLocalPlayerRevived());
+      onLocalPlayerRevived();
       return;
     }
 
