@@ -1,25 +1,21 @@
-/**
- * socket.js — Quản lý kết nối Socket.io client
- * WAN mode: kết nối tới api.bongma.storyoftri.xyz
- */
+import { API_BASE_URL } from "../config.js";
 
 const SERVER_URL = "https://bongma.storyoftri.xyz";
 
 let socket = null;
 
-/**
- * Kết nối đến server WAN. Không cần truyền IP nữa.
- */
-export function connectSocket() {
+const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost"]);
+
+export function connectSocket(serverIp = "localhost") {
   if (socket && socket.connected) return socket;
 
-  // eslint-disable-next-line no-undef
-  socket = io(SERVER_URL, {
-    transports: ["websocket", "polling"], // polling fallback cho WAN
-    reconnectionAttempts: 5,
-    reconnectionDelay: 1000,
-    reconnectionDelayMax: 5000,
-    timeout: 10000,
+  const isLocal =
+    typeof window !== "undefined" && LOCAL_HOSTS.has(window.location.hostname);
+  const url = isLocal ? `http://${serverIp}:3005` : API_BASE_URL;
+
+  socket = io(url, {
+    transports: ["websocket", "polling"],
+    reconnectionAttempts: 3,
   });
 
   socket.on("connect", () => {
@@ -43,10 +39,6 @@ export function disconnectSocket() {
     socket = null;
   }
 }
-
-// ==============================
-// EMIT HELPERS
-// ==============================
 
 export function emitPlayerUpdate(roomCode, playerData) {
   if (!socket) return;
