@@ -25,7 +25,7 @@ import { updateBossUI } from "./ui.js";
 import { FPS } from "./config.js";
 
 // === MULTIPLAYER imports ===
-import { connectSocket, disconnectSocket } from "./multiplayer/socket.js";
+import { connectSocket, disconnectSocket, getSocket } from "./multiplayer/socket.js";
 import { createRoom, joinRoom, mpState, resetMpState, openLobby, setLobbyUICallback } from "./multiplayer/room.js";
 import { startMultiplayerBossArena, handleMultiplayerBossKill } from "./multiplayer/mpFlow.js";
 import { stopAllSync } from "./multiplayer/sync.js";
@@ -73,11 +73,14 @@ function gameLoop(timestamp = performance.now()) {
 
   const elapsed = timestamp - state.lastLoopTimestamp;
   if (elapsed < FRAME_INTERVAL_MS) {
-    scheduleNextFrame(timestamp);
+    // Chưa tới frame kế → đợi rAF sau (không xử lý logic). Pure rAF = nhịp
+    // vsync, mượt, ít input delay (trước setTimeout+rAF lồng nhau → ~30fps giật).
+    state.loopId = requestAnimationFrame(gameLoop);
     return;
   }
 
-  state.lastLoopTimestamp = timestamp;
+  // Giữ phần dư để nhịp không trôi, cap logic ở 60fps.
+  state.lastLoopTimestamp = timestamp - (elapsed % FRAME_INTERVAL_MS);
 
   handleSkillsUpdate(canvas, changeStateBound);
 
@@ -100,7 +103,7 @@ function gameLoop(timestamp = performance.now()) {
 
   if (state.gameState === "PLAYING") {
     draw(ctx, canvas);
-    scheduleNextFrame(timestamp);
+    state.loopId = requestAnimationFrame(gameLoop);
   }
 }
 
@@ -413,6 +416,21 @@ function buildCharacterSelectGrid(socket) {
     grid.appendChild(card);
   });
 }
+
+// Cả đội ngã xuống → về lại phòng chờ MP để chơi lại (thay vì văng ra menu solo).
+// mpFlow đã gọi changeState("GAME_OVER") để dừng loop sạch; ở đây chỉ đổi màn hình.
+window.addEventListener("mp:allDead", () => {
+  const socket = getSocket();
+  if (!socket || !socket.connected) return; // mất kết nối → giữ màn GAME_OVER
+  UI.bossUi.style.display = "none";
+  document.getElementById("screen-main").classList.add("hidden");
+  _lobbySocket = socket;
+  openLobby(socket);
+  if (mpState.isHost) buildBossSelectGrid();
+  buildCharacterSelectGrid(socket);
+  refreshLobbyUI();
+  setupGameStartListener(socket);
+});
 
 function setupGameStartListener(socket) {
   socket.off("game_start");

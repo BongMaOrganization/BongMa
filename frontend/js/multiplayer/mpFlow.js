@@ -179,7 +179,10 @@ function checkAllPlayersDead(changeStateFn) {
   if (!anyAlive) {
     stopAllSync();
     state.isMultiplayer = false;
-    changeStateFn("GAME_OVER");
+    changeStateFn("GAME_OVER"); // dừng game loop sạch sẽ
+    // Đưa cả đội về phòng chờ MP để chơi lại (main.js xử lý) thay vì
+    // văng ra menu solo. Nếu mất kết nối, giữ nguyên màn GAME_OVER.
+    window.dispatchEvent(new CustomEvent("mp:allDead"));
   }
 }
 
@@ -191,6 +194,7 @@ function checkAllPlayersDead(changeStateFn) {
  * Gọi thay cho changeState("GAME_OVER") khi HP <= 0 trong MP
  */
 export function onMultiplayerPlayerDead() {
+  if (state.player.isDead) return; // đã xử lý chết rồi → tránh spawn zone/text trùng
   state.player.isDead = true;
   state.player.hp = 0;
   state.player.gracePeriod = 9999; // Không nhận thêm damage

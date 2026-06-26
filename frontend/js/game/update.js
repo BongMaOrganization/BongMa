@@ -26,7 +26,7 @@ import { startBossFight } from "./flow.js";
 import { spawnBullet } from "../entities/helpers.js";
 import { spawnCrate, spawnCrystal } from "../world/element.js";
 import { ATTACK_MODES, SPECIAL_SKILLS } from "../entities/bosses/patterns.js";
-import { updateMultiplayer } from "../multiplayer/mpFlow.js";
+import { updateMultiplayer, onMultiplayerPlayerDead } from "../multiplayer/mpFlow.js";
 import { enforceBulletBudget, enforceVfxBudget } from "./vfxBudget.js";
 
 function applyPlayerShotCompression(
@@ -77,10 +77,36 @@ export function update(ctx, canvas, changeStateFn) {
   // === MULTIPLAYER: update revive zones, check all dead ===
   updateMultiplayer(changeStateFn);
 
-  // === MULTIPLAYER: Skip normal update if local player is dead (wait for revive) ===
+  // === MULTIPLAYER: Đã hy sinh → chế độ xem (spectator), chờ hồi sinh ===
   if (state.isMultiplayer && state.player?.isDead) {
-    // Still update boss (host) so others see the fight
+    // Camera bám đồng đội còn sống (hoặc xác mình) để theo dõi trận đấu.
+    const watch = state.remotePlayers.find((p) => !p.isDead) || state.player;
+    state.camera.width = canvas.width;
+    state.camera.height = canvas.height;
+    state.camera.x = Math.max(
+      0,
+      Math.min(watch.x - canvas.width / 2, state.world.width - canvas.width),
+    );
+    state.camera.y = Math.max(
+      0,
+      Math.min(watch.y - canvas.height / 2, state.world.height - canvas.height),
+    );
+
+    // Host vẫn chạy logic boss; mọi người advance đạn để render mượt (hết đứng/giật).
     if (state.isHost && boss && !boss.entityPhase) updateBoss(boss);
+    updateBullets(ctx, canvas, changeStateFn, false);
+    return null;
+  }
+
+  // === Chết do mất máu TRỰC TIẾP (elemental zone / hazard tick trừ player.hp
+  // thẳng, KHÔNG qua playerTakeDamage) — death không tự kích hoạt. Check tập
+  // trung mỗi frame để HP về 0 là luôn chết (hết bug HP=0 vẫn điều khiển được). ===
+  if (player && player.hp <= 0 && !player.isDead) {
+    if (state.isMultiplayer) {
+      onMultiplayerPlayerDead();
+    } else {
+      changeStateFn("GAME_OVER");
+    }
     return null;
   }
 
@@ -89,7 +115,7 @@ export function update(ctx, canvas, changeStateFn) {
   // --- 1. Quản lý Camera & Boundaries ---
   state.camera.width = canvas.width;
   state.camera.height = canvas.height;
-  if (player && player.hp > 0) {
+  if (player && !player.isDead) {
     state.camera.x = player.x - canvas.width / 2;
     state.camera.y = player.y - canvas.height / 2;
     state.camera.x = Math.max(
