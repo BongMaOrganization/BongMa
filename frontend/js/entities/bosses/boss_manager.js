@@ -9,6 +9,49 @@ import {
 } from "../../config.js";
 import { SPECIAL_SKILLS, ATTACK_MODES } from "./patterns.js";
 
+/**
+ * Trả về vị trí player sống gần boss nhất (local hoặc remote).
+ * Dùng thay cho state.player trực tiếp trong tất cả boss logic.
+ */
+export function getBossTarget(boss) {
+  const local = state.player;
+
+  // Lấy vị trí local player nếu còn sống
+  const candidates = [];
+  if (local && !local.isDead) {
+    candidates.push({ x: local.x, y: local.y });
+  }
+
+  // Thêm remote players còn sống
+  if (state.remotePlayers) {
+    for (const rp of state.remotePlayers) {
+      if (!rp.isDead) {
+        candidates.push({ x: rp.x, y: rp.y });
+      }
+    }
+  }
+
+  if (candidates.length === 0) {
+    // Tất cả đã chết — trả về vị trí local player để boss không crash
+    return local || { x: 2500, y: 2500 };
+  }
+
+  if (!boss || candidates.length === 1) return candidates[0];
+
+  // Tìm người gần boss nhất
+  let nearest = candidates[0];
+  let nearestDist = Math.hypot(nearest.x - boss.x, nearest.y - boss.y);
+  for (let i = 1; i < candidates.length; i++) {
+    const d = Math.hypot(candidates[i].x - boss.x, candidates[i].y - boss.y);
+    if (d < nearestDist) {
+      nearestDist = d;
+      nearest = candidates[i];
+    }
+  }
+  return nearest;
+}
+
+
 function getBossSkillCooldown() {
   return (
     BOSS_SPECIAL_COOLDOWN_BASE +
@@ -296,13 +339,14 @@ export function updateBoss(boss) {
   boss.attackTimer++;
   boss.moveTimer++;
 
-  // Movement
+  // Movement — target nearest alive player (local or remote)
   if (boss.moveTimer % 120 === 0) {
+    const target = getBossTarget(boss);
     boss.moveTargetX =
-      state.player.x +
+      target.x +
       (Math.random() > 0.5 ? 1 : -1) * (200 + Math.random() * 200);
     boss.moveTargetY =
-      state.player.y +
+      target.y +
       (Math.random() > 0.5 ? 1 : -1) * (200 + Math.random() * 200);
 
     boss.moveTargetX = Math.max(

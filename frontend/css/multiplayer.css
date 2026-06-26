@@ -60,9 +60,74 @@
   text-align: center;
   color: #557;
   font-size: 13px;
-  margin-bottom: 28px;
+  margin-bottom: 14px;
   letter-spacing: 1px;
 }
+
+/* --- Connection Status Indicator --- */
+.mp-connection-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 12px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  font-weight: 700;
+  margin-bottom: 20px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid transparent;
+  transition: all 0.4s ease;
+}
+
+.mp-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* States */
+.mp-status-disconnected {
+  color: #556;
+  border-color: rgba(80, 80, 120, 0.3);
+  background: rgba(80, 80, 120, 0.05);
+}
+.mp-status-disconnected .mp-status-dot {
+  background: #445;
+}
+
+.mp-status-connecting {
+  color: #aaa;
+  border-color: rgba(180, 180, 80, 0.3);
+  background: rgba(180, 180, 80, 0.04);
+}
+.mp-status-connecting .mp-status-dot {
+  background: #ccaa00;
+  animation: mp-dot-blink 0.8s ease-in-out infinite;
+}
+
+.mp-status-connected {
+  color: #00ffaa;
+  border-color: rgba(0, 255, 170, 0.4);
+  background: rgba(0, 255, 170, 0.07);
+}
+.mp-status-connected .mp-status-dot {
+  background: #00ff88;
+  box-shadow: 0 0 8px #00ff88;
+  animation: mp-dot-pulse 2s ease-in-out infinite;
+}
+
+@keyframes mp-dot-blink {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+@keyframes mp-dot-pulse {
+  0%, 100% { box-shadow: 0 0 4px #00ff88; }
+  50% { box-shadow: 0 0 12px #00ff88, 0 0 24px rgba(0,255,136,0.4); }
+}
+
 
 /* --- IP + Code Input --- */
 .mp-input-group {

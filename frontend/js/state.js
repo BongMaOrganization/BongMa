@@ -214,6 +214,7 @@ export const state = {
   mpRoomCode: null,
   mpPlayerCount: 1,
   remotePlayers: [],   // [{ id, username, characterId, isHost, x, y, hp, maxHp, isDead }]
+  remoteBullets: [],   // Bullets của remote players để render (không chạy collision)
   reviveZones: [],     // [{ deadPlayerId, x, y, radius, progress, reviverId, isLocalPlayer }]
   _mpBossKilledSent: false,
 };

@@ -10,6 +10,7 @@ import {
   setupGameListeners,
   startPlayerSync,
   startBossSync,
+  startBulletSync,
   stopAllSync,
   spawnLocalReviveZone,
   onLocalPlayerRevived,
@@ -142,16 +143,10 @@ export function startMultiplayerBossArena(bossType, hpScale, players, changeStat
 
   // Bắt đầu sync
   startPlayerSync(mpState.roomCode);
+  startBulletSync(mpState.roomCode); // Tất cả players đều gửi bullets
   if (mpState.isHost) {
     startBossSync(mpState.roomCode);
   }
-
-  // Luxa nghe sự kiện hồi sinh bản thân
-  socket.on("remote_player_revived", ({ deadPlayerId }) => {
-    if (deadPlayerId === mpState.playerId) {
-      onLocalPlayerRevived();
-    }
-  });
 
   playSound("start");
   playBGM("BOSS_" + 1);

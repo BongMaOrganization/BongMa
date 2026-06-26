@@ -1,8 +1,3 @@
-/**
- * sync.js — Đồng bộ game state giữa các clients qua Socket.io
- * * Host:   chạy boss logic thật, broadcast boss state
- * Non-host: nhận boss state từ host, gửi damage lên host
- */
 import { state } from "../state.js";
 import { mpState, updatePlayerInRoom } from "./room.js";
 import {
@@ -13,24 +8,37 @@ import {
   emitReviveUpdate,
   emitPlayerRevived,
 } from "./socket.js";
+import { getSocket } from "./socket.js";
+import { UI } from "../ui.js";
 
 let playerSyncInterval = null;
 let bossSyncInterval = null;
+let bulletSyncInterval = null;
 
 // ==============================
 // SETUP LISTENERS
 // ==============================
 
 /**
- * Khởi tạo tất cả socket event listener cho in-game
- * Gọi 1 lần khi game_start
+ * Khởi tạo tất cả socket event listener cho in-game.
+ * Luôn gọi .off() trước để tránh stack listeners khi game restart.
  */
 export function setupGameListeners(socket) {
+  // Xóa listeners cũ trước để tránh stack khi game restart
+  socket.off("remote_player_update");
+  socket.off("boss_state_update");
+  socket.off("apply_damage");
+  socket.off("revive_progress");
+  socket.off("remote_player_revived");
+  socket.off("all_boss_killed");
+  socket.off("host_left");
+  socket.off("player_left");
+  socket.off("remote_bullets");
+
   // Nhận vị trí/state remote players
   socket.on("remote_player_update", ({ id, x, y, hp, maxHp, isDead }) => {
     updatePlayerInRoom(id, { x, y, hp, maxHp, isDead });
 
-    // Cập nhật vào state.remotePlayers để draw
     const idx = state.remotePlayers.findIndex((p) => p.id === id);
     if (idx !== -1) {
       state.remotePlayers[idx].x = x;
@@ -49,25 +57,49 @@ export function setupGameListeners(socket) {
 
   // Non-host nhận boss state từ host
   if (!mpState.isHost) {
-    socket.on(
-      "boss_state_update",
-      ({ x, y, hp, maxHp, phase, bossSpecial, deathTimer }) => {
-        if (!state.boss) return;
-        state.boss.x = x;
-        state.boss.y = y;
-        state.boss.hp = hp;
-        state.boss.maxHp = maxHp;
-        if (deathTimer !== undefined) state.boss.deathTimer = deathTimer;
-        if (bossSpecial !== undefined) state.bossSpecial = bossSpecial;
+    socket.on("boss_state_update", (data) => {
+      if (!state.boss) return;
+      const { 
+        x, y, hp, maxHp, phase, bossSpecial, deathTimer, 
+        bullets, beams, hazards, warnings, safeZones,
+        entityPhase, ultimatePhase, cinematic, glitch, globalHazard 
+      } = data;
 
-        // Cập nhật UI boss HP
-        import("../ui.js").then(({ UI }) => {
-          const pct = Math.max(0, (hp / maxHp) * 100);
-          if (UI.bossHp) UI.bossHp.style.width = pct + "%";
-          if (UI.bossHpTrail) UI.bossHpTrail.style.width = pct + "%";
-        });
-      },
-    );
+      state.boss.x = x;
+      state.boss.y = y;
+      state.boss.hp = hp;
+      state.boss.maxHp = maxHp;
+      if (deathTimer !== undefined) state.boss.deathTimer = deathTimer;
+      if (bossSpecial !== undefined) {
+        state.bossSpecial = bossSpecial;
+        state.boss.special = bossSpecial; // Gán cả 2 nơi cho chắc
+      }
+      if (phase !== undefined) state.boss.currentPhaseIndex = phase;
+      
+      // Sync Phase States
+      state.boss.entityPhase = !!entityPhase;
+      state.boss.ultimatePhase = !!ultimatePhase;
+
+      // Sync Visual Elements
+      if (bullets) {
+        const playerBullets = state.bullets.filter(b => b.isPlayer);
+        state.bullets = [...playerBullets, ...bullets.map(b => ({ ...b, isPlayer: false }))];
+      }
+      if (beams) state.bossBeams = beams;
+      if (hazards) state.hazards = hazards;
+      if (warnings) state.groundWarnings = warnings;
+      if (safeZones) state.safeZones = safeZones;
+
+      // Sync Global Effects
+      if (cinematic) state.cinematicEffects = { ...state.cinematicEffects, ...cinematic };
+      if (glitch) state.glitch = { ...state.glitch, ...glitch };
+      if (globalHazard) state.globalHazard = globalHazard;
+
+      // Cập nhật UI boss HP
+      const pct = Math.max(0, (hp / maxHp) * 100);
+      if (UI.bossHp) UI.bossHp.style.width = pct + "%";
+      if (UI.bossHpTrail) UI.bossHpTrail.style.width = pct + "%";
+    });
   }
 
   // Host nhận damage từ non-host và apply vào boss
@@ -86,7 +118,7 @@ export function setupGameListeners(socket) {
     });
   }
 
-  // Nhận trạng thái revive từ người đang revive
+  // Nhận trạng thái revive
   socket.on("revive_progress", ({ deadPlayerId, progress, reviverId }) => {
     const zone = state.reviveZones.find((z) => z.deadPlayerId === deadPlayerId);
     if (zone) {
@@ -97,10 +129,14 @@ export function setupGameListeners(socket) {
 
   // Người chết được hồi sinh
   socket.on("remote_player_revived", ({ deadPlayerId }) => {
-    // Xoá revive zone
-    state.reviveZones = state.reviveZones.filter(
-      (z) => z.deadPlayerId !== deadPlayerId,
-    );
+    // Xóa revive zone
+    state.reviveZones = state.reviveZones.filter((z) => z.deadPlayerId !== deadPlayerId);
+
+    // Nếu là bản thân → hồi sinh local player
+    if (deadPlayerId === mpState.playerId) {
+      import("./mpFlow.js").then(({ onLocalPlayerRevived }) => onLocalPlayerRevived());
+      return;
+    }
 
     // Hồi sinh remote player
     const rp = state.remotePlayers.find((p) => p.id === deadPlayerId);
@@ -112,7 +148,7 @@ export function setupGameListeners(socket) {
     updatePlayerInRoom(deadPlayerId, { isDead: false });
   });
 
-  // Nhận lệnh boss bị hạ từ host (non-host)
+  // Boss bị hạ — non-host nhận lệnh từ host
   socket.on("all_boss_killed", () => {
     if (state.boss) {
       state.boss.hp = 0;
@@ -127,52 +163,23 @@ export function setupGameListeners(socket) {
     window.location.reload();
   });
 
-  // Có player mới rời phòng giữa trận
-  socket.on("player_left", ({ playerId, players }) => {
+  // Player rời phòng giữa trận
+  socket.on("player_left", ({ playerId }) => {
     state.remotePlayers = state.remotePlayers.filter((p) => p.id !== playerId);
-    state.reviveZones = state.reviveZones.filter(
-      (z) => z.deadPlayerId !== playerId,
-    );
-  });
-
-  // ==============================
-  // GAME START, END, AND ERRORS
-  // ==============================
-
-  // Listen for game start
-  socket.on("startGame", () => {
-    if (mpState.isHost) {
-      startBossSync(socket);
+    state.reviveZones = state.reviveZones.filter((z) => z.deadPlayerId !== playerId);
+    if (state.remoteBullets) {
+      state.remoteBullets = state.remoteBullets.filter((b) => b.ownerId !== playerId);
     }
   });
 
-  // Listen for game end
-  socket.on("endGame", () => {
-    stopAllSync();
-    // Additional cleanup if needed
-  });
-
-  // Handle socket errors gracefully
-  socket.on("connect_error", (error) => {
-    console.error("Socket connection error:", error);
-    alert("Kết nối thất bại. Vui lòng kiểm tra mạng và thử lại.");
-  });
-
-  socket.on("disconnect", (reason) => {
-    console.warn("Socket disconnected:", reason);
-    alert("Mất kết nối với máy chủ. Vui lòng thử lại.");
-    stopAllSync();
-
-    // Safety check in case DOM elements don't exist yet
-    const screenLobby = document.getElementById("screen-lobby");
-    const screenMain = document.getElementById("screen-main");
-    if (screenLobby) screenLobby.classList.add("hidden");
-    if (screenMain) screenMain.classList.remove("hidden");
-  });
-
-  socket.on("error", (error) => {
-    console.error("Socket error:", error);
-    alert("Đã xảy ra lỗi. Vui lòng thử lại.");
+  // Nhận snapshot bullets từ remote players
+  socket.on("remote_bullets", ({ ownerId, bullets }) => {
+    if (!state.remoteBullets) state.remoteBullets = [];
+    state.remoteBullets = state.remoteBullets.filter((b) => b.ownerId !== ownerId);
+    const now = performance.now();
+    for (const b of bullets) {
+      state.remoteBullets.push({ ...b, ownerId, _born: now, isPlayer: true });
+    }
   });
 }
 
@@ -181,41 +188,65 @@ export function setupGameListeners(socket) {
 // ==============================
 
 /** Host gửi boss state xuống cho các client (30 lần/giây) */
-export function startBossSync(roomCodeOrSocket) {
+export function startBossSync(roomCode) {
   if (!mpState.isHost) return;
 
   if (bossSyncInterval) clearInterval(bossSyncInterval);
   bossSyncInterval = setInterval(() => {
     if (!state.boss) return;
-    emitBossState(roomCodeOrSocket, {
+
+    // 1. Thu thập đạn boss (enemy bullets)
+    const bossBullets = state.bullets
+      .filter(b => !b.isPlayer)
+      .slice(0, 80) // Giảm xuống 80 để dành chỗ cho data khác
+      .map(b => ({
+        x: b.x, y: b.y, vx: b.vx, vy: b.vy,
+        radius: b.radius, style: b.style, visualStyle: b.visualStyle,
+        life: b.life, damage: b.damage
+      }));
+
+    // 2. Thu thập warnings/hazards/safezones
+    const warnings = (state.groundWarnings || []).slice(0, 40);
+    const hazards = (state.hazards || []).slice(0, 30);
+    const safeZones = (state.safeZones || []).slice(0, 10);
+
+    emitBossState(roomCode, {
       x: state.boss.x,
       y: state.boss.y,
       hp: state.boss.hp,
       maxHp: state.boss.maxHp,
       phase: state.boss.currentPhaseIndex || 0,
-      bossSpecial: state.bossSpecial || null,
+      bossSpecial: state.bossSpecial || state.boss.special || null,
       deathTimer: state.boss.deathTimer || 0,
+      
+      bullets: bossBullets,
+      beams: state.bossBeams || [],
+      warnings,
+      hazards,
+      safeZones,
+      
+      entityPhase: !!state.boss.entityPhase,
+      ultimatePhase: !!state.boss.ultimatePhase,
+      cinematic: state.cinematicEffects,
+      glitch: state.glitch,
+      globalHazard: state.globalHazard
     });
 
     // Kiểm tra boss chết → broadcast
     if (state.boss.hp <= 0 && !state._mpBossKilledSent) {
       state._mpBossKilledSent = true;
-      emitBossKilled(roomCodeOrSocket);
+      emitBossKilled(roomCode);
     }
   }, 1000 / 30);
 }
 
-/** * Đồng bộ trạng thái của Local Player (vị trí, máu, trạng thái) lên server
- * (Gửi 30 lần/giây)
- */
-export function startPlayerSync(roomCodeOrSocket) {
+/** Đồng bộ trạng thái Local Player (30 lần/giây) */
+export function startPlayerSync(roomCode) {
   if (playerSyncInterval) clearInterval(playerSyncInterval);
 
   playerSyncInterval = setInterval(() => {
-    // Nếu chưa có player thì bỏ qua
     if (!state.player) return;
-
-    emitPlayerUpdate(roomCodeOrSocket, {
+    emitPlayerUpdate(roomCode, {
       x: state.player.x,
       y: state.player.y,
       hp: state.player.hp,
@@ -224,16 +255,33 @@ export function startPlayerSync(roomCodeOrSocket) {
     });
   }, 1000 / 30);
 }
-/** Stop all synchronization intervals. */
+
+/** Gửi snapshot bullets của local player (60ms/lần) */
+export function startBulletSync(roomCode) {
+  if (bulletSyncInterval) clearInterval(bulletSyncInterval);
+  bulletSyncInterval = setInterval(() => {
+    const socket = getSocket();
+    if (!socket || !state.bullets) return;
+    const playerBullets = state.bullets
+      .filter((b) => b.isPlayer)
+      .slice(0, 30)
+      .map((b) => ({
+        x: b.x, y: b.y,
+        vx: b.vx, vy: b.vy,
+        radius: b.radius || 5,
+        style: b.visualStyle || b.style || 0,
+        visualStyle: b.visualStyle || null,
+        life: b.life,
+      }));
+    socket.emit("player_bullets", { roomCode, bullets: playerBullets });
+  }, 60);
+}
+
 export function stopAllSync() {
-  if (playerSyncInterval) {
-    clearInterval(playerSyncInterval);
-    playerSyncInterval = null;
-  }
-  if (bossSyncInterval) {
-    clearInterval(bossSyncInterval);
-    bossSyncInterval = null;
-  }
+  if (playerSyncInterval) { clearInterval(playerSyncInterval); playerSyncInterval = null; }
+  if (bossSyncInterval)   { clearInterval(bossSyncInterval);   bossSyncInterval   = null; }
+  if (bulletSyncInterval) { clearInterval(bulletSyncInterval); bulletSyncInterval = null; }
+  state.remoteBullets = [];
 }
 
 // ==============================
@@ -245,9 +293,7 @@ export function sendDamageToHost(roomCode, damage) {
   emitPlayerDamage(roomCode, damage);
 }
 
-/**
- * Cập nhật revive zones mỗi frame (gọi từ game loop)
- */
+/** Cập nhật revive zones mỗi frame (gọi từ game loop) */
 export function updateReviveZones(roomCode) {
   if (!state.reviveZones) return;
   const player = state.player;
@@ -277,12 +323,9 @@ export function updateReviveZones(roomCode) {
   }
 }
 
-/**
- * Tạo revive zone khi remote player chết
- */
+/** Tạo revive zone khi remote player chết */
 function spawnReviveZone(deadPlayerId, x, y) {
   if (!state.reviveZones) state.reviveZones = [];
-  // Không tạo 2 zone cho cùng 1 player
   if (state.reviveZones.some((z) => z.deadPlayerId === deadPlayerId)) return;
 
   state.reviveZones.push({
@@ -290,14 +333,12 @@ function spawnReviveZone(deadPlayerId, x, y) {
     x,
     y,
     radius: 80,
-    progress: 0, // 0..100
+    progress: 0,
     reviverId: null,
   });
 }
 
-/**
- * Tạo revive zone cho BẢN THÂN khi local player chết trong MP
- */
+/** Tạo revive zone cho BẢN THÂN khi local player chết trong MP */
 export function spawnLocalReviveZone(x, y) {
   if (!state.reviveZones) state.reviveZones = [];
   const myId = mpState.playerId;
@@ -321,8 +362,7 @@ export function onLocalPlayerRevived() {
   state.player.isDead = false;
   state.player.hp = Math.ceil(state.player.maxHp / 2);
   state.player.gracePeriod = 120;
-
-  import("../ui.js").then(({ updateHealthUI }) => updateHealthUI());
+  UI.updateHealthUI?.();
 }
 
 // ==============================

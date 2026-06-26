@@ -180,12 +180,27 @@ export { evolve };
 // === MULTIPLAYER UI HANDLER
 // ============================================================
 
+// Helper: update connection status indicator
+function setMpConnectionStatus(status) {
+  const el = document.getElementById("mp-connection-status");
+  const textEl = document.getElementById("mp-status-text");
+  if (!el || !textEl) return;
+  el.className = "mp-connection-status mp-status-" + status;
+  const labels = {
+    disconnected: "Chưa kết nối",
+    connecting: "Đang kết nối...",
+    connected: "🟢 Server Online",
+  };
+  textEl.textContent = labels[status] || status;
+}
+
 const btnMultiplayer = document.getElementById("btn-multiplayer");
 if (btnMultiplayer) {
   btnMultiplayer.onclick = async () => {
     document.getElementById("screen-main").classList.add("hidden");
     document.getElementById("screen-multiplayer").classList.remove("hidden");
-    // Pre-fill username from JWT token
+
+    // Pre-fill username from JWT
     try {
       const { TOKEN_KEY } = await import("./utils.js");
       const token = localStorage.getItem(TOKEN_KEY);
@@ -195,6 +210,20 @@ if (btnMultiplayer) {
         if (el && !el.value) el.value = payload.username || "";
       }
     } catch (_) {}
+
+    // Pre-connect socket and show live status
+    setMpConnectionStatus("connecting");
+    const socket = connectSocket();
+
+    if (socket.connected) {
+      setMpConnectionStatus("connected");
+    } else {
+      socket.once("connect", () => setMpConnectionStatus("connected"));
+      socket.once("connect_error", () => setMpConnectionStatus("disconnected"));
+    }
+    socket.on("disconnect", () => setMpConnectionStatus("disconnected"));
+    socket.on("reconnect_attempt", () => setMpConnectionStatus("connecting"));
+    socket.on("reconnect", () => setMpConnectionStatus("connected"));
   };
 }
 
@@ -207,20 +236,19 @@ document.getElementById("btn-mp-back")?.addEventListener("click", () => {
 
 // --- Tạo phòng ---
 document.getElementById("btn-mp-create")?.addEventListener("click", async () => {
-  const ip = document.getElementById("mp-server-ip").value.trim() || "localhost";
   const username = document.getElementById("mp-username").value.trim() || "Player";
   const errEl = document.getElementById("mp-connect-error");
-  errEl.textContent = "Đang kết nối...";
+  errEl.textContent = "Đang kết nối đến server...";
   errEl.style.color = "#00ffcc";
 
   try {
-    mpState.serverIp = ip;
-    const socket = connectSocket(ip);
+    const socket = connectSocket();
 
     await new Promise((res, rej) => {
+      if (socket.connected) return res();
       socket.once("connect", res);
-      socket.once("connect_error", (e) => rej(new Error("Không kết nối được: " + e.message)));
-      setTimeout(() => rej(new Error("Timeout kết nối")), 5000);
+      socket.once("connect_error", (e) => rej(new Error("Không kết nối được server: " + e.message)));
+      setTimeout(() => rej(new Error("Timeout — server có thể đang khởi động lại")), 10000);
     });
 
     await createRoom(socket, username, state.selectedCharacter);
@@ -240,7 +268,6 @@ document.getElementById("btn-mp-create")?.addEventListener("click", async () => 
 
 // --- Vào phòng ---
 document.getElementById("btn-mp-join")?.addEventListener("click", async () => {
-  const ip = document.getElementById("mp-server-ip").value.trim() || "localhost";
   const username = document.getElementById("mp-username").value.trim() || "Player";
   const code = document.getElementById("mp-room-code-input").value.trim().toUpperCase();
   const errEl = document.getElementById("mp-connect-error");
@@ -251,17 +278,17 @@ document.getElementById("btn-mp-join")?.addEventListener("click", async () => {
     return;
   }
 
-  errEl.textContent = "Đang kết nối...";
+  errEl.textContent = "Đang kết nối đến server...";
   errEl.style.color = "#00ffcc";
 
   try {
-    mpState.serverIp = ip;
-    const socket = connectSocket(ip);
+    const socket = connectSocket();
 
     await new Promise((res, rej) => {
+      if (socket.connected) return res();
       socket.once("connect", res);
-      socket.once("connect_error", (e) => rej(new Error("Không kết nối được: " + e.message)));
-      setTimeout(() => rej(new Error("Timeout kết nối")), 5000);
+      socket.once("connect_error", (e) => rej(new Error("Không kết nối được server: " + e.message)));
+      setTimeout(() => rej(new Error("Timeout — server có thể đang khởi động lại")), 10000);
     });
 
     await joinRoom(socket, code, username, state.selectedCharacter);

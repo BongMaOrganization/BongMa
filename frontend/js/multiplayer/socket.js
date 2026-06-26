@@ -1,5 +1,7 @@
 import { API_BASE_URL } from "../config.js";
 
+const SERVER_URL = "https://bongma.storyoftri.xyz";
+
 let socket = null;
 
 const LOCAL_HOSTS = new Set(["127.0.0.1", "localhost"]);

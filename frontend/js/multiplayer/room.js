@@ -12,7 +12,7 @@ export const mpState = {
   bossType: null,
   playerCount: 1,
   hpScale: 1,
-  serverIp: "localhost",
+  // serverIp removed — WAN mode dùng fixed server URL
 };
 
 /**
@@ -128,14 +128,6 @@ export function openLobby(socket) {
 
   // 4. Setup listeners cho lobby
   setupLobbyListeners(socket);
-
-  // 5. Lắng nghe sự kiện bắt đầu game
-  socket.on("startGame", () => {
-    document.getElementById("screen-mp-lobby")?.classList.add("hidden");
-    // Thêm logic hiển thị màn hình game thực tế của bạn tại đây
-    // Ví dụ: document.getElementById("game-container").classList.remove("hidden");
-    // Khởi tạo vòng lặp game, v.v.
-  });
 }
 
 /**

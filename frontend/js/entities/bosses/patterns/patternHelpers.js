@@ -1,5 +1,6 @@
 import { state } from "../../../state.js";
 import { spawnBullet } from "../../helpers.js";
+import { getBossTarget } from "../boss_manager.js";
 
 export const TAU = Math.PI * 2;
 
@@ -30,7 +31,8 @@ export function fan(sx, sy, baseAngle, count, spread, style = 0, source = "boss"
   }
 }
 
-// Tính góc hướng về player
+// Tính góc hướng về player sống gần nhất (local hoặc remote)
 export function aim(boss, extraAngle = 0) {
-  return Math.atan2(state.player.y - boss.y, state.player.x - boss.x) + extraAngle;
+  const target = getBossTarget(boss);
+  return Math.atan2(target.y - boss.y, target.x - boss.x) + extraAngle;
 }

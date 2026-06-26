@@ -141,7 +141,7 @@
               <div class="btn-content">
                 <span class="btn-icon">🌐</span>
                 <span class="btn-text">MULTIPLAYER</span>
-                <span class="btn-subtext">Co-op Boss Arena — LAN 2-4 người</span>
+                <span class="btn-subtext">Co-op Boss Arena — Online toàn cầu</span>
               </div>
             </button>
             
@@ -349,11 +349,11 @@
     <div id="screen-multiplayer" class="hidden">
       <div class="mp-panel">
         <div class="mp-title">🌐 MULTIPLAYER</div>
-        <div class="mp-subtitle">Co-op Boss Arena · LAN 2-4 người</div>
+        <div class="mp-subtitle">Co-op Boss Arena · Online 2-4 người</div>
 
-        <div class="mp-input-group">
-          <label class="mp-input-label">IP Server (máy host)</label>
-          <input id="mp-server-ip" class="mp-input" type="text" value="" placeholder="192.168.x.x" />
+        <div id="mp-connection-status" class="mp-connection-status mp-status-connecting">
+          <span class="mp-status-dot"></span>
+          <span id="mp-status-text">Chưa kết nối</span>
         </div>
 
         <div class="mp-input-group">
@@ -387,7 +387,7 @@
         <div class="mp-room-code-display">
           <div class="mp-room-code-label">Mã Phòng — Chia sẻ cho bạn bè</div>
           <div id="mp-room-code-display" class="mp-room-code-value">——</div>
-          <div class="mp-room-code-hint">Vào cùng mạng LAN · Nhập mã để tham gia</div>
+          <div class="mp-room-code-hint">Chia sẻ mã phòng để bạn bè tham gia — trên mọi thiết bị!</div>
         </div>
 
         <div class="mp-section-title">Người chơi (<span id="mp-player-count">1</span>/4)</div>

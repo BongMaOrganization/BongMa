@@ -1,82 +1,130 @@
 /**
  * drawRemotePlayers.js — Vẽ các remote players lên canvas
+ * Remote players được vẽ bằng đúng hàm animation của từng nhân vật (như local player).
  */
 import { state } from "../../state.js";
 import { mpState } from "../../multiplayer/room.js";
+import { drawPlayerByCharId } from "./drawPlayer.js";
+import { drawFastBullet } from "./drawBullets.js";
 
-// Màu nhân vật (placeholder — tương lai có thể lấy từ characterRegistry)
+// Màu nhân vật (dùng cho fallback và HUD)
 const CHARACTER_COLORS = {
-  speedster:   "#00ffcc",
-  tank:        "#ff8800",
-  wizard:      "#aa00ff",
-  sniper:      "#ffff00",
-  assassin:    "#ff0088",
-  ghost:       "#88ffff",
-  necromancer: "#00ff44",
-  phoenix:     "#ff4400",
-  hunter:      "#bbff00",
-  storm:       "#4488ff",
-  frost:       "#aaffff",
-  engineer:    "#ffcc00",
-  gunner:      "#ff6600",
-  reaper:      "#aa0000",
-  summoner:    "#cc00ff",
-  painter:     "#ff88ff",
-  scout:       "#00ffbb",
-  warden:      "#00aaff",
-  knight:      "#ffffff",
-  destroyer:   "#ff2200",
-  creator:     "#ffdd00",
-  oracle:      "#88ffcc",
-  druid:       "#44ff44",
-  spirit:      "#ccaaff",
-  elementalist:"#ff0088",
-  glitch:      "#00ff00",
-  void:        "#5566ff",
+  speedster:    "#00ffcc",
+  tank:         "#ff8800",
+  sniper:       "#ffff00",
+  assassin:     "#ff0088",
+  ghost:        "#88ffff",
+  necromancer:  "#00ff44",
+  phoenix:      "#ff4400",
+  hunter:       "#bbff00",
+  storm:        "#4488ff",
+  frost:        "#aaffff",
+  engineer:     "#ffcc00",
+  gunner:       "#ff6600",
+  reaper:       "#aa0000",
+  summoner:     "#cc00ff",
+  painter:      "#ff88ff",
+  scout:        "#00ffbb",
+  warden:       "#00aaff",
+  knight:       "#ffffff",
+  destroyer:    "#ff2200",
+  creator:      "#ffdd00",
+  oracle:       "#88ffcc",
+  druid:        "#44ff44",
+  spirit:       "#ccaaff",
+  elementalist: "#ff0088",
+  void:         "#5566ff",
+  mage:         "#ff44ff",
+  brawler:      "#ffaa44",
+  medic:        "#00ffaa",
+  alchemist:    "#aaff44",
+  berserker:    "#ff4422",
+  sharpshooter: "#ffeeaa",
+  timekeeper:   "#aaddff",
+};
+
+// Element colors (cần cho Elementalist)
+const ELEMENT_COLORS = {
+  fire: "#ff4400", ice: "#aaffff", lightning: "#ffff00",
+  wind: "#00ff88", earth: "#884400",
 };
 
 /**
- * Vẽ tất cả remote players
- * @param {CanvasRenderingContext2D} ctx
+ * Tạo fakeState giả lập cho remote player.
+ * Dùng buffs rỗng nên nhân vật sẽ vẽ ở trạng thái idle/thường.
+ */
+function buildFakeState(rp) {
+  const color = CHARACTER_COLORS[rp.characterId] || "#00ffcc";
+  return {
+    player: {
+      x: rp.x,
+      y: rp.y,
+      radius: 14,
+      characterId: rp.characterId,
+      hp: rp.hp,
+      maxHp: rp.maxHp,
+      isDead: rp.isDead,
+      shield: 0,
+      maxShield: 0,
+      gracePeriod: 0,
+      dashTimeLeft: 0,
+      dashDx: 0,
+      dashDy: 0,
+      isInvincible: false,
+      color,
+      multiShot: 1,
+      bounces: 0,
+    },
+    frameCount: state.frameCount || 0,
+    playerStatus: { slowTimer: 0, stunTimer: 0, burnTimer: 0 },
+    element: "fire",
+    elementColors: ELEMENT_COLORS,
+    activeBuffs: { q: 0, e: 0, r: 0 },
+    // Character-specific state — empty defaults
+    particles: state.particles || [],
+    speedsterBursts: [],
+    phantoms: [],
+    glitch: { matrixMode: false, invertControls: false },
+    cinematicEffects: { fogAlpha: 0 },
+    boss: null,
+  };
+}
+
+/**
+ * Vẽ tất cả remote players với animation đúng nhân vật
  */
 export function drawRemotePlayers(ctx) {
   if (!state.isMultiplayer || !state.remotePlayers) return;
 
+  const emptyBuffs = { q: 0, e: 0, r: 0 };
+
   for (const rp of state.remotePlayers) {
     if (rp.x === 0 && rp.y === 0) continue; // Chưa nhận vị trí
 
-    const color = CHARACTER_COLORS[rp.characterId] || "#00ffcc";
     const isDead = rp.isDead;
-    const alpha = isDead ? 0.3 : 1.0;
+    const color = CHARACTER_COLORS[rp.characterId] || "#00ffcc";
 
     ctx.save();
-    ctx.globalAlpha = alpha;
+    if (isDead) ctx.globalAlpha = 0.3;
 
-    // --- Vẽ thân player ---
-    ctx.beginPath();
-    ctx.arc(rp.x, rp.y, 14, 0, Math.PI * 2);
-    ctx.fillStyle = isDead ? "#444" : color;
-    ctx.fill();
+    // --- Vẽ thân player bằng đúng hàm animation ---
+    const fakeState = buildFakeState(rp);
+    drawPlayerByCharId(ctx, rp.characterId, fakeState, emptyBuffs, false);
 
-    // Viền neon
-    ctx.strokeStyle = isDead ? "#888" : color;
-    ctx.lineWidth = 2.5;
-    ctx.shadowBlur = isDead ? 0 : 10;
-    ctx.shadowColor = color;
-    ctx.stroke();
-    ctx.shadowBlur = 0;
-
-    // Dấu X khi chết
+    // --- Overlay dấu X khi chết ---
     if (isDead) {
+      ctx.globalAlpha = 0.8;
       ctx.strokeStyle = "#ff4444";
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.moveTo(rp.x - 8, rp.y - 8);
-      ctx.lineTo(rp.x + 8, rp.y + 8);
-      ctx.moveTo(rp.x + 8, rp.y - 8);
-      ctx.lineTo(rp.x - 8, rp.y + 8);
+      ctx.moveTo(rp.x - 9, rp.y - 9);
+      ctx.lineTo(rp.x + 9, rp.y + 9);
+      ctx.moveTo(rp.x + 9, rp.y - 9);
+      ctx.lineTo(rp.x - 9, rp.y + 9);
       ctx.stroke();
     }
+
+    ctx.globalAlpha = isDead ? 0.5 : 1.0;
 
     // --- Tên player ---
     ctx.font = "bold 12px 'Segoe UI', sans-serif";
@@ -85,7 +133,7 @@ export function drawRemotePlayers(ctx) {
     ctx.shadowBlur = 4;
     ctx.shadowColor = "rgba(0,0,0,0.8)";
     const label = (rp.isHost ? "👑 " : "") + rp.username;
-    ctx.fillText(label, rp.x, rp.y - 20);
+    ctx.fillText(label, rp.x, rp.y - 22);
     ctx.shadowBlur = 0;
 
     // --- Mini HP bar ---
@@ -109,8 +157,38 @@ export function drawRemotePlayers(ctx) {
 }
 
 /**
+ * Vẽ bullets của remote players với visual style đúng nhân vật.
+ * state.remoteBullets là snapshot 60ms/lần, mỗi viên tự di chuyển với vx/vy giữa các update.
+ */
+export function drawRemoteBullets(ctx) {
+  if (!state.isMultiplayer || !state.remoteBullets || !state.remoteBullets.length) return;
+
+  const now = performance.now();
+  const STALE_MS = 200;
+
+  for (let i = state.remoteBullets.length - 1; i >= 0; i--) {
+    const b = state.remoteBullets[i];
+
+    // Di chuyển bullet theo vận tốc giữa các snapshot
+    b.x += (b.vx || 0) * 0.5;
+    b.y += (b.vy || 0) * 0.5;
+    b.life = (b.life || 30) - 1;
+
+    if (b.life <= 0 || (now - b._born) > STALE_MS) {
+      state.remoteBullets.splice(i, 1);
+      continue;
+    }
+
+    // Dùng drawFastBullet — có trail, màu theo visualStyle của nhân vật
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, b.life / 15);
+    drawFastBullet(ctx, b);
+    ctx.restore();
+  }
+}
+
+/**
  * Vẽ tất cả revive zones
- * @param {CanvasRenderingContext2D} ctx
  */
 export function drawReviveZones(ctx) {
   if (!state.reviveZones || !state.reviveZones.length) return;
@@ -118,7 +196,7 @@ export function drawReviveZones(ctx) {
   const t = (state.frameCount || 0) * 0.04;
 
   for (const zone of state.reviveZones) {
-    const { x, y, radius, progress, deadPlayerId } = zone;
+    const { x, y, radius, progress } = zone;
     const alpha = 0.5 + 0.25 * Math.sin(t * 2);
     const progressFrac = progress / 100;
 
@@ -136,7 +214,7 @@ export function drawReviveZones(ctx) {
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Vòng tiến độ hồi sinh (màu xanh, arc)
+    // Vòng tiến độ hồi sinh
     if (progressFrac > 0) {
       ctx.beginPath();
       ctx.arc(x, y, radius - 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * progressFrac);
@@ -145,27 +223,27 @@ export function drawReviveZones(ctx) {
       ctx.stroke();
     }
 
-    // Icon hồi sinh
+    // Icon
     ctx.font = `${24 + 4 * Math.sin(t)}px serif`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillStyle = "rgba(255, 120, 120, 0.9)";
     ctx.fillText("💫", x, y);
 
-    // Text "Đứng đây để hồi sinh"
+    // Label
     ctx.font = "bold 11px 'Segoe UI', sans-serif";
     ctx.fillStyle = "rgba(255, 200, 200, 0.9)";
     ctx.textBaseline = "alphabetic";
     ctx.fillText("Đứng vào để hồi sinh", x, y + radius + 16);
 
-    // Thanh tiến độ ở dưới
+    // Thanh tiến độ
     if (progressFrac > 0) {
       const bw = 80;
       const bx = x - bw / 2;
       const by = y + radius + 22;
       ctx.fillStyle = "rgba(0,0,0,0.4)";
       ctx.fillRect(bx, by, bw, 6);
-      ctx.fillStyle = `rgba(0, 255, 160, 0.85)`;
+      ctx.fillStyle = "rgba(0, 255, 160, 0.85)";
       ctx.fillRect(bx, by, bw * progressFrac, 6);
     }
 
@@ -174,9 +252,7 @@ export function drawReviveZones(ctx) {
 }
 
 /**
- * Vẽ HUD mini (danh sách players góc trên trái, bao gồm bản thân)
- * @param {CanvasRenderingContext2D} ctx
- * @param {HTMLCanvasElement} canvas
+ * Vẽ HUD mini (danh sách players góc trên trái)
  */
 export function drawMpPlayersHUD(ctx, canvas) {
   if (!state.isMultiplayer) return;

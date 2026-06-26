@@ -52,7 +52,7 @@ function isBulletVisible(b, padding = 160) {
   );
 }
 
-function drawFastBullet(ctx, b) {
+export function drawFastBullet(ctx, b) {
   const speed = Math.hypot(b.vx, b.vy) || 1;
   const nx = b.vx / speed;
   const ny = b.vy / speed;

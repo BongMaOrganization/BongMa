@@ -1,6 +1,7 @@
 import { state } from "../../../state.js";
 import { spawnWarning } from "../../helpers.js";
 import { fireAngle, ring, fan, aim, TAU } from "./patternHelpers.js";
+import { getBossTarget } from "../boss_manager.js";
 
 export const ATTACK_MODES_MAP = {
   // ===== FIRE (style 1) =====
@@ -102,15 +103,20 @@ export const ATTACK_MODES_MAP = {
 
   // ===== 35: Black Hole Pull =====
   35: (b) => {
-    const dx = b.x - state.player.x;
-    const dy = b.y - state.player.y;
-    state.player.x += dx * 0.02;
-    state.player.y += dy * 0.02;
+    const target = getBossTarget(b);
+    const dx = b.x - target.x;
+    const dy = b.y - target.y;
+    // Kéo local player nếu còn sống
+    if (state.player && !state.player.isDead) {
+      state.player.x += dx * 0.02;
+      state.player.y += dy * 0.02;
+    }
     ring(b.x, b.y, 10, state.frameCount * 0.05, 4);
   },
 
   // ===== 36: Void Rifts (bắn từ viền) =====
   36: (b) => {
+    const target = getBossTarget(b);
     for (let i = 0; i < 6; i++) {
       let side = Math.floor(Math.random() * 4);
       let x, y;
@@ -118,7 +124,7 @@ export const ATTACK_MODES_MAP = {
       if (side === 1) { x = state.camera.x + 1536; y = state.camera.y + Math.random() * 864; }
       if (side === 2) { x = state.camera.x + Math.random() * 1536; y = state.camera.y; }
       if (side === 3) { x = state.camera.x + Math.random() * 1536; y = state.camera.y + 864; }
-      fireAngle(x, y, Math.atan2(state.player.y - y, state.player.x - x), 4);
+      fireAngle(x, y, Math.atan2(target.y - y, target.x - x), 4);
     }
   },
 
@@ -159,7 +165,8 @@ export const ATTACK_MODES_MAP = {
   },
 
   // 39: Screen Edge Glitch
-  39: () => {
+  39: (b) => {
+    const target = getBossTarget(b);
     for (let i = 0; i < 8; i++) {
       let side = Math.floor(Math.random() * 4);
       let x, y;
@@ -168,7 +175,7 @@ export const ATTACK_MODES_MAP = {
       if (side === 2) { x = state.camera.x + Math.random() * 1536; y = state.camera.y; }
       if (side === 3) { x = state.camera.x + Math.random() * 1536; y = state.camera.y + 864; }
       let speed = 2 + Math.random() * 6;
-      state.bullets.push({ x, y, vx: ((state.player.x - x) / 100) * speed, vy: ((state.player.y - y) / 100) * speed, radius: 8, life: 200, isPlayer: false, style: 4 });
+      state.bullets.push({ x, y, vx: ((target.x - x) / 100) * speed, vy: ((target.y - y) / 100) * speed, radius: 8, life: 200, isPlayer: false, style: 4 });
     }
   },
 
@@ -182,8 +189,9 @@ export const ATTACK_MODES_MAP = {
 
   // 41: Teleport Burst
   41: (b) => {
-    b.x = Math.max(100, Math.min(state.world.width - 100, state.player.x + (Math.random() - 0.5) * 800));
-    b.y = Math.max(100, Math.min(state.world.height - 100, state.player.y + (Math.random() - 0.5) * 600));
+    const target = getBossTarget(b);
+    b.x = Math.max(100, Math.min(state.world.width - 100, target.x + (Math.random() - 0.5) * 800));
+    b.y = Math.max(100, Math.min(state.world.height - 100, target.y + (Math.random() - 0.5) * 600));
     ring(b.x, b.y, 20, 0, 4);
   },
 
@@ -195,11 +203,13 @@ export const ATTACK_MODES_MAP = {
     }
   },
 
-  // 43: Random Freeze + Push
+  // 43: Random Freeze + Push (chỉ ảnh hưởng local player nếu còn sống)
   43: () => {
     state.cinematicEffects.freezeTimer = 20;
-    state.player.x += (Math.random() - 0.5) * 200;
-    state.player.y += (Math.random() - 0.5) * 200;
+    if (state.player && !state.player.isDead) {
+      state.player.x += (Math.random() - 0.5) * 200;
+      state.player.y += (Math.random() - 0.5) * 200;
+    }
   },
 
   // ===== THE ENTITY PHASE =====

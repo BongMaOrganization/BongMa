@@ -189,13 +189,12 @@ export function setupSocketIO(io) {
     // ==============================
     // HOST BROADCAST BOSS STATE
     // ==============================
-    socket.on("boss_state", ({ roomCode, x, y, hp, maxHp, phase, bossSpecial, deathTimer }) => {
+    socket.on("boss_state", (data) => {
+      const { roomCode, ...bossData } = data;
       const room = rooms.get(roomCode);
       if (!room || room.hostId !== socket.id) return;
 
-      socket.to(roomCode).emit("boss_state_update", {
-        x, y, hp, maxHp, phase, bossSpecial, deathTimer,
-      });
+      socket.to(roomCode).emit("boss_state_update", bossData);
     });
 
     // ==============================
@@ -209,6 +208,19 @@ export function setupSocketIO(io) {
       io.to(room.hostId).emit("apply_damage", {
         fromId: socket.id,
         damage,
+      });
+    });
+
+    // ==============================
+    // RELAY BULLETS (snapshot từ mỗi player → broadcast cho room)
+    // ==============================
+    socket.on("player_bullets", ({ roomCode, bullets }) => {
+      const room = rooms.get(roomCode);
+      if (!room) return;
+      // Relay cho tất cả NGOẠI TRỪ người gửi
+      socket.to(roomCode).emit("remote_bullets", {
+        ownerId: socket.id,
+        bullets,
       });
     });
 
@@ -274,11 +286,9 @@ export function setupSocketIO(io) {
           io.to(code).emit("player_list_update", remaining);
 
           if (wasHost) {
-            // Chuyển host cho người tiếp theo
-            const newHostId = room.players.keys().next().value;
-            room.hostId = newHostId;
-            rooms.delete(code); // Game kết thúc nếu host thoát khi đang chơi
+            // Thông báo cho tất cả BEFORE xoá phòng
             io.to(code).emit("host_left");
+            rooms.delete(code);
             console.log(`[Room] Host phòng ${code} đã thoát. Game kết thúc.`);
           }
         }

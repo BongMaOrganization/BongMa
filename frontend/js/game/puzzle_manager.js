@@ -57,8 +57,7 @@ const PUZZLES = {
 
 export function initPuzzle() {
   const types = Object.keys(PUZZLES);
-  //const selected = types[Math.floor(Math.random() * types.length)];
-  const selected = "melody"; // chọn cái bạn muốn test
+  const selected = types[Math.floor(Math.random() * types.length)];
   state.currentPuzzleType = selected;
   state.currentPuzzle = {};
 

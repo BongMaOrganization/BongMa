@@ -123,5 +123,5 @@ app.get("/api/load", authenticateToken, async (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-httpServer.listen(PORT, "0.0.0.0", () => console.log(`Server running on :${PORT} (LAN accessible)`));
+httpServer.listen(PORT, "0.0.0.0", () => console.log(`Server running on :${PORT} — WAN via api.bongma.storyoftri.xyz`));
 

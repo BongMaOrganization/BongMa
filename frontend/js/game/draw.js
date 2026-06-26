@@ -35,7 +35,7 @@ import {
 } from "./draw/drawHUD.js";
 import { drawMinimap } from "./draw/drawMinimap.js";
 import { drawWorldObjects, drawFloatingTexts } from "./draw/drawWorldObjects.js";
-import { drawRemotePlayers, drawReviveZones, drawMpPlayersHUD } from "./draw/drawRemotePlayers.js";
+import { drawRemotePlayers, drawRemoteBullets, drawReviveZones, drawMpPlayersHUD } from "./draw/drawRemotePlayers.js";
 import { shouldSkipCharacterVfxFrame } from "./vfxBudget.js";
 
 // Re-export hexToRgba for other modules that may import from draw.js
@@ -115,6 +115,9 @@ export function draw(ctx, canvas) {
 
   // --- Bullets ---
   drawBullets(ctx);
+
+  // --- Remote player bullets (MP co-op) ---
+  drawRemoteBullets(ctx);
 
   // --- Engineer turrets ---
   drawEngineerTurrets(ctx);
