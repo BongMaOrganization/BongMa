@@ -36,7 +36,7 @@ export function setupGameListeners(socket) {
   socket.off("remote_bullets");
 
   // Nhận vị trí/state remote players
-  socket.on("remote_player_update", ({ id, x, y, hp, maxHp, isDead }) => {
+  socket.on("remote_player_update", ({ id, x, y, hp, maxHp, isDead, buffs }) => {
     updatePlayerInRoom(id, { x, y, hp, maxHp, isDead });
 
     const idx = state.remotePlayers.findIndex((p) => p.id === id);
@@ -46,6 +46,7 @@ export function setupGameListeners(socket) {
       state.remotePlayers[idx].hp = hp;
       state.remotePlayers[idx].maxHp = maxHp;
       state.remotePlayers[idx].isDead = isDead;
+      if (buffs) state.remotePlayers[idx].buffs = buffs;
 
       // Tạo revive zone nếu player vừa chết
       if (isDead && !state.remotePlayers[idx].wasDeadLastFrame) {
@@ -248,12 +249,15 @@ export function startPlayerSync(roomCode) {
 
   playerSyncInterval = setInterval(() => {
     if (!state.player) return;
+    const ab = state.activeBuffs || {};
     emitPlayerUpdate(roomCode, {
       x: state.player.x,
       y: state.player.y,
       hp: state.player.hp,
       maxHp: state.player.maxHp,
       isDead: state.player.isDead || false,
+      // Sync buff để đồng đội thấy aura chiêu (q/e/r) của nhau.
+      buffs: { q: ab.q || 0, e: ab.e || 0, r: ab.r || 0 },
     });
   }, 1000 / 30);
 }

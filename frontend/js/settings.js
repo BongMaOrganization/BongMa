@@ -8,10 +8,30 @@ import { setGraphicsPreset, getGraphicsKey, cancelAutoDetect } from "./game/grap
 // ============================================================
 
 const FPS_KEY = "bm_fps_cap";
+const SHOW_FPS_KEY = "bm_show_fps";
 
 function ensureSettings() {
   if (!state.settings) state.settings = {};
   return state.settings;
+}
+
+// Nạp cờ hiện FPS (mặc định tắt).
+export function loadShowFps() {
+  const s = ensureSettings();
+  let saved = "0";
+  try {
+    saved = localStorage.getItem(SHOW_FPS_KEY) ?? "0";
+  } catch (_) {}
+  s.showFps = saved === "1";
+  return s.showFps;
+}
+
+function setShowFps(on) {
+  const s = ensureSettings();
+  s.showFps = !!on;
+  try {
+    localStorage.setItem(SHOW_FPS_KEY, s.showFps ? "1" : "0");
+  } catch (_) {}
 }
 
 // Nạp FPS cap đã lưu (mặc định 60 — giữ cảm giác như cũ, tránh vẽ thừa trên
@@ -36,6 +56,7 @@ function setFpsCap(value) {
 
 export function setupSettingsUI() {
   loadFpsCap();
+  loadShowFps();
 
   const screen = document.getElementById("screen-settings");
   const main = document.getElementById("screen-main");
@@ -43,6 +64,7 @@ export function setupSettingsUI() {
   const btnBack = document.getElementById("btn-settings-back");
   const selGraphics = document.getElementById("setting-graphics");
   const selFps = document.getElementById("setting-fps");
+  const chkFps = document.getElementById("setting-show-fps");
 
   // Đồng bộ select với giá trị hiện tại
   if (selGraphics) {
@@ -57,6 +79,13 @@ export function setupSettingsUI() {
     selFps.value = String(ensureSettings().fpsCap ?? 60);
     selFps.addEventListener("change", (e) => {
       setFpsCap(e.target.value);
+    });
+  }
+
+  if (chkFps) {
+    chkFps.checked = !!ensureSettings().showFps;
+    chkFps.addEventListener("change", (e) => {
+      setShowFps(e.target.checked);
     });
   }
 

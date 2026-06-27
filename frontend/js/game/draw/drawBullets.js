@@ -3,6 +3,7 @@ import {
   shouldUseFastBulletDraw,
   withParticleSpawnBudget,
 } from "../vfxBudget.js";
+import { getGraphicsKey } from "../graphics.js";
 
 const FAST_BULLET_COLORS = {
   speedster_lightning: ["#fff36a", "#ffd400"],
@@ -3626,6 +3627,14 @@ function drawElementalistBullet(ctx, b) {
 export function drawBullets(ctx) {
   const { bullets } = state;
   const fastBulletLoad = shouldUseFastBulletDraw(state, bullets.length);
+  // Đạn player vẽ kiểu "đẹp" (riêng từng nhân vật) chỉ khi đồ họa Cao/Tối đa và
+  // không quá tải. Thấp/Vừa -> drawFastBullet đơn giản (nhẹ). Đây là lý do trước
+  // đây đồ họa cao/thấp đạn vẫn như nhau: nhánh fancy bị chặn cứng.
+  const gKey = getGraphicsKey();
+  const fancyPlayer = (gKey === "high" || gKey === "ultra") && !fastBulletLoad;
+  // Đạn quái/boss vẽ đẹp (switch b.style) khi đồ họa Cao/Ultra và chưa quá đông.
+  // >48 đạn -> fast cho nhẹ; auto-downgrade (shadow) lo phần spike.
+  const fancyEnemy = (gKey === "high" || gKey === "ultra") && bullets.length <= 48;
   const restoreParticlePush = withParticleSpawnBudget(state);
 
   try {
@@ -3634,7 +3643,8 @@ export function drawBullets(ctx) {
     if (
       fastBulletLoad &&
       !b.isMeteor &&
-      !b.isShuriken
+      !b.isShuriken &&
+      !(fancyEnemy && !b.isPlayer) // đạn quái đẹp đi tiếp khi Cao/Ultra + chưa quá đông
     ) {
       drawFastBullet(ctx, b);
       continue;
@@ -3707,7 +3717,7 @@ export function drawBullets(ctx) {
       continue;
     }
 
-    if (b.isPlayer) {
+    if (b.isPlayer && !fancyPlayer) {
       drawFastBullet(ctx, b);
       continue;
     }
@@ -3872,7 +3882,14 @@ export function drawBullets(ctx) {
       continue;
     }
 
-    // ===== STYLE SYSTEM =====
+    // Fallback: đạn player (Cao/Ultra) không khớp visualStyle nào -> vẽ fast,
+    // tránh rơi vào switch(b.style) của đạn quái và bị tàng hình.
+    if (b.isPlayer) {
+      drawFastBullet(ctx, b);
+      continue;
+    }
+
+    // ===== STYLE SYSTEM (đạn quái / elemental) =====
     switch (b.style) {
       // 🔥 FIRE
       case 1: {

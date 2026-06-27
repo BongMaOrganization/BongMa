@@ -55,6 +55,7 @@ const ELEMENT_COLORS = {
  */
 function buildFakeState(rp) {
   const color = CHARACTER_COLORS[rp.characterId] || "#00ffcc";
+  const buffs = rp.buffs || { q: 0, e: 0, r: 0 };
   return {
     player: {
       x: rp.x,
@@ -79,7 +80,7 @@ function buildFakeState(rp) {
     playerStatus: { slowTimer: 0, stunTimer: 0, burnTimer: 0 },
     element: "fire",
     elementColors: ELEMENT_COLORS,
-    activeBuffs: { q: 0, e: 0, r: 0 },
+    activeBuffs: buffs,
     // Character-specific state — empty defaults
     particles: state.particles || [],
     speedsterBursts: [],
@@ -107,9 +108,9 @@ export function drawRemotePlayers(ctx) {
     ctx.save();
     if (isDead) ctx.globalAlpha = 0.3;
 
-    // --- Vẽ thân player bằng đúng hàm animation ---
+    // --- Vẽ thân player bằng đúng hàm animation (kèm buff đã sync -> hiện aura) ---
     const fakeState = buildFakeState(rp);
-    drawPlayerByCharId(ctx, rp.characterId, fakeState, emptyBuffs, false);
+    drawPlayerByCharId(ctx, rp.characterId, fakeState, fakeState.activeBuffs, false);
 
     // --- Overlay dấu X khi chết ---
     if (isDead) {

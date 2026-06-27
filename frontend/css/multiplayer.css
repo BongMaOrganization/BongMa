@@ -506,3 +506,34 @@
 .mp-lobby-panel::-webkit-scrollbar-track { background: transparent; }
 .mp-lobby-panel::-webkit-scrollbar-thumb { background: rgba(0,255,204,0.2); border-radius: 4px; }
 
+
+/* ===== COPY ROOM CODE ===== */
+.mp-room-code-value-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mp-copy-btn {
+  background: rgba(0, 255, 204, 0.12);
+  color: #00ffcc;
+  border: 1px solid #00ffcc66;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.mp-copy-btn:hover {
+  background: rgba(0, 255, 204, 0.25);
+  box-shadow: 0 0 8px #00ffcc55;
+}
+
+.mp-copy-btn:active {
+  transform: scale(0.95);
+}

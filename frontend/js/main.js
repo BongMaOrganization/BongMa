@@ -136,15 +136,40 @@ function gameLoop(timestamp = performance.now()) {
 function renderAndSample() {
   if (!needsAutoDetect()) {
     draw(ctx, canvas);
-    return;
+  } else {
+    const t0 = performance.now();
+    draw(ctx, canvas);
+    const drawMs = performance.now() - t0;
+    const picked = sampleAutoDetect(1000 / Math.max(drawMs, 0.1));
+    if (picked) {
+      const sel = document.getElementById("setting-graphics");
+      if (sel) sel.value = picked;
+    }
   }
-  const t0 = performance.now();
-  draw(ctx, canvas);
-  const drawMs = performance.now() - t0;
-  const picked = sampleAutoDetect(1000 / Math.max(drawMs, 0.1));
-  if (picked) {
-    const sel = document.getElementById("setting-graphics");
-    if (sel) sel.value = picked;
+  trackFps(performance.now());
+}
+
+// === FPS COUNTER (đo nhịp render thực tế) ===
+let _fpsLast = 0;
+let _fpsEma = 60;
+let _fpsDomAt = 0;
+function trackFps(now) {
+  if (_fpsLast) {
+    const dt = now - _fpsLast;
+    if (dt > 0) _fpsEma = _fpsEma * 0.9 + (1000 / dt) * 0.1;
+  }
+  _fpsLast = now;
+
+  const el = document.getElementById("fps-counter");
+  if (!el) return;
+  if (state.settings?.showFps) {
+    if (now - _fpsDomAt > 250) {
+      _fpsDomAt = now;
+      el.style.display = "block";
+      el.textContent = Math.round(_fpsEma) + " FPS";
+    }
+  } else if (el.style.display !== "none") {
+    el.style.display = "none";
   }
 }
 
