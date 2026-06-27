@@ -17,6 +17,8 @@ import {
 } from "./game/flow.js";
 import { update } from "./game/update.js";
 import { draw } from "./game/draw.js";
+import { initGraphics } from "./game/graphics.js";
+import { setupSettingsUI } from "./settings.js";
 import { openShop } from "./characters/shop.js";
 import { setupMenuButtons } from "./characters/select.js";
 import { evolve } from "./game/evolutions.js";
@@ -36,6 +38,9 @@ import { CHARACTERS } from "./characters/data.js";
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const FRAME_INTERVAL_MS = 1000 / FPS;
+// Số bước update tối đa được "bù" trong 1 frame render. Chống spiral of death
+// khi máy quá yếu / tab chạy nền: thà game chậm tạm thời còn hơn treo cứng.
+const MAX_CATCHUP_STEPS = 5;
 
 function scheduleNextFrame(frameStartedAt) {
   if (state.gameState !== "PLAYING") return;
@@ -67,24 +72,33 @@ function nextStageBound() {
 function gameLoop(timestamp = performance.now()) {
   if (state.gameState !== "PLAYING") return;
 
-  if (!state.lastLoopTimestamp) {
-    state.lastLoopTimestamp = timestamp - FRAME_INTERVAL_MS;
+  if (!state.lastLoopTimestamp) state.lastLoopTimestamp = timestamp;
+  let elapsed = timestamp - state.lastLoopTimestamp;
+  state.lastLoopTimestamp = timestamp;
+  // Clamp khoảng trống lớn (chuyển tab, lag spike) để không dồn hàng trăm bước.
+  if (elapsed > 250) elapsed = 250;
+
+  // === FIXED-TIMESTEP ACCUMULATOR ===
+  // Mô phỏng (update) LUÔN chạy 60 bước/giây, tách rời tốc độ render. Khi vẽ
+  // nặng làm FPS tụt, ta chạy bù nhiều update/frame để tốc độ game (và vị trí
+  // gửi cho đồng đội) giữ nguyên — hết hiện tượng "nhân vật đi chậm".
+  state._accumulator = (state._accumulator || 0) + elapsed;
+
+  let steps = 0;
+  let result = null;
+  while (state._accumulator >= FRAME_INTERVAL_MS && steps < MAX_CATCHUP_STEPS) {
+    handleSkillsUpdate(canvas, changeStateBound);
+    result = update(ctx, canvas, changeStateBound);
+    state._accumulator -= FRAME_INTERVAL_MS;
+    steps++;
+    if (result === "BOSS_KILLED" || result === "STAGE_CLEAR") {
+      state._accumulator = 0;
+      break;
+    }
   }
+  // Quá tải không bù kịp → bỏ phần dư, tránh dồn hàng (spiral of death).
+  if (steps >= MAX_CATCHUP_STEPS) state._accumulator = 0;
 
-  const elapsed = timestamp - state.lastLoopTimestamp;
-  if (elapsed < FRAME_INTERVAL_MS) {
-    // Chưa tới frame kế → đợi rAF sau (không xử lý logic). Pure rAF = nhịp
-    // vsync, mượt, ít input delay (trước setTimeout+rAF lồng nhau → ~30fps giật).
-    state.loopId = requestAnimationFrame(gameLoop);
-    return;
-  }
-
-  // Giữ phần dư để nhịp không trôi, cap logic ở 60fps.
-  state.lastLoopTimestamp = timestamp - (elapsed % FRAME_INTERVAL_MS);
-
-  handleSkillsUpdate(canvas, changeStateBound);
-
-  const result = update(ctx, canvas, changeStateBound);
   updateBossUI();
 
   if (result === "BOSS_KILLED" || result === "STAGE_CLEAR") {
@@ -102,11 +116,23 @@ function gameLoop(timestamp = performance.now()) {
   }
 
   if (state.gameState === "PLAYING") {
-    draw(ctx, canvas);
+    // FPS cap render (tách khỏi sim). 0 = không giới hạn (theo nhịp màn hình).
+    const cap = state.settings?.fpsCap || 0;
+    if (cap > 0) {
+      const minInterval = 1000 / cap - 1;
+      if (timestamp - (state._lastDrawAt || 0) >= minInterval) {
+        draw(ctx, canvas);
+        state._lastDrawAt = timestamp;
+      }
+    } else {
+      draw(ctx, canvas);
+    }
     state.loopId = requestAnimationFrame(gameLoop);
   }
 }
 
+initGraphics(); // gắn hook shadowBlur + nạp preset đã lưu TRƯỚC khi vẽ frame đầu
+setupSettingsUI();
 setupInput(canvas);
 setupMenuButtons(openShop, changeStateBound);
 // Kiểm tra đăng nhập TRƯỚC KHI hiện menu

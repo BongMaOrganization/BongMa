@@ -13,7 +13,10 @@
       "Bash(node _cleanup_draw.js)",
       "Bash(python3 -)",
       "Bash(find \"e:\\\\Users\\\\Admin\\\\Documents\\\\GitHub\\\\BongMa\\\\frontend\\\\js\\\\\" -type f -name \"*.js\" | head -30)",
-      "Bash(grep -n \"^    {$\\\\|id:\" /e/Users/Admin/Documents/GitHub/BongMa/frontend/js/characters/data.js)"
+      "Bash(grep -n \"^    {$\\\\|id:\" /e/Users/Admin/Documents/GitHub/BongMa/frontend/js/characters/data.js)",
+      "Bash(cat)",
+      "Bash(node /tmp/hooktest.mjs)",
+      "Bash(rm -f /tmp/hooktest.mjs)"
     ]
   }
 }

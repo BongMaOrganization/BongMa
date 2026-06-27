@@ -1615,3 +1615,39 @@ button:disabled {
 ::-webkit-scrollbar-thumb:hover {
   background: #00ffcc;
 }
+
+/* ===== SETTINGS (Cài đặt: đồ họa + FPS) ===== */
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 16px 0;
+  text-align: left;
+}
+
+.settings-label {
+  color: #00ffcc;
+  font-weight: bold;
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.settings-select {
+  flex: 1;
+  max-width: 320px;
+  padding: 10px 12px;
+  background: #0d0d11;
+  color: #e8e8e8;
+  border: 1px solid #00ffcc66;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  outline: none;
+}
+
+.settings-select:hover,
+.settings-select:focus {
+  border-color: #00ffcc;
+  box-shadow: 0 0 8px #00ffcc44;
+}

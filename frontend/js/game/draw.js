@@ -36,13 +36,16 @@ import {
 import { drawMinimap } from "./draw/drawMinimap.js";
 import { drawWorldObjects, drawFloatingTexts } from "./draw/drawWorldObjects.js";
 import { drawRemotePlayers, drawRemoteBullets, drawReviveZones, drawMpPlayersHUD } from "./draw/drawRemotePlayers.js";
-import { shouldSkipCharacterVfxFrame } from "./vfxBudget.js";
+import { shouldSkipCharacterVfxFrame, getPerfLoadLevel } from "./vfxBudget.js";
+import { beginFrameQuality } from "./graphics.js";
 
 // Re-export hexToRgba for other modules that may import from draw.js
 export { hexToRgba } from "./draw/drawUtils.js";
 
 // ===== MAIN DRAW FUNCTION =====
 export function draw(ctx, canvas) {
+  // Điều chỉnh chất lượng theo tải ngay đầu frame (auto hạ shadowBlur khi nặng).
+  beginFrameQuality(getPerfLoadLevel(state));
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   ctx.save();

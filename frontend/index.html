@@ -149,6 +149,9 @@
               <button id="btn-select-character" class="menu-btn-utility">👥 NHÂN VẬT</button>
               <button id="btn-shop" class="menu-btn-utility">🛒 CỬA HÀNG</button>
             </div>
+            <div class="menu-btn-row">
+              <button id="btn-settings" class="menu-btn-utility">⚙️ CÀI ĐẶT</button>
+            </div>
           </div>
           
           <button id="btn-start" style="display: none; width: 100%; margin-top: 15px;" class="menu-btn-epic btn-restart">LÀM LẠI TỪ ĐẦU</button>
@@ -156,6 +159,37 @@
           <button id="btn-logout" class="menu-btn-logout">
             🚪 Đăng Xuất
           </button>
+        </div>
+      </div>
+      <div id="screen-settings" class="overlay hidden">
+        <div class="panel" style="max-width: 520px;">
+          <h2 class="title-main text-cyan" style="text-shadow: 0 0 15px cyan;">⚙️ CÀI ĐẶT</h2>
+          <p class="desc">Hiệu năng kém? Hạ mức đồ họa hoặc giới hạn FPS.</p>
+
+          <div class="settings-row">
+            <label class="settings-label">Mức đồ họa</label>
+            <select id="setting-graphics" class="settings-select">
+              <option value="low">Thấp — ít hiệu ứng, mượt nhất</option>
+              <option value="medium">Vừa — cân bằng</option>
+              <option value="high">Cao — đầy đủ hiệu ứng</option>
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <label class="settings-label">Giới hạn FPS</label>
+            <select id="setting-fps" class="settings-select">
+              <option value="30">30 FPS — tiết kiệm, máy yếu</option>
+              <option value="60">60 FPS</option>
+              <option value="120">120 FPS</option>
+              <option value="0">Không giới hạn (theo màn hình)</option>
+            </select>
+          </div>
+
+          <p class="desc" style="font-size: 12px; color: #888; margin-top: 10px;">
+            Tốc độ game luôn cố định 60 — giảm FPS chỉ giảm tải vẽ, không làm chậm nhân vật.
+          </p>
+
+          <button id="btn-settings-back" class="menu-btn-utility" style="margin-top: 25px; padding: 10px 40px;">Quay Lại</button>
         </div>
       </div>
       <div id="screen-map-select" class="overlay hidden">
