@@ -17,7 +17,7 @@ import {
 } from "./game/flow.js";
 import { update } from "./game/update.js";
 import { draw } from "./game/draw.js";
-import { initGraphics } from "./game/graphics.js";
+import { initGraphics, needsAutoDetect, sampleAutoDetect } from "./game/graphics.js";
 import { setupSettingsUI } from "./settings.js";
 import { openShop } from "./characters/shop.js";
 import { setupMenuButtons } from "./characters/select.js";
@@ -121,13 +121,30 @@ function gameLoop(timestamp = performance.now()) {
     if (cap > 0) {
       const minInterval = 1000 / cap - 1;
       if (timestamp - (state._lastDrawAt || 0) >= minInterval) {
-        draw(ctx, canvas);
+        renderAndSample();
         state._lastDrawAt = timestamp;
       }
     } else {
-      draw(ctx, canvas);
+      renderAndSample();
     }
     state.loopId = requestAnimationFrame(gameLoop);
+  }
+}
+
+// Vẽ 1 frame; lần đầu (chưa có lựa chọn đồ họa) đo thời gian vẽ để auto-detect
+// mức phù hợp với máy.
+function renderAndSample() {
+  if (!needsAutoDetect()) {
+    draw(ctx, canvas);
+    return;
+  }
+  const t0 = performance.now();
+  draw(ctx, canvas);
+  const drawMs = performance.now() - t0;
+  const picked = sampleAutoDetect(1000 / Math.max(drawMs, 0.1));
+  if (picked) {
+    const sel = document.getElementById("setting-graphics");
+    if (sel) sel.value = picked;
   }
 }
 

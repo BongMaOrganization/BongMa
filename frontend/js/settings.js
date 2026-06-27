@@ -1,5 +1,5 @@
 import { state } from "./state.js";
-import { setGraphicsPreset, getGraphicsKey } from "./game/graphics.js";
+import { setGraphicsPreset, getGraphicsKey, cancelAutoDetect } from "./game/graphics.js";
 
 // ============================================================
 // UI CÀI ĐẶT: Mức đồ họa + Giới hạn FPS
@@ -48,6 +48,7 @@ export function setupSettingsUI() {
   if (selGraphics) {
     selGraphics.value = getGraphicsKey();
     selGraphics.addEventListener("change", (e) => {
+      cancelAutoDetect(); // người chơi tự chọn -> tắt auto-detect
       setGraphicsPreset(e.target.value);
     });
   }

@@ -37,15 +37,47 @@ import { drawMinimap } from "./draw/drawMinimap.js";
 import { drawWorldObjects, drawFloatingTexts } from "./draw/drawWorldObjects.js";
 import { drawRemotePlayers, drawRemoteBullets, drawReviveZones, drawMpPlayersHUD } from "./draw/drawRemotePlayers.js";
 import { shouldSkipCharacterVfxFrame, getPerfLoadLevel } from "./vfxBudget.js";
-import { beginFrameQuality } from "./graphics.js";
+import { beginFrameQuality, getRenderScale } from "./graphics.js";
 
 // Re-export hexToRgba for other modules that may import from draw.js
 export { hexToRgba } from "./draw/drawUtils.js";
+
+// ===== OFFSCREEN RENDER TARGET (resolution scaling) =====
+// Vẽ scene vào canvas phụ nhỏ hơn rồi phóng to lên canvas thật. Giảm số pixel
+// GPU phải tô theo bình phương renderScale mà KHÔNG đổi FOV (toạ độ logic vẫn
+// 1536x864 nhờ setTransform). renderScale === 1 -> bỏ qua, vẽ thẳng.
+let _offCanvas = null;
+let _offCtx = null;
+function getOffscreen(w, h) {
+  if (!_offCanvas) {
+    _offCanvas = document.createElement("canvas");
+    _offCtx = _offCanvas.getContext("2d");
+  }
+  if (_offCanvas.width !== w || _offCanvas.height !== h) {
+    _offCanvas.width = w;
+    _offCanvas.height = h;
+  }
+  return _offCtx;
+}
 
 // ===== MAIN DRAW FUNCTION =====
 export function draw(ctx, canvas) {
   // Điều chỉnh chất lượng theo tải ngay đầu frame (auto hạ shadowBlur khi nặng).
   beginFrameQuality(getPerfLoadLevel(state));
+
+  // Resolution scale: chuyển hướng toàn bộ lệnh vẽ vào offscreen nếu < 1.
+  const rs = getRenderScale();
+  const realCtx = ctx;
+  let blit = false;
+  if (rs < 0.999) {
+    const ow = Math.max(1, Math.round(canvas.width * rs));
+    const oh = Math.max(1, Math.round(canvas.height * rs));
+    const octx = getOffscreen(ow, oh);
+    octx.setTransform(rs, 0, 0, rs, 0, 0); // toạ độ logic giữ nguyên 1536x864
+    ctx = octx;
+    blit = true;
+  }
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   ctx.save();
@@ -188,5 +220,12 @@ export function draw(ctx, canvas) {
 
   // --- MP Players HUD (screen-space, top-left) ---
   if (state.isMultiplayer) drawMpPlayersHUD(ctx, canvas);
+
+  // --- Phóng offscreen lên canvas thật (nếu đang scale resolution) ---
+  if (blit) {
+    realCtx.setTransform(1, 0, 0, 1, 0, 0);
+    realCtx.clearRect(0, 0, canvas.width, canvas.height);
+    realCtx.drawImage(_offCanvas, 0, 0, canvas.width, canvas.height);
+  }
 }
 
