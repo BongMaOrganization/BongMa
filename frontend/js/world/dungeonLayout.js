@@ -2,6 +2,7 @@ import { state } from "../state.js";
 import { UPGRADES } from "../config.js";
 import { spawnMiniBoss } from "./element.js";
 import { buildStorySigns, drawStorySigns } from "./storyLore.js";
+import { applyMapEnemyModifier } from "../game/mapMechanics.js";
 
 export const MAP_TO_ELEMENT = {
   fire: "fire",
@@ -299,6 +300,49 @@ export function getDungeonRoomByType(type) {
   return state.dungeon?.rooms?.find((r) => r.type === type) || null;
 }
 
+export function isPointInsideWall(x, y, radius = 0) {
+  if (!state.dungeon?.walls?.length) return false;
+  for (const wall of state.dungeon.walls) {
+    const closestX = Math.max(wall.x, Math.min(x, wall.x + wall.w));
+    const closestY = Math.max(wall.y, Math.min(y, wall.y + wall.h));
+    const dx = x - closestX;
+    const dy = y - closestY;
+    if (dx * dx + dy * dy <= radius * radius) return true;
+  }
+  return false;
+}
+
+export function isValidSpawnInRoom(room, x, y, radius = 14) {
+  if (!room) return false;
+  if (getCurrentRoom(x, y)?.id !== room.id) return false;
+  return !isPointInsideWall(x, y, radius);
+}
+
+/** Đạn có chạm tường phòng dungeon không (circle + quét đoạn bay) */
+export function bulletHitsDungeonWall(b, prevX, prevY) {
+  if (!state.dungeon?.walls?.length || state.isBossLevel || state.bossArenaMode) {
+    return false;
+  }
+  const r = b.radius || 4;
+  const x1 = b.x;
+  const y1 = b.y;
+  const x0 = prevX ?? x1;
+  const y0 = prevY ?? y1;
+  const steps = Math.max(2, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / 6));
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const px = x0 + (x1 - x0) * t;
+    const py = y0 + (y1 - y0) * t;
+    if (isPointInsideWall(px, py, r)) return true;
+  }
+  return false;
+}
+
+export function getRoomById(roomId) {
+  if (!roomId || !state.dungeon?.rooms) return null;
+  return state.dungeon.rooms.find((r) => r.id === roomId) || null;
+}
+
 export function getCurrentRoom(x, y) {
   if (!state.dungeon) return null;
   const pad = WALL_THICK + 8;
@@ -493,13 +537,15 @@ export function constrainToRoomBounds(entity, room, radius = 14) {
   entity.y = Math.max(room.y + pad, Math.min(room.y + room.h - pad, entity.y));
 }
 
-export function getSafeSpawnPointInRoom(room, margin = 120) {
+export function getSafeSpawnPointInRoom(room, margin = 120, radius = 14) {
   if (!room) return null;
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 24; i++) {
     const pt = getRandomPointInRoom(room, margin);
-    if (getCurrentRoom(pt.x, pt.y)?.id === room.id) return pt;
+    if (isValidSpawnInRoom(room, pt.x, pt.y, radius)) return pt;
   }
-  return getRoomCenter(room);
+  const center = getRoomCenter(room);
+  if (isValidSpawnInRoom(room, center.x, center.y, radius)) return center;
+  return null;
 }
 
 function createCapturePoint(room, order) {
@@ -527,7 +573,7 @@ function createCapturePoint(room, order) {
     roomId: room.id,
   };
 
-  const bossPt = getRandomPointInRoom(room, 120);
+  const bossPt = getSafeSpawnPointInRoom(room, 120) || getRoomCenter(room);
   if (order === 1) {
     spawnMiniBoss(bossPt.x, bossPt.y, cp.miniBossId);
   }
@@ -641,7 +687,15 @@ function spawnCrateInRoom(room, typeOverride = null) {
 }
 
 function spawnElementalEnemyAt(x, y, element, roomId = null) {
-  state.elementalEnemies.push({
+  const room = roomId ? getRoomById(roomId) : getCurrentRoom(x, y);
+  if (!room || !isValidSpawnInRoom(room, x, y, 14)) {
+    const pt = getSafeSpawnPointInRoom(room || getCurrentRoom(x, y));
+    if (!pt) return;
+    x = pt.x;
+    y = pt.y;
+    roomId = room?.id || roomId;
+  }
+  const e = {
     x,
     y,
     radius: 14,
@@ -656,15 +710,19 @@ function spawnElementalEnemyAt(x, y, element, roomId = null) {
     moveAngle: Math.random() * Math.PI * 2,
     strafeDir: Math.random() > 0.5 ? 1 : -1,
     wanderTimer: 0,
-  });
+    wanderX: x,
+    wanderY: y,
+  };
+  applyMapEnemyModifier(e);
+  state.elementalEnemies.push(e);
 }
 
 export function spawnRoomEnemies(room) {
+  if (!room) return;
   const count = Math.min(5, 2 + Math.floor(state.currentLevel / 2));
   for (let i = 0; i < count; i++) {
-    const element = getMapElement();
     const point = getSafeSpawnPointInRoom(room, 120);
-    if (point) spawnElementalEnemyAt(point.x, point.y, element, room.id);
+    if (point) spawnElementalEnemyAt(point.x, point.y, getMapElement(), room.id);
   }
 }
 

@@ -24,6 +24,10 @@ import {
   resolveDoorGates,
   updateDungeonRoomState,
   getCurrentRoom,
+  getRoomById,
+  getSafeSpawnPointInRoom,
+  moveWithDungeonCollision,
+  constrainToRoomBounds,
   countElementalsInRoom,
   getBossGateRoom,
   getRoomCenter,
@@ -56,6 +60,18 @@ import {
   onMultiplayerPlayerDead,
 } from "../multiplayer/mpFlow.js";
 import { enforceBulletBudget, enforceVfxBudget } from "./vfxBudget.js";
+
+function moveGhostInDungeon(g, dx, dy) {
+  const radius = g.radius || 12;
+  if (state.dungeon && !state.isBossLevel && !state.bossArenaMode) {
+    moveWithDungeonCollision(g, dx, dy, radius);
+    const home = g.roomId ? getRoomById(g.roomId) : getCurrentRoom(g.x, g.y);
+    if (home) constrainToRoomBounds(g, home, radius);
+  } else {
+    g.x += dx;
+    g.y += dy;
+  }
+}
 
 function applyPlayerShotCompression(
   startIndex,
@@ -535,19 +551,22 @@ export function update(ctx, canvas, changeStateFn) {
         sz.requiredKills - sz.currentKills - currentZoneGhosts;
       if (remainingToSpawn > 0 && currentZoneGhosts < 10) {
         const spawnBatch = Math.min(5, remainingToSpawn);
+        const swarmRoom = getRoomById(sz.roomId);
         for (let j = 0; j < spawnBatch; j++) {
-          const angle = Math.random() * Math.PI * 2;
-          const r = Math.random() * (sz.radius - 50);
+          const pt = swarmRoom
+            ? getSafeSpawnPointInRoom(swarmRoom, 100)
+            : null;
           state.ghosts.push({
             record: [],
             speedRate: 1,
             timer: 0,
-            x: sz.x + Math.cos(angle) * r,
-            y: sz.y + Math.sin(angle) * r,
+            x: pt?.x ?? sz.x,
+            y: pt?.y ?? sz.y,
             radius: 15,
             hp: 1 + Math.floor(state.currentLevel / 3),
             isDummy: true,
             parentZoneId: sz.id,
+            roomId: sz.roomId,
             historyPath: [],
             isStunned: 0,
             lastShot: state.frameCount + Math.random() * 60,
@@ -663,9 +682,18 @@ export function update(ctx, canvas, changeStateFn) {
       g.respawnTimer--;
       g.timer++;
       if (g.respawnTimer === Math.floor(0.5 * FPS)) {
-        let spawnAngle = Math.random() * Math.PI * 2;
-        g.x = player.x + Math.cos(spawnAngle) * 400;
-        g.y = player.y + Math.sin(spawnAngle) * 400;
+        const room = getCurrentRoom(player.x, player.y);
+        const pt = room ? getSafeSpawnPointInRoom(room, 120) : null;
+        if (pt) {
+          g.x = pt.x;
+          g.y = pt.y;
+          g.roomId = room.id;
+        } else {
+          const spawnAngle = Math.random() * Math.PI * 2;
+          g.x = player.x + Math.cos(spawnAngle) * 200;
+          g.y = player.y + Math.sin(spawnAngle) * 200;
+          resolveDungeonCollision(g, g.radius || 12);
+        }
         g.historyPath = [{ x: g.x, y: g.y }];
       }
       if (g.respawnTimer < 0.5 * FPS) g.flicker = true;
@@ -683,14 +711,16 @@ export function update(ctx, canvas, changeStateFn) {
       if (g.parentZoneId) {
         const angle = Math.atan2(player.y - g.y, player.x - g.x);
         const speed = 0.8 + state.currentLevel * 0.05;
-        g.x += Math.cos(angle) * speed;
-        g.y += Math.sin(angle) * speed;
+        moveGhostInDungeon(g, Math.cos(angle) * speed, Math.sin(angle) * speed);
 
         const zone = state.swarmZones.find((sz) => sz.id === g.parentZoneId);
         if (zone && dist(g.x, g.y, zone.x, zone.y) > zone.radius) {
           const angleBack = Math.atan2(zone.y - g.y, zone.x - g.x);
-          g.x += Math.cos(angleBack) * (speed + 2);
-          g.y += Math.sin(angleBack) * (speed + 2);
+          moveGhostInDungeon(
+            g,
+            Math.cos(angleBack) * (speed + 2),
+            Math.sin(angleBack) * (speed + 2),
+          );
         }
         if (state.frameCount - (g.lastShot || 0) > 90 + Math.random() * 60) {
           spawnBullet(
@@ -723,8 +753,11 @@ export function update(ctx, canvas, changeStateFn) {
         if (g.isStunned > 0) g.isStunned--;
         else {
           let angleToTarget = Math.atan2(ty - g.y, tx - g.x);
-          g.x += Math.cos(angleToTarget) * (g.speed * 1.8 || 2.2);
-          g.y += Math.sin(angleToTarget) * (g.speed * 1.8 || 2.2);
+          moveGhostInDungeon(
+            g,
+            Math.cos(angleToTarget) * (g.speed * 1.8 || 2.2),
+            Math.sin(angleToTarget) * (g.speed * 1.8 || 2.2),
+          );
         }
         activeGhosts++;
         g.timer = (g.timer || 0) + 1;
@@ -753,8 +786,11 @@ export function update(ctx, canvas, changeStateFn) {
           if (dToPlayer < 600 && dPlayerFromHome < 900) {
             let angle = Math.atan2(player.y - g.y, player.x - g.x);
             let moveSpeed = (g.speedRate || 1.0) * (g.speed || 1.1);
-            g.x += Math.cos(angle) * moveSpeed;
-            g.y += Math.sin(angle) * moveSpeed;
+            moveGhostInDungeon(
+              g,
+              Math.cos(angle) * moveSpeed,
+              Math.sin(angle) * moveSpeed,
+            );
             if (state.frameCount % 60 === 0)
               spawnBullet(g.x, g.y, player.x, player.y, false, 2, "ghost", 1.5);
           } else {
@@ -762,8 +798,7 @@ export function update(ctx, canvas, changeStateFn) {
             const dHome = dist(g.x, g.y, g.originalX, g.originalY);
             if (dHome > 15) {
               let angleHome = Math.atan2(g.originalY - g.y, g.originalX - g.x);
-              g.x += Math.cos(angleHome) * 4.5;
-              g.y += Math.sin(angleHome) * 4.5;
+              moveGhostInDungeon(g, Math.cos(angleHome) * 4.5, Math.sin(angleHome) * 4.5);
             } else {
               // Đã về đến nhà → mới hồi máu/khiên
               if (g.hp < g.maxHp || (g.shield || 0) < (g.maxShield || 0)) {
@@ -777,8 +812,11 @@ export function update(ctx, canvas, changeStateFn) {
         } else if (g.isSubBoss || g.isMiniBoss) {
           let angle = Math.atan2(player.y - g.y, player.x - g.x);
           let moveSpeed = (g.speedRate || 1.0) * (g.speed || 1.1);
-          g.x += Math.cos(angle) * moveSpeed;
-          g.y += Math.sin(angle) * moveSpeed;
+          moveGhostInDungeon(
+            g,
+            Math.cos(angle) * moveSpeed,
+            Math.sin(angle) * moveSpeed,
+          );
           if (state.frameCount % 60 === 0)
             spawnBullet(
               g.x,
@@ -818,24 +856,23 @@ export function update(ctx, canvas, changeStateFn) {
               let angleToPlayer = Math.atan2(player.y - g.y, player.x - g.x);
               let chaseSpeed =
                 g.isDummy || g.record.length === 5000 ? 4.5 : 1.5;
-              g.x +=
-                (action2[0] -
-                  action1[0] +
-                  Math.cos(angleToPlayer) * chaseSpeed) *
-                (g.speedRate || 1.0);
-              g.y +=
-                (action2[1] -
-                  action1[1] +
-                  Math.sin(angleToPlayer) * chaseSpeed) *
-                (g.speedRate || 1.0);
+              const rate = g.speedRate || 1.0;
+              moveGhostInDungeon(
+                g,
+                (action2[0] - action1[0] + Math.cos(angleToPlayer) * chaseSpeed) *
+                  rate,
+                (action2[1] - action1[1] + Math.sin(angleToPlayer) * chaseSpeed) *
+                  rate,
+              );
             } else {
               let angleToPlayer = Math.atan2(player.y - g.y, player.x - g.x);
               let chaseSpeed =
                 g.isDummy || g.record.length === 5000 ? 4.5 : 2.5;
-              g.x +=
-                Math.cos(angleToPlayer) * chaseSpeed * (g.speedRate || 1.0);
-              g.y +=
-                Math.sin(angleToPlayer) * chaseSpeed * (g.speedRate || 1.0);
+              moveGhostInDungeon(
+                g,
+                Math.cos(angleToPlayer) * chaseSpeed * (g.speedRate || 1.0),
+                Math.sin(angleToPlayer) * chaseSpeed * (g.speedRate || 1.0),
+              );
             }
 
             if (!g.historyPath) g.historyPath = [];
@@ -1290,18 +1327,19 @@ function updateCapturePoints(ctx, canvas, changeStateFn) {
       }
 
       if (isInside && state.frameCount % 120 === 0) {
+        const cpRoom = getRoomById(cp.roomId);
         for (let i = 0; i < 2 + Math.floor(state.currentLevel / 3); i++) {
-          const spawnAngle = Math.random() * Math.PI * 2;
-          const spawnDist = cp.radius + 200;
+          const pt = cpRoom ? getSafeSpawnPointInRoom(cpRoom, 130) : null;
           state.ghosts.push({
             id: `horde_${Date.now()}_${i}`,
-            x: cp.x + Math.cos(spawnAngle) * spawnDist,
-            y: cp.y + Math.sin(spawnAngle) * spawnDist,
+            x: pt?.x ?? cp.x,
+            y: pt?.y ?? cp.y,
             radius: 12,
             hp: 20 + state.currentLevel * 5,
             maxHp: 20 + state.currentLevel * 5,
             speed: 1.5 + Math.random() * 0.5,
             isHorde: true,
+            roomId: cp.roomId,
             isStunned: 0,
             historyPath: [],
           });

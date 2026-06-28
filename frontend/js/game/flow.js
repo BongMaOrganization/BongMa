@@ -32,6 +32,7 @@ import {
   generateDungeon,
   clearDungeon,
   getStartSpawnPosition,
+  getSafeSpawnPointInRoom,
   placeStageObjectives,
   unlockNextMap,
   unlockOmniMap,
@@ -161,6 +162,18 @@ export function initGame(isNextLevel = false) {
     const spawn = getStartSpawnPosition();
     state.player.x = spawn.x;
     state.player.y = spawn.y;
+    const startRoom = state.dungeon?.rooms?.find(
+      (r) => r.id === state.dungeon.startRoomId,
+    );
+    if (startRoom) {
+      state.ghosts.forEach((g, idx) => {
+        const pt = getSafeSpawnPointInRoom(startRoom, 140);
+        if (!pt) return;
+        g.x = pt.x + (idx % 3) * 36 - 36;
+        g.y = pt.y + Math.floor(idx / 3) * 36 - 18;
+        g.roomId = startRoom.id;
+      });
+    }
   } else {
     clearDungeon();
   }

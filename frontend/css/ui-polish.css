@@ -221,7 +221,9 @@ canvas {
     0 24px 64px rgba(0, 0, 0, 0.7),
     0 0 40px rgba(0, 255, 204, 0.04);
   position: relative;
-  overflow: hidden;
+  max-height: calc(100% - 48px);
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .panel::before {
@@ -333,6 +335,40 @@ h2.title-main {
 
 .map-select-card.selected {
   box-shadow: 0 0 30px var(--map-glow, rgba(0, 255, 204, 0.4));
+}
+
+#screen-map-select .panel {
+  max-height: calc(100% - 40px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#screen-map-select .panel-header-block {
+  flex-shrink: 0;
+}
+
+#screen-map-select #map-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding-right: 8px;
+  margin-bottom: 8px;
+}
+
+#screen-map-select #map-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+#screen-map-select #map-list::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 204, 0.35);
+  border-radius: 4px;
+}
+
+#screen-map-select #btn-map-back {
+  flex-shrink: 0;
 }
 
 /* Cards upgrade/shop */

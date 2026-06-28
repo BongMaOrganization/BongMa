@@ -6,6 +6,7 @@ import { playSound } from "./audio.js";
 import { spawnSatelliteDrone } from "../world/element.js";
 import { spawnBullet, spawnHazard } from "../entities/helpers.js";
 import { spawnElementalZone } from "../game/elementalZone.js";
+import { bulletHitsDungeonWall } from "../world/dungeonLayout.js";
 
 function withinRadiusSq(x1, y1, x2, y2, radius) {
   const dx = x1 - x2;
@@ -305,10 +306,18 @@ export function updateBullets(
   for (let i = bullets.length - 1; i >= 0; i--) {
     let b = bullets[i];
     let isSpiritE = player.characterId === "spirit" && buffs.e > 0;
+    let hitWall = false;
 
     if (!b.isMeteor && !isBulletNearSimulationArea(b, player)) {
+      const prevX = b.x;
+      const prevY = b.y;
       b.x += b.vx || 0;
       b.y += b.vy || 0;
+      if (bulletHitsDungeonWall(b, prevX, prevY)) {
+        b.x = prevX;
+        b.y = prevY;
+        b.life = 0;
+      }
       b.life -= b.isPlayer ? 3 : 4;
       if (b.life <= 0) bullets.splice(i, 1);
       continue;
@@ -387,8 +396,18 @@ export function updateBullets(
         });
       }
 
+      const prevX = b.x;
+      const prevY = b.y;
       b.x += b.vx * speedMult;
       b.y += b.vy * speedMult;
+
+      if (bulletHitsDungeonWall(b, prevX, prevY)) {
+        hitWall = true;
+        b.x = prevX;
+        b.y = prevY;
+        b.vx *= -1;
+        b.vy *= -1;
+      }
 
       if (!b.isPlayer && speedMult < 1) {
         b.life -= speedMult;
@@ -396,8 +415,6 @@ export function updateBullets(
         b.life--;
       }
     }
-
-    let hitWall = false;
 
     if (!b.isMeteor) {
       if (b.x < b.radius) {

@@ -7,7 +7,9 @@ import {
   getMapElement,
   getRandomPointInRoom,
   getCurrentRoom,
+  getRoomById,
   getSafeSpawnPointInRoom,
+  isValidSpawnInRoom,
   moveWithDungeonCollision,
   constrainToRoomBounds,
 } from "../world/dungeonLayout.js";
@@ -40,6 +42,14 @@ function createEnemyData(x, y, element, roomId) {
 
 export function spawnElementalEnemy(x, y, forcedElement = null, roomId = null) {
   const element = forcedElement || getMapElement();
+  const room = roomId ? getRoomById(roomId) : getCurrentRoom(x, y);
+  if (room && !isValidSpawnInRoom(room, x, y, 14)) {
+    const pt = getSafeSpawnPointInRoom(room, 120);
+    if (!pt) return;
+    x = pt.x;
+    y = pt.y;
+    roomId = room.id;
+  }
   state.elementalEnemies.push(createEnemyData(x, y, element, roomId));
 }
 
