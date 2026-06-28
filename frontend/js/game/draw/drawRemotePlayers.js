@@ -165,14 +165,15 @@ export function drawRemoteBullets(ctx) {
   if (!state.isMultiplayer || !state.remoteBullets || !state.remoteBullets.length) return;
 
   const now = performance.now();
-  const STALE_MS = 200;
+  const STALE_MS = 320; // sống qua 1 snapshot bị rớt (gửi 60ms/lần)
 
   for (let i = state.remoteBullets.length - 1; i >= 0; i--) {
     const b = state.remoteBullets[i];
 
-    // Di chuyển bullet theo vận tốc giữa các snapshot
-    b.x += (b.vx || 0) * 0.5;
-    b.y += (b.vy || 0) * 0.5;
+    // Di chuyển bullet theo đúng vận tốc thật (trước nhân 0.5 -> đạn tụt lại nửa
+    // tốc, cụm gần người bắn, đồng đội tưởng "không thấy đạn").
+    b.x += b.vx || 0;
+    b.y += b.vy || 0;
     b.life = (b.life || 30) - 1;
 
     if (b.life <= 0 || (now - b._born) > STALE_MS) {

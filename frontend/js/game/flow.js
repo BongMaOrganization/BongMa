@@ -586,14 +586,29 @@ export function handleBossArenaReward(gameLoopFn) {
   document.getElementById("screen-arena-victory").classList.remove("hidden");
   state.gameState = "MENU";
 
-  document.getElementById("btn-arena-victory-back").onclick = () => {
-    document.getElementById("screen-arena-victory").classList.add("hidden");
-    state.bossArenaMode = false;
-    state.bossArenaType = null;
-    saveGame(state, GHOST_DATA_KEY);
-    persistState();
-    window.location.reload();
-  };
+  const victoryBackBtn = document.getElementById("btn-arena-victory-back");
+  if (state.isMultiplayer) {
+    // MP: quay về PHÒNG CHỜ (không reload kẻo văng khỏi phòng/mất kết nối).
+    victoryBackBtn.textContent = "🏠 Về Phòng Chờ";
+    victoryBackBtn.onclick = () => {
+      document.getElementById("screen-arena-victory").classList.add("hidden");
+      state.bossArenaMode = false;
+      state.bossArenaType = null;
+      saveGame(state, GHOST_DATA_KEY);
+      persistState();
+      window.dispatchEvent(new Event("mp:returnLobby"));
+    };
+  } else {
+    victoryBackBtn.textContent = "Về Menu Chính";
+    victoryBackBtn.onclick = () => {
+      document.getElementById("screen-arena-victory").classList.add("hidden");
+      state.bossArenaMode = false;
+      state.bossArenaType = null;
+      saveGame(state, GHOST_DATA_KEY);
+      persistState();
+      window.location.reload();
+    };
+  }
 }
 
 /**

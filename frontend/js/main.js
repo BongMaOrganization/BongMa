@@ -510,6 +510,23 @@ window.addEventListener("mp:allDead", () => {
   setupGameStartListener(socket);
 });
 
+// Thắng boss MP → quay về phòng chờ (nút trên màn Victory), không reload.
+window.addEventListener("mp:returnLobby", () => {
+  const socket = getSocket();
+  if (!socket || !socket.connected) {
+    window.location.reload(); // mất kết nối → đành reload về menu
+    return;
+  }
+  UI.bossUi.style.display = "none";
+  document.getElementById("screen-main").classList.add("hidden");
+  _lobbySocket = socket;
+  openLobby(socket);
+  if (mpState.isHost) buildBossSelectGrid();
+  buildCharacterSelectGrid(socket);
+  refreshLobbyUI();
+  setupGameStartListener(socket);
+});
+
 function setupGameStartListener(socket) {
   socket.off("game_start");
   socket.on("game_start", ({ bossType, hpScale, playerCount, players }) => {

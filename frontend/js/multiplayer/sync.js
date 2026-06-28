@@ -270,7 +270,7 @@ export function startBulletSync(roomCode) {
     if (!socket || !state.bullets) return;
     const playerBullets = state.bullets
       .filter((b) => b.isPlayer)
-      .slice(0, 30)
+      .slice(0, 40)
       .map((b) => ({
         x: b.x, y: b.y,
         vx: b.vx, vy: b.vy,
