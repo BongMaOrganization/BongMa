@@ -470,10 +470,36 @@ export function resolveDungeonCollision(entity, radius) {
         continue;
       }
       const d = Math.sqrt(distSq);
-      entity.x += (dx / d) * (radius - d);
-      entity.y += (dy / d) * (radius - d);
+      entity.x += (dx / d) * (radius - d + 0.5);
+      entity.y += (dy / d) * (radius - d + 0.5);
     }
   }
+}
+
+/** Di chuyển có va chạm tường (trục tách + lặp) — tránh xuyên tường */
+export function moveWithDungeonCollision(entity, dx, dy, radius) {
+  if (!entity) return;
+  entity.x += dx;
+  resolveDungeonCollision(entity, radius);
+  entity.y += dy;
+  resolveDungeonCollision(entity, radius);
+  resolveDungeonCollision(entity, radius);
+}
+
+export function constrainToRoomBounds(entity, room, radius = 14) {
+  if (!room || !entity) return;
+  const pad = WALL_THICK + radius + 12;
+  entity.x = Math.max(room.x + pad, Math.min(room.x + room.w - pad, entity.x));
+  entity.y = Math.max(room.y + pad, Math.min(room.y + room.h - pad, entity.y));
+}
+
+export function getSafeSpawnPointInRoom(room, margin = 120) {
+  if (!room) return null;
+  for (let i = 0; i < 12; i++) {
+    const pt = getRandomPointInRoom(room, margin);
+    if (getCurrentRoom(pt.x, pt.y)?.id === room.id) return pt;
+  }
+  return getRoomCenter(room);
 }
 
 function createCapturePoint(room, order) {
@@ -614,7 +640,7 @@ function spawnCrateInRoom(room, typeOverride = null) {
   });
 }
 
-function spawnElementalEnemyAt(x, y, element) {
+function spawnElementalEnemyAt(x, y, element, roomId = null) {
   state.elementalEnemies.push({
     x,
     y,
@@ -626,7 +652,10 @@ function spawnElementalEnemyAt(x, y, element) {
     aggroRange: 420,
     attackRange: 220,
     cooldown: 0,
-    roomId: getCurrentRoom(x, y)?.id || null,
+    roomId: roomId || getCurrentRoom(x, y)?.id || null,
+    moveAngle: Math.random() * Math.PI * 2,
+    strafeDir: Math.random() > 0.5 ? 1 : -1,
+    wanderTimer: 0,
   });
 }
 
@@ -634,8 +663,8 @@ export function spawnRoomEnemies(room) {
   const count = Math.min(5, 2 + Math.floor(state.currentLevel / 2));
   for (let i = 0; i < count; i++) {
     const element = getMapElement();
-    const point = getRandomPointInRoom(room, 100);
-    spawnElementalEnemyAt(point.x, point.y, element);
+    const point = getSafeSpawnPointInRoom(room, 120);
+    if (point) spawnElementalEnemyAt(point.x, point.y, element, room.id);
   }
 }
 

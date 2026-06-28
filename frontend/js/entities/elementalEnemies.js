@@ -2,70 +2,175 @@ import { state } from "../state.js";
 import { dist } from "../utils.js";
 import { spawnBullet } from "./helpers.js";
 import { spawnElementalZone } from "../game/elementalZone.js";
+import { applyMapEnemyModifier } from "../game/mapMechanics.js";
 import {
   getMapElement,
   getRandomPointInRoom,
   getCurrentRoom,
-  resolveDungeonCollision,
+  getSafeSpawnPointInRoom,
+  moveWithDungeonCollision,
+  constrainToRoomBounds,
 } from "../world/dungeonLayout.js";
 
 export const ELEMENTS = ["fire", "ice", "lightning", "wind", "earth"];
 
-export function spawnElementalEnemy(x, y, forcedElement = null) {
-  const element = forcedElement || getMapElement();
-
-  state.elementalEnemies.push({
+function createEnemyData(x, y, element, roomId) {
+  const e = {
     x,
     y,
     radius: 14,
     hp: 1,
     speed: 2,
     element,
-
     state: "idle",
-    aggroRange: 500,
-    attackRange: 250,
+    aggroRange: 480,
+    attackRange: 240,
     cooldown: 0,
-    roomId: getCurrentRoom(x, y)?.id || null,
-  });
+    roomId: roomId || getCurrentRoom(x, y)?.id || null,
+    moveAngle: Math.random() * Math.PI * 2,
+    strafeDir: Math.random() > 0.5 ? 1 : -1,
+    wanderTimer: 0,
+    wanderX: x,
+    wanderY: y,
+    losTimer: 0,
+  };
+  applyMapEnemyModifier(e);
+  return e;
+}
+
+export function spawnElementalEnemy(x, y, forcedElement = null, roomId = null) {
+  const element = forcedElement || getMapElement();
+  state.elementalEnemies.push(createEnemyData(x, y, element, roomId));
 }
 
 export function spawnElementalEnemyInRoom(room, forcedElement = null) {
   if (!room) return;
-  const point = getRandomPointInRoom(room, 100);
-  spawnElementalEnemy(point.x, point.y, forcedElement);
+  const point = getSafeSpawnPointInRoom(room, 120);
+  if (!point) return;
+  spawnElementalEnemy(point.x, point.y, forcedElement, room.id);
 }
+
+function smoothTurn(e, targetAngle, rate = 0.18) {
+  let diff = targetAngle - (e.moveAngle || 0);
+  while (diff > Math.PI) diff -= Math.PI * 2;
+  while (diff < -Math.PI) diff += Math.PI * 2;
+  e.moveAngle = (e.moveAngle || 0) + diff * rate;
+}
+
+function moveToward(e, tx, ty, speed) {
+  const dx = tx - e.x;
+  const dy = ty - e.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 4) return;
+
+  smoothTurn(e, Math.atan2(dy, dx));
+  const spd = speed * Math.min(1, len / 80);
+  moveWithDungeonCollision(
+    e,
+    Math.cos(e.moveAngle) * spd,
+    Math.sin(e.moveAngle) * spd,
+    e.radius || 14,
+  );
+}
+
+function hasLineOfSight(e, player, homeRoom) {
+  if (!homeRoom || !state.dungeon?.walls?.length) return true;
+  const steps = 8;
+  for (let i = 1; i <= steps; i++) {
+    const t = i / steps;
+    const px = e.x + (player.x - e.x) * t;
+    const py = e.y + (player.y - e.y) * t;
+    if (getCurrentRoom(px, py)?.id !== homeRoom.id) return false;
+  }
+  return true;
+}
+
+function updateWander(e, homeRoom) {
+  e.wanderTimer = (e.wanderTimer || 0) - 1;
+  if (e.wanderTimer <= 0 || dist(e.x, e.y, e.wanderX, e.wanderY) < 24) {
+    const pt = getRandomPointInRoom(homeRoom, 130);
+    e.wanderX = pt.x;
+    e.wanderY = pt.y;
+    e.wanderTimer = 90 + Math.floor(Math.random() * 90);
+  }
+  moveToward(e, e.wanderX, e.wanderY, e.speed * 0.45);
+  constrainToRoomBounds(e, homeRoom, e.radius);
+}
+
 export function updateElementalEnemies(player) {
+  if (!player || !state.elementalEnemies?.length) return;
+
+  const playerRoom = getCurrentRoom(player.x, player.y);
+  const rooms = state.dungeon?.rooms;
+
   for (let i = state.elementalEnemies.length - 1; i >= 0; i--) {
     const e = state.elementalEnemies[i];
+    const radius = e.radius || 14;
+    const homeRoom = rooms?.find((r) => r.id === e.roomId) || getCurrentRoom(e.x, e.y);
 
-    const d = dist(e.x, e.y, player.x, player.y);
-
-    // ===== STATE MACHINE =====
-    if (d < e.attackRange) e.state = "attack";
-    else if (d < e.aggroRange) e.state = "aggro";
-    else e.state = "idle";
-
-    // ===== BEHAVIOR =====
-    if (e.state === "aggro") {
-      let angle = Math.atan2(player.y - e.y, player.x - e.x);
-      e.x += Math.cos(angle) * e.speed;
-      e.y += Math.sin(angle) * e.speed;
+    if (!homeRoom) {
+      state.elementalEnemies.splice(i, 1);
+      continue;
     }
 
-    if (e.state === "attack") {
+    if (!getCurrentRoom(e.x, e.y)) {
+      const pt = getSafeSpawnPointInRoom(homeRoom, 100);
+      if (pt) {
+        e.x = pt.x;
+        e.y = pt.y;
+      }
+    }
+
+    const d = dist(e.x, e.y, player.x, player.y);
+    const sameRoom = playerRoom && e.roomId === playerRoom.id;
+    const canSee =
+      sameRoom && hasLineOfSight(e, player, homeRoom);
+
+    if (canSee && d < e.attackRange) e.state = "attack";
+    else if (canSee && d < e.aggroRange) e.state = "aggro";
+    else if (sameRoom && d < e.aggroRange * 1.2) e.state = "aggro";
+    else e.state = "idle";
+
+    if (e.state === "idle" || !sameRoom) {
+      updateWander(e, homeRoom);
+    } else if (e.state === "aggro") {
+      const lead = 0.12;
+      const tx = player.x + (player.x - e.x) * lead;
+      const ty = player.y + (player.y - e.y) * lead;
+      moveToward(e, tx, ty, e.speed);
+      constrainToRoomBounds(e, homeRoom, radius);
+    } else if (e.state === "attack") {
+      const preferDist = e.attackRange * 0.72;
+      if (d > preferDist + 20) {
+        moveToward(e, player.x, player.y, e.speed * 1.05);
+      } else if (d < preferDist - 30) {
+        const away = Math.atan2(e.y - player.y, e.x - player.x);
+        moveToward(
+          e,
+          e.x + Math.cos(away) * 80,
+          e.y + Math.sin(away) * 80,
+          e.speed * 0.9,
+        );
+      } else {
+        const strafe = Math.atan2(player.y - e.y, player.x - e.x) + (Math.PI / 2) * (e.strafeDir || 1);
+        moveToward(
+          e,
+          e.x + Math.cos(strafe) * 60,
+          e.y + Math.sin(strafe) * 60,
+          e.speed * 0.75,
+        );
+        if (Math.random() < 0.015) e.strafeDir = -(e.strafeDir || 1);
+      }
+      constrainToRoomBounds(e, homeRoom, radius);
       handleElementAttack(e, player);
     }
 
-    resolveDungeonCollision(e, e.radius || 14);
+    if (e.cooldown > 0) e.cooldown--;
 
-    // ===== DEATH =====
     if (!Number.isFinite(e.hp) || e.hp <= 0) {
-      spawnElementalZone(e); // dùng system zone bạn đã làm
+      spawnElementalZone(e);
       state.elementalEnemies.splice(i, 1);
     }
-
-    if (e.cooldown > 0) e.cooldown--;
   }
 }
 
@@ -76,30 +181,25 @@ function handleElementAttack(e, player) {
     case "fire":
       fireAttack(e, player);
       break;
-
     case "ice":
       iceAttack(e, player);
       break;
-
     case "lightning":
       lightningAttack(e, player);
       break;
-
     case "wind":
       windAttack(e, player);
       break;
-
     case "earth":
       earthAttack(e, player);
       break;
   }
 }
+
 function fireAttack(e, player) {
   const baseAngle = Math.atan2(player.y - e.y, player.x - e.x);
-
   for (let i = -1; i <= 1; i++) {
-    let angle = baseAngle + i * 0.2;
-
+    const angle = baseAngle + i * 0.2;
     spawnBullet(
       e.x,
       e.y,
@@ -110,15 +210,13 @@ function fireAttack(e, player) {
       "fire",
     );
   }
-
   e.cooldown = 60;
 }
+
 function iceAttack(e, player) {
   const baseAngle = Math.atan2(player.y - e.y, player.x - e.x);
-
   for (let i = -1; i <= 1; i++) {
-    let angle = baseAngle + i * 0.2;
-
+    const angle = baseAngle + i * 0.2;
     spawnBullet(
       e.x,
       e.y,
@@ -127,16 +225,14 @@ function iceAttack(e, player) {
       false,
       1,
     );
-
-    let b = state.bullets[state.bullets.length - 1];
-    b.style = 2; // ❄️ ICE
+    const b = state.bullets[state.bullets.length - 1];
+    b.style = 2;
   }
-
   e.cooldown = 80;
 }
+
 function lightningAttack(e, player) {
   const angle = Math.atan2(player.y - e.y, player.x - e.x);
-
   spawnBullet(
     e.x,
     e.y,
@@ -145,20 +241,17 @@ function lightningAttack(e, player) {
     false,
     2,
   );
-
-  let b = state.bullets[state.bullets.length - 1];
-  b.style = 3; // ⚡
+  const b = state.bullets[state.bullets.length - 1];
+  b.style = 3;
   b.speed *= 2;
   b.pierce = 1;
-
   e.cooldown = 90;
 }
+
 function windAttack(e, player) {
   const baseAngle = Math.atan2(player.y - e.y, player.x - e.x);
-
   for (let i = -2; i <= 2; i++) {
-    let angle = baseAngle + i * 0.25;
-
+    const angle = baseAngle + i * 0.25;
     spawnBullet(
       e.x,
       e.y,
@@ -167,17 +260,15 @@ function windAttack(e, player) {
       false,
       0.5,
     );
-
-    let b = state.bullets[state.bullets.length - 1];
-    b.style = 4; // 🌪️
+    const b = state.bullets[state.bullets.length - 1];
+    b.style = 4;
     b.speed *= 1.5;
   }
-
   e.cooldown = 70;
 }
+
 function earthAttack(e, player) {
   const angle = Math.atan2(player.y - e.y, player.x - e.x);
-
   spawnBullet(
     e.x,
     e.y,
@@ -186,11 +277,9 @@ function earthAttack(e, player) {
     false,
     3,
   );
-
-  let b = state.bullets[state.bullets.length - 1];
-  b.style = 5; // 🌍
+  const b = state.bullets[state.bullets.length - 1];
+  b.style = 5;
   b.speed *= 0.6;
   b.radius = 8;
-
   e.cooldown = 120;
 }

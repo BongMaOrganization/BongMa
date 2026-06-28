@@ -873,10 +873,18 @@ export function update(ctx, canvas, changeStateFn) {
   if (
     !state.isBossLevel &&
     !state.bossArenaMode &&
-    state.frameCount % 210 === 0
+    state.frameCount % 240 === 0
   ) {
     const room = getCurrentRoom(state.player.x, state.player.y);
-    if (room && room.type !== "start" && room.type !== "boss_gate") {
+    if (
+      room &&
+      room.visited &&
+      room.enemySpawned &&
+      room.type !== "start" &&
+      room.type !== "boss_gate" &&
+      room.type !== "heal" &&
+      room.type !== "upgrade"
+    ) {
       const cap = room.type === "swarm" ? 8 : 5;
       if (countElementalsInRoom(room) < cap) {
         spawnElementalEnemyInRoom(room, getMapElement());

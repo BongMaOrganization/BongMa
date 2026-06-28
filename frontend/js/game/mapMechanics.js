@@ -2,6 +2,14 @@ import { state } from "../state.js";
 import { dist } from "../utils.js";
 import { playerTakeDamage } from "./combat.js";
 import { pushParticles } from "./elementalZone.js";
+import { getCurrentRoom } from "../world/dungeonLayout.js";
+
+function isEnvDamageImmune(player) {
+  if (!player) return true;
+  if ((player.gracePeriod || 0) > 0) return true;
+  const room = getCurrentRoom(player.x, player.y);
+  return room && (room.type === "start" || room.type === "heal" || room.type === "upgrade");
+}
 
 // ============================================================================
 // MAP IDENTITY SYSTEM
@@ -65,7 +73,7 @@ function resolveStrikes(mm, player, ctx, canvas, changeStateFn) {
     if (s.fuse > 0) continue;
 
     // Nổ: trúng player → damage (qua playerTakeDamage để tôn trọng i-frame)
-    if (dist(player.x, player.y, s.x, s.y) < s.radius) {
+    if (!isEnvDamageImmune(player) && dist(player.x, player.y, s.x, s.y) < s.radius) {
       playerTakeDamage(ctx, canvas, changeStateFn, s.dmg);
       if (s.stun) {
         state.playerStatus.stunTimer = Math.max(
@@ -110,35 +118,44 @@ const MAP_MECHANICS = {
   // 🔥 LỬA — Lò Dung Nham ----------------------------------------------------
   fire: {
     onStageInit(mm) {
-      mm.meterMax = 220; // heat
-      mm.eventTimer = 8 * 60;
-      mm.eruptTimer = 6 * 60;
+      mm.meterMax = 280;
+      mm.eventTimer = 14 * 60;
+      mm.eruptTimer = 12 * 60;
       mm.objectiveTarget = 3;
     },
     updateEnv(player, mm, frame, isAuthority) {
+      if (isEnvDamageImmune(player)) {
+        mm.meter = Math.max(0, mm.meter - 4);
+        mm.lastX = player.x;
+        mm.lastY = player.y;
+        return;
+      }
+
       const data = state.mapThemeData || {};
       const moved =
         Math.hypot(player.x - mm.lastX, player.y - mm.lastY) > movedThreshold;
 
-      // Lava pools = vùng bỏng thật
+      // Lava pools = vùng bỏng thật (giảm DoT, tick chậm hơn)
       let inLava = false;
-      for (const p of data.lavaPools || []) {
-        if (inEllipse(player.x, player.y, p.x, p.y, p.rx * 0.9, p.ry * 0.9, p.angle)) {
-          inLava = true;
-          break;
+      if (frame % 2 === 0) {
+        for (const p of data.lavaPools || []) {
+          if (inEllipse(player.x, player.y, p.x, p.y, p.rx * 0.85, p.ry * 0.85, p.angle)) {
+            inLava = true;
+            break;
+          }
         }
       }
       if (inLava) {
-        player.hp -= 0.03; // DoT trực tiếp (cùng cỡ với fire zone 0.02)
-        state.playerStatus.burnTimer = Math.max(state.playerStatus.burnTimer, 45);
+        player.hp -= 0.012;
+        state.playerStatus.burnTimer = Math.max(state.playerStatus.burnTimer, 30);
       }
 
-      // Heat meter: đứng yên → nóng lên, di chuyển → hạ nhiệt
-      if (moved) mm.meter = Math.max(0, mm.meter - 2.2);
-      else mm.meter = Math.min(mm.meterMax, mm.meter + 1);
-      if (mm.meter >= mm.meterMax) {
-        player.hp -= 0.05; // quá nhiệt → bốc cháy
-        state.playerStatus.burnTimer = Math.max(state.playerStatus.burnTimer, 30);
+      // Heat meter: đứng yên → nóng lên chậm hơn, di chuyển → hạ nhiệt
+      if (moved) mm.meter = Math.max(0, mm.meter - 2.5);
+      else mm.meter = Math.min(mm.meterMax, mm.meter + 0.55);
+      if (mm.meter >= mm.meterMax && frame % 3 === 0) {
+        player.hp -= 0.018;
+        state.playerStatus.burnTimer = Math.max(state.playerStatus.burnTimer, 20);
       }
 
       if (!isAuthority) return;
