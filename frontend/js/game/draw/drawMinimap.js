@@ -1,5 +1,6 @@
 import { state } from "../../state.js";
 import { getPuzzleMinimapMarkers } from "../puzzle_manager.js";
+import { drawDungeonMinimap } from "../../world/dungeonLayout.js";
 
 export function drawMinimap(ctx, canvas) {
   const mmSize = 220;
@@ -12,6 +13,8 @@ export function drawMinimap(ctx, canvas) {
   ctx.lineWidth = 2;
   ctx.fillRect(mmX, mmY, mmSize, mmSize);
   ctx.strokeRect(mmX, mmY, mmSize, mmSize);
+
+  drawDungeonMinimap(ctx, mmX, mmY, mmSize);
 
   const scaleX = mmSize / state.world.width;
   const scaleY = mmSize / state.world.height;
@@ -132,86 +135,13 @@ export function drawMinimap(ctx, canvas) {
     markers.forEach((m) => {
       const mx = mmX + m.x * scaleX;
       const my = mmY + m.y * scaleY;
-
-      if (m.type === "clue") {
-        ctx.fillStyle = "rgba(0,0,0,0.7)";
-        ctx.fillRect(mx - 6, my - 9, 12, 18);
-
-        ctx.fillStyle = m.revealed ? "#FFD700" : "#aaaaaa";
-        ctx.fillRect(mx - 4, my - 7, 8, 14);
-
-        ctx.fillStyle = m.revealed ? "#000" : "#fff";
-        ctx.font = "bold 8px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(m.revealed ? "!" : "?", mx, my + 3.5);
-      }
-
-      if (m.type === "rune") {
-        const isPending = m.state === "pending";
-
-        const fillColor = isPending
-          ? "#ff9900"
-          : m.isNext
-            ? "#ffff00"
-            : "#cc44ff";
-
-        ctx.beginPath();
-        ctx.arc(mx, my, 8, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(0,0,0,0.7)";
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.arc(mx, my, 6, 0, Math.PI * 2);
-        ctx.fillStyle = fillColor;
-        ctx.fill();
-
-        ctx.strokeStyle = "#fff";
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        ctx.fillStyle = "#000";
-        ctx.font = "bold 8px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(m.symbol, mx, my + 3);
-      }
-
-      if (m.type === "domino") {
-        ctx.beginPath();
-        ctx.arc(mx, my, 5, 0, Math.PI * 2);
-        ctx.fillStyle = m.isNext ? "#ffff00" : "#888";
-        ctx.fill();
-        ctx.strokeStyle = "#000";
-        ctx.stroke();
-      }
-
-      if (m.type === "melody") {
-        ctx.beginPath();
-        ctx.arc(mx, my, 5, 0, Math.PI * 2);
-        ctx.fillStyle = "#00ccff";
-        ctx.fill();
-        ctx.fillStyle = "#000";
-        ctx.font = "bold 7px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("♪", mx, my + 2);
-      }
-
-      if (m.type === "torch") {
-        ctx.beginPath();
-        ctx.arc(mx, my, 5, 0, Math.PI * 2);
-        ctx.fillStyle = "#ff8800";
-        ctx.fill();
-        ctx.fillStyle = "#000";
-        ctx.font = "bold 7px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("🔥", mx, my + 2);
-      }
-
-      if (m.type === "source") {
-        ctx.fillStyle = m.color;
-        ctx.beginPath();
-        ctx.arc(mx, my, 3, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      ctx.beginPath();
+      ctx.arc(mx, my, 4, 0, Math.PI * 2);
+      ctx.fillStyle = m.color || "#cc44ff";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(0,0,0,0.6)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
     });
   }
 

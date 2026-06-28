@@ -4,6 +4,7 @@ import { drawActiveCharacter } from "../characters/characterRegistry.js";
 // ===== DRAW MODULES =====
 import { getShakeOffset } from "./draw/drawUtils.js";
 import { drawThemedBackground, drawPermanentScars, drawBurnVignette } from "./draw/drawBackground.js";
+import { drawDungeon } from "../world/dungeonLayout.js";
 import {
   drawHazards,
   drawElementalZones,
@@ -86,6 +87,7 @@ export function draw(ctx, canvas) {
 
   // --- Background ---
   drawThemedBackground(ctx);
+  drawDungeon(ctx);
   drawPermanentScars(ctx);
 
   // --- World objects (crates, puzzles, portals, swarm zones, items, floating texts) ---

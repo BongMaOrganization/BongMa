@@ -22,6 +22,14 @@ import { initSkills } from "./skills.js";
 import { playBGM, stopAllBGM, playSound } from "./audio.js";
 import { spawnCrate, spawnCapturePoint } from "../world/element.js";
 import { createBoss, BOSS_TYPES } from "../entities/bosses/boss_manager.js";
+import {
+  generateDungeon,
+  clearDungeon,
+  getStartSpawnPosition,
+  placeStageObjectives,
+  unlockNextMap,
+  mergeMapProgress,
+} from "../world/dungeonLayout.js";
 export function initGame(isNextLevel = false) {
   let saved = JSON.parse(localStorage.getItem(GHOST_DATA_KEY) || "{}");
 
@@ -38,7 +46,7 @@ export function initGame(isNextLevel = false) {
     state.resources = saved.resources ||
       state.resources || { common: 0, rare: 0, legendary: 0 };
     state.bossFragments = saved.bossFragments || state.bossFragments || [];
-    state.maps = saved.maps || state.maps;
+    state.maps = mergeMapProgress(saved.maps || state.maps);
     state.selectedMap = saved.selectedMap || state.selectedMap;
 
     if (saved.player) {
@@ -90,10 +98,8 @@ export function initGame(isNextLevel = false) {
 
   state.isBossLevel = false; // Boss được kích hoạt khi player bước vào cổng sau khi hoàn thành 3 điều kiện
 
-  if (!isNextLevel) {
-    state.player.x = 400;
-    state.player.y = 500;
-  }
+  state.elementalEnemies = [];
+  state.elementalZones = [];
 
   state.player.gracePeriod = 120;
   state.player.dashTimeLeft = 0;
@@ -141,62 +147,30 @@ export function initGame(isNextLevel = false) {
 
   // Boss không còn được khởi tạo tự động - sẽ spawn khi player bước vào cổng portal
 
-  // --- INITIALIZE SWARM ZONES ---
-  const shouldRegenZones =
-    state.swarmZones.length === 0 ||
-    state.swarmZones.every((sz) => sz.isCompleted);
-
-  if (shouldRegenZones) {
-    state.swarmZones = [];
-    if (!state.isBossLevel && !state.bossArenaMode) {
-      // Mỗi đợt rải đúng 3 khu vực bầy đàn, đảm bảo không chồng lấn
-      const numZones = 3;
-      for (let i = 0; i < numZones; i++) {
-        let x, y, overlap;
-        let attempts = 0;
-        const radius = 400;
-
-        do {
-          overlap = false;
-          x = 400 + Math.random() * (state.world.width - 1000);
-          y = 400 + Math.random() * (state.world.height - 1000);
-
-          // Kiểm tra khoảng cách với các vùng đã có
-          for (const existing of state.swarmZones) {
-            if (dist(x, y, existing.x, existing.y) < radius * 2) {
-              overlap = true;
-              break;
-            }
-          }
-          attempts++;
-        } while (overlap && attempts < 50);
-
-        state.swarmZones.push({
-          id: `swarm_${state.currentLevel}_${i}_${Date.now()}`,
-          x: x,
-          y: y,
-          radius: radius,
-          requiredKills: 15 + state.currentLevel * 5,
-          currentKills: 0,
-          isCompleted: false,
-          active: false,
-          spawnedLocalGhosts: false,
-        });
-      }
-    }
+  // --- INITIALIZE SWARM ZONES & DUNGEON LAYOUT ---
+  if (!state.isBossLevel && !state.bossArenaMode) {
+    generateDungeon(state.currentLevel);
+    placeStageObjectives();
+    const spawn = getStartSpawnPosition();
+    state.player.x = spawn.x;
+    state.player.y = spawn.y;
+  } else {
+    clearDungeon();
   }
 
   // --- INITIALIZE ITEM CRATES ---
   if (!state.isBossLevel && !state.bossArenaMode) {
-    state.crates = [];
-    for (let i = 0; i < 10; i++) {
-      spawnCrate();
+    if (!state.dungeon) {
+      state.crates = [];
+      for (let i = 0; i < 10; i++) {
+        spawnCrate();
+      }
+      state.capturePoints = [];
+      for (let i = 0; i < 2; i++) {
+        spawnCapturePoint();
+      }
     }
-    // Luôn sinh đúng 2 điểm chiếm đóng (specialZone) mỗi màn
-    state.capturePoints = [];
-    for (let i = 0; i < 2; i++) {
-      spawnCapturePoint();
-    }
+    // placeStageObjectives() đã xử lý crates/capture khi có dungeon
     // ===== NEW PUZZLE SYSTEM =====
     state.puzzleZone = null; // giữ lại nếu code khác còn dùng (tạm thời)
     state.stagePortal = null;
@@ -383,6 +357,21 @@ export function nextStage(gameLoopFn) {
   persistState();
   if (state.isBossLevel) {
     checkOmniBossUnlock();
+    if (!state.bossArenaMode) {
+      const bossType = state.currentBossType || state.boss?.bossType || state.pendingBossType;
+      const unlocked = unlockNextMap(bossType);
+      if (unlocked) {
+        state.floatingTexts.push({
+          x: state.player?.x || state.world.width / 2,
+          y: (state.player?.y || state.world.height / 2) - 100,
+          text: `🗺️ MAP ${unlocked.toUpperCase()} ĐÃ MỞ KHÓA!`,
+          color: "#ffd700",
+          size: 28,
+          life: 240,
+          opacity: 1,
+        });
+      }
+    }
     // 10% chance to drop a boss fragment
     tryBossFragmentDrop();
     changeState("BOSS_REWARD", gameLoopFn);

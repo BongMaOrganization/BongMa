@@ -12,9 +12,17 @@ import { updatePuzzle } from "../game/puzzle_manager.js";
 import { updateElementalZones } from "../game/elementalZone.js";
 import {
   updateElementalEnemies,
-  spawnElementalEnemy,
-  ELEMENTS,
+  spawnElementalEnemyInRoom,
 } from "../entities/elementalEnemies.js";
+import {
+  resolveDungeonCollision,
+  updateDungeonRoomState,
+  getCurrentRoom,
+  countElementalsInRoom,
+  getBossGateRoom,
+  getRoomCenter,
+  getMapElement,
+} from "../world/dungeonLayout.js";
 import {
   updateBullets,
   playerTakeDamage,
@@ -293,6 +301,9 @@ export function update(ctx, canvas, changeStateFn) {
     player.radius,
     Math.min(state.world.height - player.radius, player.y),
   );
+
+  resolveDungeonCollision(player, player.radius);
+  updateDungeonRoomState(player);
 
   // --- 5. Bắn Súng (Dùng chung) ---
   let shotThisFrame = false;
@@ -804,23 +815,14 @@ export function update(ctx, canvas, changeStateFn) {
       if (g.x > 0) activeGhosts++;
     }
   }
-// THÊM ĐIỀU KIỆN: Chỉ spawn khi KHÔNG ở level Boss và KHÔNG ở Boss Arena
-  if (!state.isBossLevel && !state.bossArenaMode && state.frameCount % 180 === 0) {
-    const existingElements = new Set(
-      state.elementalEnemies.map((e) => e.element),
-    );
-
-    const missing = ELEMENTS.filter((el) => !existingElements.has(el));
-
-    // nếu thiếu element thì spawn
-    if (missing.length > 0) {
-      const element = missing[Math.floor(Math.random() * missing.length)];
-
-      spawnElementalEnemy(
-        state.player.x + (Math.random() - 0.5) * 800,
-        state.player.y + (Math.random() - 0.5) * 800,
-        element, // 👈 truyền element vào
-      );
+// Chỉ spawn quái nguyên tố của map hiện tại, trong phòng player đang đứng
+  if (!state.isBossLevel && !state.bossArenaMode && state.frameCount % 210 === 0) {
+    const room = getCurrentRoom(state.player.x, state.player.y);
+    if (room && room.type !== "start" && room.type !== "boss_gate") {
+      const cap = room.type === "swarm" ? 8 : 5;
+      if (countElementalsInRoom(room) < cap) {
+        spawnElementalEnemyInRoom(room, getMapElement());
+      }
     }
   }
   // --- 8. MÔI TRƯỜNG & TƯƠNG TÁC (Hazards, Safe Zones, Warnings) ---
@@ -1306,16 +1308,21 @@ function updateStagePortal() {
         0) >= 2;
 
     if (puzzleSolved && swarmsDone && specialsDone) {
+      const gateRoom = getBossGateRoom();
+      const portalPos = gateRoom
+        ? getRoomCenter(gateRoom)
+        : { x: state.world.width / 2, y: state.world.height / 2 };
+
       state.stagePortal = {
-        x: state.world.width / 2 + (Math.random() - 0.5) * 400,
-        y: state.world.height / 2 + (Math.random() - 0.5) * 400,
+        x: portalPos.x,
+        y: portalPos.y,
         radius: 65,
         active: true,
         pulse: 0,
       };
       state.floatingTexts.push({
-        x: state.world.width / 2,
-        y: state.world.height / 2 - 200,
+        x: portalPos.x,
+        y: portalPos.y - 200,
         text: "⚡ CỔNG BOSS ĐÃ MỞ! ⚡",
         color: "#cc00ff",
         size: 40,

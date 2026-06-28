@@ -2,12 +2,17 @@ import { state } from "../state.js";
 import { dist } from "../utils.js";
 import { spawnBullet } from "./helpers.js";
 import { spawnElementalZone } from "../game/elementalZone.js";
+import {
+  getMapElement,
+  getRandomPointInRoom,
+  getCurrentRoom,
+  resolveDungeonCollision,
+} from "../world/dungeonLayout.js";
 
 export const ELEMENTS = ["fire", "ice", "lightning", "wind", "earth"];
 
 export function spawnElementalEnemy(x, y, forcedElement = null) {
-  const element =
-    forcedElement || ELEMENTS[Math.floor(Math.random() * ELEMENTS.length)];
+  const element = forcedElement || getMapElement();
 
   state.elementalEnemies.push({
     x,
@@ -21,7 +26,14 @@ export function spawnElementalEnemy(x, y, forcedElement = null) {
     aggroRange: 500,
     attackRange: 250,
     cooldown: 0,
+    roomId: getCurrentRoom(x, y)?.id || null,
   });
+}
+
+export function spawnElementalEnemyInRoom(room, forcedElement = null) {
+  if (!room) return;
+  const point = getRandomPointInRoom(room, 100);
+  spawnElementalEnemy(point.x, point.y, forcedElement);
 }
 export function updateElementalEnemies(player) {
   for (let i = state.elementalEnemies.length - 1; i >= 0; i--) {
@@ -44,6 +56,8 @@ export function updateElementalEnemies(player) {
     if (e.state === "attack") {
       handleElementAttack(e, player);
     }
+
+    resolveDungeonCollision(e, e.radius || 14);
 
     // ===== DEATH =====
     if (!Number.isFinite(e.hp) || e.hp <= 0) {

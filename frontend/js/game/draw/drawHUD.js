@@ -1,4 +1,5 @@
 import { state } from "../../state.js";
+import { getPuzzleHUDInfo } from "../puzzle_manager.js";
 
 // ===== GLITCH EFFECTS (matrix mode, decoys, overload) =====
 export function drawGlitchEffects(ctx, canvas) {
@@ -152,7 +153,6 @@ export function drawHUD(ctx, canvas) {
 // ===== STAGE CONDITIONS HUD =====
 export function drawStageConditionsHUD(ctx, canvas) {
   const pz = state.currentPuzzle;
-  const type = state.currentPuzzleType;
 
   const cp = state.capturePoints || [];
   const sz = state.swarmZones || [];
@@ -174,80 +174,14 @@ export function drawStageConditionsHUD(ctx, canvas) {
 
   const lines = [];
 
-  const nameMap = {
-    domino: "⚡ Domino",
-    melody: "🎵 Melody",
-    torch: "🔥 Torch",
-    rune: "🔮 Rune",
-  };
-  const pzName = nameMap[type] || "🧩 Puzzle";
-
-  if (pz && type) {
-    if (puzzleDone) {
-      lines.push({ text: `${pzName}: Hoàn thành ✔️`, color: "#00ffcc" });
+  const puzzleInfo = getPuzzleHUDInfo();
+  if (state.currentPuzzle && state.currentPuzzleType) {
+    if (puzzleInfo.done) {
+      lines.push({ text: `${puzzleInfo.name}: Hoàn thành ✔️`, color: "#00ffcc" });
     } else {
-      if (type === "rune") {
-        const activatedCount = pz.runes
-          ? pz.runes.filter((r) => r.activated).length
-          : 0;
-        const totalCount = pz.runes ? pz.runes.length : 4;
-
-        if (!pz.clueRevealed) {
-          lines.push({
-            text: `${pzName}: Tìm Bia Đá (Obelisk)`,
-            color: "#ffaa00",
-          });
-        } else {
-          lines.push({
-            text: `${pzName}: ${activatedCount}/${totalCount}`,
-            color: "#fff",
-          });
-
-          const RECIPES = {
-            steam: "Fire + Ice",
-            plasma: "Fire + Lightning",
-            blaze: "Fire + Wind",
-            magma: "Fire + Earth",
-            frostbite: "Ice + Lightning",
-            blizzard: "Ice + Wind",
-            glacier: "Ice + Earth",
-            storm: "Lightning + Wind",
-            magnet: "Lightning + Earth",
-            sandstorm: "Wind + Earth",
-          };
-
-          if (pz.runes) {
-            pz.runes.forEach((r) => {
-              const formula = RECIPES[r.element] || "? + ?";
-              const elName =
-                r.element.charAt(0).toUpperCase() + r.element.slice(1);
-
-              const isDone = r.activated;
-              const status = isDone ? "1/1 ✔️" : "0/1";
-              const color = isDone ? "#00ffcc" : "#aaaaaa";
-
-              lines.push({
-                text: `  ↳ ${elName} = ${formula} (${status})`,
-                color: color,
-              });
-            });
-          }
-        }
-      } else {
-        let puzzleLabel = "...";
-        switch (type) {
-          case "domino":
-            puzzleLabel = `${pz.currentIndex || 0}/${pz.tiles?.length || 0}`;
-            break;
-          case "melody":
-            puzzleLabel = `${pz.input?.length || 0}/${pz.sequence?.length || 0}`;
-            break;
-          case "torch":
-            const lit = pz.torches?.filter((t) => t.lit).length || 0;
-            puzzleLabel = `${lit}/${pz.torches?.length || 0}`;
-            break;
-        }
-        lines.push({ text: `${pzName}: ${puzzleLabel}`, color: "#fff" });
+      lines.push({ text: `${puzzleInfo.name}: ${puzzleInfo.progress}`, color: "#fff" });
+      if (puzzleInfo.hint) {
+        lines.push({ text: `  ↳ ${puzzleInfo.hint}`, color: "#aaaaaa" });
       }
     }
   }
