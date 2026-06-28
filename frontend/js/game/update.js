@@ -18,9 +18,17 @@ import {
 } from "../game/mapMechanics.js";
 import {
   updateElementalEnemies,
-  spawnElementalEnemy,
-  ELEMENTS,
+  spawnElementalEnemyInRoom,
 } from "../entities/elementalEnemies.js";
+import {
+  resolveDungeonCollision,
+  updateDungeonRoomState,
+  getCurrentRoom,
+  countElementalsInRoom,
+  getBossGateRoom,
+  getRoomCenter,
+  getMapElement,
+} from "../world/dungeonLayout.js";
 import {
   updateBullets,
   playerTakeDamage,
@@ -32,7 +40,10 @@ import { startBossFight } from "./flow.js";
 import { spawnBullet } from "../entities/helpers.js";
 import { spawnCrate, spawnCrystal } from "../world/element.js";
 import { ATTACK_MODES, SPECIAL_SKILLS } from "../entities/bosses/patterns.js";
-import { updateMultiplayer, onMultiplayerPlayerDead } from "../multiplayer/mpFlow.js";
+import {
+  updateMultiplayer,
+  onMultiplayerPlayerDead,
+} from "../multiplayer/mpFlow.js";
 import { enforceBulletBudget, enforceVfxBudget } from "./vfxBudget.js";
 
 function applyPlayerShotCompression(
@@ -210,8 +221,7 @@ export function update(ctx, canvas, changeStateFn) {
       (currentMultiShot * FPS) / PLAYER_MAX_PROJECTILES_PER_SECOND,
     );
     shotDamageMultiplier = optimizedFireRate / Math.max(1, currentFireRate);
-    shotRadiusMultiplier =
-      1 + Math.min(0.35, (shotDamageMultiplier - 1) * 0.1);
+    shotRadiusMultiplier = 1 + Math.min(0.35, (shotDamageMultiplier - 1) * 0.1);
     currentFireRate = optimizedFireRate;
   }
 
@@ -231,7 +241,10 @@ export function update(ctx, canvas, changeStateFn) {
     setTextIfChanged(UI.dash, "Lướt: SẴN SÀNG");
     setStyleIfChanged(UI.dash, "color", "#00ffcc");
   } else {
-    setTextIfChanged(UI.dash, `Lướt: ${(player.dashCooldownTimer / 60).toFixed(1)}s`);
+    setTextIfChanged(
+      UI.dash,
+      `Lướt: ${(player.dashCooldownTimer / 60).toFixed(1)}s`,
+    );
     setStyleIfChanged(UI.dash, "color", "#888");
   }
 
@@ -300,6 +313,9 @@ export function update(ctx, canvas, changeStateFn) {
     player.radius,
     Math.min(state.world.height - player.radius, player.y),
   );
+
+  resolveDungeonCollision(player, player.radius);
+  updateDungeonRoomState(player);
 
   // --- 5. Bắn Súng (Dùng chung) ---
   let shotThisFrame = false;
@@ -529,8 +545,7 @@ export function update(ctx, canvas, changeStateFn) {
     // Kiểm tra quái chết
     const hasDeadHp =
       g.hp !== undefined && (!Number.isFinite(g.hp) || g.hp <= 0);
-    let isHit =
-      hasDeadHp || (!g.isSubBoss && !g.isMiniBoss && g.isStunned > 0);
+    let isHit = hasDeadHp || (!g.isSubBoss && !g.isMiniBoss && g.isStunned > 0);
     if (isHit && !g.isRespawning) {
       if (g.parentZoneId) {
         const zone = state.swarmZones.find((sz) => sz.id === g.parentZoneId);
@@ -811,34 +826,18 @@ export function update(ctx, canvas, changeStateFn) {
       if (g.x > 0) activeGhosts++;
     }
   }
-// THÊM ĐIỀU KIỆN: Chỉ spawn khi KHÔNG ở level Boss và KHÔNG ở Boss Arena
-  if (!state.isBossLevel && !state.bossArenaMode && state.frameCount % 180 === 0) {
-    // Khoá hệ theo map: map Lửa chỉ spawn quái lửa (không round-robin 5 hệ)
-    const mapElement = getMapElement();
-    let element = null;
-
-    if (mapElement) {
-      // Giữ tối đa vài con cùng hệ trên sân; chỉ spawn khi còn thưa
-      if (state.elementalEnemies.length < 4) element = mapElement;
-    } else {
-      const existingElements = new Set(
-        state.elementalEnemies.map((e) => e.element),
-      );
-      const missing = ELEMENTS.filter((el) => !existingElements.has(el));
-      if (missing.length > 0)
-        element = missing[Math.floor(Math.random() * missing.length)];
-    }
-
-    if (element) {
-      spawnElementalEnemy(
-        state.player.x + (Math.random() - 0.5) * 800,
-        state.player.y + (Math.random() - 0.5) * 800,
-        element, // 👈 truyền element vào
-      );
-      // Áp chỉ số đặc thù map cho con vừa spawn
-      applyMapEnemyModifier(
-        state.elementalEnemies[state.elementalEnemies.length - 1],
-      );
+  // Chỉ spawn quái nguyên tố của map hiện tại, trong phòng player đang đứng
+  if (
+    !state.isBossLevel &&
+    !state.bossArenaMode &&
+    state.frameCount % 210 === 0
+  ) {
+    const room = getCurrentRoom(state.player.x, state.player.y);
+    if (room && room.type !== "start" && room.type !== "boss_gate") {
+      const cap = room.type === "swarm" ? 8 : 5;
+      if (countElementalsInRoom(room) < cap) {
+        spawnElementalEnemyInRoom(room, getMapElement());
+      }
     }
   }
   // --- 8. MÔI TRƯỜNG & TƯƠNG TÁC (Hazards, Safe Zones, Warnings) ---
@@ -1024,15 +1023,15 @@ export function update(ctx, canvas, changeStateFn) {
   }
 
   // Cập nhật UI Text
-  setTextIfChanged(UI.ghosts, state.isBossLevel
-    ? boss?.ghostsActive
-      ? `Quái đợt này: ${activeGhosts}`
-      : `Boss triệu hồi (${Math.ceil(boss?.summonCooldown / FPS || 0)}s)...`
-    : `Quái: ${activeGhosts}`);
   setTextIfChanged(
-    getCoinsCountEl(),
-    `Tiền: ${state.player?.coins || 0}`,
+    UI.ghosts,
+    state.isBossLevel
+      ? boss?.ghostsActive
+        ? `Quái đợt này: ${activeGhosts}`
+        : `Boss triệu hồi (${Math.ceil(boss?.summonCooldown / FPS || 0)}s)...`
+      : `Quái: ${activeGhosts}`,
   );
+  setTextIfChanged(getCoinsCountEl(), `Tiền: ${state.player?.coins || 0}`);
 
   // Kiểm tra qua màn: player bước vào cổng dịch chuyển
   if (!state.isBossLevel && state.stagePortal?.active) {
@@ -1323,17 +1322,17 @@ function updateStagePortal() {
       (state.capturePoints?.filter((cp) => cp.state === "completed").length ||
         0) >= 2;
 
-    if (puzzleSolved && swarmsDone && specialsDone && isMapObjectiveDone()) {
+    if (puzzleSolved && swarmsDone && specialsDone) {
       state.stagePortal = {
-        x: state.world.width / 2 + (Math.random() - 0.5) * 400,
-        y: state.world.height / 2 + (Math.random() - 0.5) * 400,
+        x: portalPos.x,
+        y: portalPos.y,
         radius: 65,
         active: true,
         pulse: 0,
       };
       state.floatingTexts.push({
-        x: state.world.width / 2,
-        y: state.world.height / 2 - 200,
+        x: portalPos.x,
+        y: portalPos.y - 200,
         text: "⚡ CỔNG BOSS ĐÃ MỞ! ⚡",
         color: "#cc00ff",
         size: 40,

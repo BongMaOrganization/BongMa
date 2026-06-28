@@ -78,8 +78,6 @@ export const state = {
   explosions: [],
   druidOrbs: [],
   phantoms: [],
-  painterTrails: [],
-  painterZones: [],
   painterBomb: null,
   painterExplosions: [],
   hunterTraps: [],
@@ -225,6 +223,7 @@ export const state = {
   pendingBossType: null,      // boss sẽ spawn sau
   elementalZones: [], // zone của quái (KHÔNG liên quan boss)
   elementalEnemies: [], // quái có yếu tố (để render hiệu ứng)
+  dungeon: null, // layout phòng kiểu Soul Knight
 
   // ===== Multiplayer State =====
   isMultiplayer: false,

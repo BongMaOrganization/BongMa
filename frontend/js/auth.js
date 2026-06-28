@@ -7,6 +7,7 @@ import {
   loadGameFromServer,
   saveGameToServer,
 } from "./utils.js";
+import { mergeMapProgress } from "./world/dungeonLayout.js";
 
 export { TOKEN_KEY, login, register };
 
@@ -139,7 +140,7 @@ export async function syncRemoteState() {
     state.characterUpgrades = saved.characterUpgrades;
     state.resources = saved.resources;
     state.bossFragments = saved.bossFragments;
-    state.maps = saved.maps;
+    state.maps = mergeMapProgress(saved.maps);
     state.selectedMap = saved.selectedMap;
     
     // Fix coins sync
