@@ -30,7 +30,7 @@ import { FPS } from "./config.js";
 import { connectSocket, disconnectSocket, getSocket } from "./multiplayer/socket.js";
 import { createRoom, joinRoom, mpState, resetMpState, openLobby, setLobbyUICallback } from "./multiplayer/room.js";
 import { startMultiplayerBossArena, handleMultiplayerBossKill } from "./multiplayer/mpFlow.js";
-import { stopAllSync } from "./multiplayer/sync.js";
+import { stopAllSync, sendDamageToHost } from "./multiplayer/sync.js";
 import { BOSS_TYPES } from "./entities/bosses/boss_manager.js";
 import { CHARACTERS } from "./characters/data.js";
 
@@ -87,8 +87,18 @@ function gameLoop(timestamp = performance.now()) {
   let steps = 0;
   let result = null;
   while (state._accumulator >= FRAME_INTERVAL_MS && steps < MAX_CATCHUP_STEPS) {
+    // MP non-host: boss.hp do host làm chủ (sync ghi đè cục bộ). Đo lượng máu
+    // boss giảm do skill/hazard/dash trong bước này rồi gửi host — nếu không
+    // skill non-host không gây dame (đạn đã tự gửi qua combat.js, không đụng
+    // boss.hp cục bộ nên không đếm trùng).
+    const bossHpBefore =
+      state.isMultiplayer && !state.isHost && state.boss ? state.boss.hp : null;
     handleSkillsUpdate(canvas, changeStateBound);
     result = update(ctx, canvas, changeStateBound);
+    if (bossHpBefore != null && state.boss) {
+      const localDmg = bossHpBefore - state.boss.hp;
+      if (localDmg > 0) sendDamageToHost(state.mpRoomCode, localDmg);
+    }
     state._accumulator -= FRAME_INTERVAL_MS;
     steps++;
     if (result === "BOSS_KILLED" || result === "STAGE_CLEAR") {
