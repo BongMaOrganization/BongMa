@@ -11,6 +11,12 @@ import { updateActiveCharacter } from "../characters/characterRegistry.js";
 import { updatePuzzle } from "../game/puzzle_manager.js";
 import { updateElementalZones } from "../game/elementalZone.js";
 import {
+  updateMapMechanic,
+  applyMapEnemyModifier,
+  isMapObjectiveDone,
+  getMapElement,
+} from "../game/mapMechanics.js";
+import {
   updateElementalEnemies,
   spawnElementalEnemyInRoom,
 } from "../entities/elementalEnemies.js";
@@ -46,7 +52,10 @@ import {
 import { spawnBullet } from "../entities/helpers.js";
 import { spawnCrate, spawnCrystal, spawnMiniBoss } from "../world/element.js";
 import { ATTACK_MODES, SPECIAL_SKILLS } from "../entities/bosses/patterns.js";
-import { updateMultiplayer, onMultiplayerPlayerDead } from "../multiplayer/mpFlow.js";
+import {
+  updateMultiplayer,
+  onMultiplayerPlayerDead,
+} from "../multiplayer/mpFlow.js";
 import { enforceBulletBudget, enforceVfxBudget } from "./vfxBudget.js";
 
 function applyPlayerShotCompression(
@@ -154,6 +163,7 @@ export function update(ctx, canvas, changeStateFn) {
   }
 
   updateElementalZones(state.player);
+  updateMapMechanic(state.player, ctx, canvas, changeStateFn);
   updateElementalEnemies(state.player);
   updateHealStations();
   updateUpgradePedestals();
@@ -248,8 +258,7 @@ export function update(ctx, canvas, changeStateFn) {
       (currentMultiShot * FPS) / PLAYER_MAX_PROJECTILES_PER_SECOND,
     );
     shotDamageMultiplier = optimizedFireRate / Math.max(1, currentFireRate);
-    shotRadiusMultiplier =
-      1 + Math.min(0.35, (shotDamageMultiplier - 1) * 0.1);
+    shotRadiusMultiplier = 1 + Math.min(0.35, (shotDamageMultiplier - 1) * 0.1);
     currentFireRate = optimizedFireRate;
   }
 
@@ -269,7 +278,10 @@ export function update(ctx, canvas, changeStateFn) {
     setTextIfChanged(UI.dash, "Lướt: SẴN SÀNG");
     setStyleIfChanged(UI.dash, "color", "#00ffcc");
   } else {
-    setTextIfChanged(UI.dash, `Lướt: ${(player.dashCooldownTimer / 60).toFixed(1)}s`);
+    setTextIfChanged(
+      UI.dash,
+      `Lướt: ${(player.dashCooldownTimer / 60).toFixed(1)}s`,
+    );
     setStyleIfChanged(UI.dash, "color", "#888");
   }
 
@@ -577,8 +589,7 @@ export function update(ctx, canvas, changeStateFn) {
     // Kiểm tra quái chết
     const hasDeadHp =
       g.hp !== undefined && (!Number.isFinite(g.hp) || g.hp <= 0);
-    let isHit =
-      hasDeadHp || (!g.isSubBoss && !g.isMiniBoss && g.isStunned > 0);
+    let isHit = hasDeadHp || (!g.isSubBoss && !g.isMiniBoss && g.isStunned > 0);
     if (isHit && !g.isRespawning) {
       if (g.parentZoneId) {
         const zone = state.swarmZones.find((sz) => sz.id === g.parentZoneId);
@@ -859,8 +870,12 @@ export function update(ctx, canvas, changeStateFn) {
       if (g.x > 0) activeGhosts++;
     }
   }
-// Chỉ spawn quái nguyên tố của map hiện tại, trong phòng player đang đứng
-  if (!state.isBossLevel && !state.bossArenaMode && state.frameCount % 210 === 0) {
+  // Chỉ spawn quái nguyên tố của map hiện tại, trong phòng player đang đứng
+  if (
+    !state.isBossLevel &&
+    !state.bossArenaMode &&
+    state.frameCount % 210 === 0
+  ) {
     const room = getCurrentRoom(state.player.x, state.player.y);
     if (room && room.type !== "start" && room.type !== "boss_gate") {
       const cap = room.type === "swarm" ? 8 : 5;
@@ -1052,15 +1067,15 @@ export function update(ctx, canvas, changeStateFn) {
   }
 
   // Cập nhật UI Text
-  setTextIfChanged(UI.ghosts, state.isBossLevel
-    ? boss?.ghostsActive
-      ? `Quái đợt này: ${activeGhosts}`
-      : `Boss triệu hồi (${Math.ceil(boss?.summonCooldown / FPS || 0)}s)...`
-    : `Quái: ${activeGhosts}`);
   setTextIfChanged(
-    getCoinsCountEl(),
-    `Tiền: ${state.player?.coins || 0}`,
+    UI.ghosts,
+    state.isBossLevel
+      ? boss?.ghostsActive
+        ? `Quái đợt này: ${activeGhosts}`
+        : `Boss triệu hồi (${Math.ceil(boss?.summonCooldown / FPS || 0)}s)...`
+      : `Quái: ${activeGhosts}`,
   );
+  setTextIfChanged(getCoinsCountEl(), `Tiền: ${state.player?.coins || 0}`);
 
   // Kiểm tra qua màn: player bước vào cổng dịch chuyển
   if (!state.isBossLevel && state.stagePortal?.active) {
@@ -1373,11 +1388,6 @@ function updateStagePortal() {
         0) >= 2;
 
     if (puzzleSolved && swarmsDone && specialsDone) {
-      const gateRoom = getBossGateRoom();
-      const portalPos = gateRoom
-        ? getRoomCenter(gateRoom)
-        : { x: state.world.width / 2, y: state.world.height / 2 };
-
       state.stagePortal = {
         x: portalPos.x,
         y: portalPos.y,

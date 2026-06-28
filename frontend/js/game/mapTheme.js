@@ -1,5 +1,6 @@
 import { state } from "../state.js";
 import { spawnHazard } from "../entities/helpers.js";
+import { initMapMechanic } from "./mapMechanics.js";
 
 function createSeededRandom(seed) {
   let value = seed >>> 0;
@@ -755,10 +756,13 @@ export function initMapTheme() {
   // Dọn dẹp rác bẫy trang trí nếu có sót từ version cũ
   state.hazards = state.hazards.filter(h => h.owner !== "map");
 
-  // Tắt các hiệu ứng toàn bản đồ mặc định
+  // Reset hazard toàn bản đồ về mặc định; mapMechanic sẽ tự bật lại khi chơi
   state.globalHazard = {
     type: null,
     active: false,
     damage: 0,
   };
+
+  // Khởi tạo cơ chế đặc thù của map (lava/băng/sét/gió/động đất + objective)
+  initMapMechanic();
 }

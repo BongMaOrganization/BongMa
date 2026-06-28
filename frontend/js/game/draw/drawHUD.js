@@ -185,9 +185,15 @@ export function drawStageConditionsHUD(ctx, canvas) {
   const puzzleInfo = getPuzzleHUDInfo();
   if (state.currentPuzzle && state.currentPuzzleType) {
     if (puzzleInfo.done) {
-      lines.push({ text: `${puzzleInfo.name}: Hoàn thành ✔️`, color: "#00ffcc" });
+      lines.push({
+        text: `${puzzleInfo.name}: Hoàn thành ✔️`,
+        color: "#00ffcc",
+      });
     } else {
-      lines.push({ text: `${puzzleInfo.name}: ${puzzleInfo.progress}`, color: "#fff" });
+      lines.push({
+        text: `${puzzleInfo.name}: ${puzzleInfo.progress}`,
+        color: "#fff",
+      });
       if (puzzleInfo.hint) {
         lines.push({ text: `  ↳ ${puzzleInfo.hint}`, color: "#aaaaaa" });
       }
@@ -222,6 +228,15 @@ export function drawStageConditionsHUD(ctx, canvas) {
   const loreCount = state.storyLog?.length || 0;
   if (loreCount > 0) {
     lines.push({ text: `📜 Manh cốt truyện: ${loreCount}`, color: "#e0c080" });
+  }
+
+  // Điều kiện đặc thù của map (sống sót N đợt sự kiện)
+  const mapLabel = getMapObjectiveLabel();
+  if (mapLabel) {
+    lines.push({
+      text: mapLabel,
+      color: isMapObjectiveDone() ? "#00ffcc" : "#ff9955",
+    });
   }
 
   const lineHeight = 20;

@@ -10,6 +10,7 @@ import {
 } from "../config.js";
 import { initPuzzle } from "../game/puzzle_manager.js";
 import { initMapTheme } from "../game/mapTheme.js";
+import { applyMapEnemyModifier } from "../game/mapMechanics.js";
 import { saveGame, dist } from "../utils.js";
 import { UI, updateHealthUI, updateXPUI, generateCards } from "../ui.js";
 import { generateDummy } from "../entities.js";
@@ -198,6 +199,8 @@ export function initGame(isNextLevel = false) {
   UI.ghosts.innerText = `Quái: ${state.ghosts.length}`;
   if (!state.isBossLevel) {
     initMapTheme();
+    // initMapTheme đã set currentMapTheme → giờ mới khoá hệ + chỉnh chỉ số quái
+    state.ghosts.forEach((g) => applyMapEnemyModifier(g));
   }
 }
 
