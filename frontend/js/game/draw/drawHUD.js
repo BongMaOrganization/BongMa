@@ -5,6 +5,10 @@ import {
   roomRequiresClear,
   isRoomExitAllowed,
 } from "../../world/dungeonLayout.js";
+import {
+  getMapObjectiveLabel,
+  isMapObjectiveDone,
+} from "../mapMechanics.js";
 
 // ===== GLITCH EFFECTS (matrix mode, decoys, overload) =====
 export function drawGlitchEffects(ctx, canvas) {
