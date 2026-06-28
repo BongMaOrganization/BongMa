@@ -127,6 +127,24 @@ export const state = {
     timer: 0,
     damage: 0,
   },
+  // ===== Map Identity System (cơ chế đặc thù theo nguyên tố map) =====
+  // Khởi tạo lại mỗi màn ở mapMechanics.initMapMechanic()
+  mapMechanic: {
+    theme: null,
+    element: null, // hệ quái bị khoá theo map
+    meter: 0, // heat/cold/charge tuỳ map
+    meterMax: 240,
+    eventTimer: 300, // đếm ngược tới field-event kế (chỉ chạy khi globalHazard rảnh)
+    eruptTimer: 360, // đếm ngược tới đợt telegraph/strike kế
+    objectiveProgress: 0, // số đợt sự kiện đã sống sót
+    objectiveTarget: 3,
+    lastX: 0,
+    lastY: 0,
+    inertiaX: 0, // băng: quán tính trượt
+    inertiaY: 0,
+    windAngle: 0, // gió: hướng đẩy hiện tại
+    strikes: [], // {x,y,radius,fuse,dmg,stun} — đòn AoE có telegraph
+  },
   cinematicEffects: {
     fogAlpha: 0, // Ice blizzard overlay
     distortion: 0, // Earth tremor ripple

@@ -11,6 +11,12 @@ import { updateActiveCharacter } from "../characters/characterRegistry.js";
 import { updatePuzzle } from "../game/puzzle_manager.js";
 import { updateElementalZones } from "../game/elementalZone.js";
 import {
+  updateMapMechanic,
+  applyMapEnemyModifier,
+  isMapObjectiveDone,
+  getMapElement,
+} from "../game/mapMechanics.js";
+import {
   updateElementalEnemies,
   spawnElementalEnemy,
   ELEMENTS,
@@ -111,6 +117,7 @@ export function update(ctx, canvas, changeStateFn) {
   }
 
   updateElementalZones(state.player);
+  updateMapMechanic(state.player, ctx, canvas, changeStateFn);
   updateElementalEnemies(state.player);
   // --- 1. Quản lý Camera & Boundaries ---
   state.camera.width = canvas.width;
@@ -806,20 +813,31 @@ export function update(ctx, canvas, changeStateFn) {
   }
 // THÊM ĐIỀU KIỆN: Chỉ spawn khi KHÔNG ở level Boss và KHÔNG ở Boss Arena
   if (!state.isBossLevel && !state.bossArenaMode && state.frameCount % 180 === 0) {
-    const existingElements = new Set(
-      state.elementalEnemies.map((e) => e.element),
-    );
+    // Khoá hệ theo map: map Lửa chỉ spawn quái lửa (không round-robin 5 hệ)
+    const mapElement = getMapElement();
+    let element = null;
 
-    const missing = ELEMENTS.filter((el) => !existingElements.has(el));
+    if (mapElement) {
+      // Giữ tối đa vài con cùng hệ trên sân; chỉ spawn khi còn thưa
+      if (state.elementalEnemies.length < 4) element = mapElement;
+    } else {
+      const existingElements = new Set(
+        state.elementalEnemies.map((e) => e.element),
+      );
+      const missing = ELEMENTS.filter((el) => !existingElements.has(el));
+      if (missing.length > 0)
+        element = missing[Math.floor(Math.random() * missing.length)];
+    }
 
-    // nếu thiếu element thì spawn
-    if (missing.length > 0) {
-      const element = missing[Math.floor(Math.random() * missing.length)];
-
+    if (element) {
       spawnElementalEnemy(
         state.player.x + (Math.random() - 0.5) * 800,
         state.player.y + (Math.random() - 0.5) * 800,
         element, // 👈 truyền element vào
+      );
+      // Áp chỉ số đặc thù map cho con vừa spawn
+      applyMapEnemyModifier(
+        state.elementalEnemies[state.elementalEnemies.length - 1],
       );
     }
   }
@@ -1305,7 +1323,7 @@ function updateStagePortal() {
       (state.capturePoints?.filter((cp) => cp.state === "completed").length ||
         0) >= 2;
 
-    if (puzzleSolved && swarmsDone && specialsDone) {
+    if (puzzleSolved && swarmsDone && specialsDone && isMapObjectiveDone()) {
       state.stagePortal = {
         x: state.world.width / 2 + (Math.random() - 0.5) * 400,
         y: state.world.height / 2 + (Math.random() - 0.5) * 400,

@@ -1,4 +1,8 @@
 import { state } from "../../state.js";
+import {
+  getMapObjectiveLabel,
+  isMapObjectiveDone,
+} from "../mapMechanics.js";
 
 // ===== GLITCH EFFECTS (matrix mode, decoys, overload) =====
 export function drawGlitchEffects(ctx, canvas) {
@@ -260,6 +264,15 @@ export function drawStageConditionsHUD(ctx, canvas) {
 
   const specialColor = specialCount >= 2 ? "#00ffcc" : "#fff";
   lines.push({ text: `🚩 Cứ điểm: ${specialCount}/2`, color: specialColor });
+
+  // Điều kiện đặc thù của map (sống sót N đợt sự kiện)
+  const mapLabel = getMapObjectiveLabel();
+  if (mapLabel) {
+    lines.push({
+      text: mapLabel,
+      color: isMapObjectiveDone() ? "#00ffcc" : "#ff9955",
+    });
+  }
 
   const lineHeight = 20;
   const padding = 15;
