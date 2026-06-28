@@ -296,6 +296,36 @@ export function getBossGateRoom() {
   return state.dungeon?.rooms?.find((r) => r.type === "boss_gate") || null;
 }
 
+export function isDungeonCampaignBoss() {
+  return !!(state.dungeon && state.isBossLevel && !state.bossArenaMode);
+}
+
+export function getBossGatePortalPosition() {
+  const room = getBossGateRoom();
+  if (!room) {
+    return { x: state.world.width / 2, y: state.world.height / 2 };
+  }
+  return getRoomCenter(room);
+}
+
+export function getRoomBossArenaRadius(room, bossType = "fire") {
+  if (!room) return bossType === "omni" ? 700 : 620;
+  const pad = WALL_THICK + 48;
+  const maxR = Math.min(room.w, room.h) / 2 - pad;
+  const themed =
+    bossType === "omni" ? 700 : bossType === "earth" ? 660 : 620;
+  return Math.max(280, Math.min(themed, maxR));
+}
+
+export function clampPointToRoom(room, x, y, radius = 20) {
+  if (!room) return { x, y };
+  const pad = WALL_THICK + radius + 16;
+  return {
+    x: Math.max(room.x + pad, Math.min(room.x + room.w - pad, x)),
+    y: Math.max(room.y + pad, Math.min(room.y + room.h - pad, y)),
+  };
+}
+
 export function getDungeonRoomByType(type) {
   return state.dungeon?.rooms?.find((r) => r.type === type) || null;
 }
@@ -320,7 +350,7 @@ export function isValidSpawnInRoom(room, x, y, radius = 14) {
 
 /** Đạn có chạm tường phòng dungeon không (circle + quét đoạn bay) */
 export function bulletHitsDungeonWall(b, prevX, prevY) {
-  if (!state.dungeon?.walls?.length || state.isBossLevel || state.bossArenaMode) {
+  if (!state.dungeon?.walls?.length || state.bossArenaMode) {
     return false;
   }
   const r = b.radius || 4;
@@ -499,7 +529,7 @@ export function resolveDoorGates(entity, radius) {
 }
 
 export function resolveDungeonCollision(entity, radius) {
-  if (!state.dungeon?.walls?.length || state.isBossLevel || state.bossArenaMode) return;
+  if (!state.dungeon?.walls?.length || state.bossArenaMode) return;
 
   for (const wall of state.dungeon.walls) {
     const closestX = Math.max(wall.x, Math.min(entity.x, wall.x + wall.w));
@@ -517,6 +547,60 @@ export function resolveDungeonCollision(entity, radius) {
       entity.x += (dx / d) * (radius - d + 0.5);
       entity.y += (dy / d) * (radius - d + 0.5);
     }
+  }
+}
+
+export function blockLockedRoomExit(entity, radius, prevX, prevY) {
+  if (!state.dungeon?.rooms || state.isBossLevel || state.bossArenaMode) return false;
+
+  const prevRoom = getCurrentRoom(prevX, prevY);
+  if (!prevRoom || !roomRequiresClear(prevRoom) || isRoomExitAllowed(prevRoom)) {
+    return false;
+  }
+
+  const nowRoom = getCurrentRoom(entity.x, entity.y);
+  if (nowRoom?.id === prevRoom.id) return false;
+
+  entity.x = prevX;
+  entity.y = prevY;
+  for (const gate of getDoorGateRects(prevRoom)) {
+    pushOutOfRect(entity, radius, gate);
+  }
+  resolveDungeonCollision(entity, radius);
+
+  if (entity === state.player && _doorBlockCooldown <= 0) {
+    _doorBlockCooldown = 90;
+    state.floatingTexts.push({
+      x: entity.x,
+      y: entity.y - 70,
+      text: "🔒 Dọn sạch phòng trước khi rời đi!",
+      color: "#ff6644",
+      size: 18,
+      life: 100,
+      opacity: 1,
+    });
+  }
+
+  return true;
+}
+
+/** Di chuyển player/quái theo bước nhỏ — chống dash xuyên tường/cổng khóa */
+export function moveEntityWithDungeonGates(entity, dx, dy, radius) {
+  if (!entity) return;
+  const dist = Math.hypot(dx, dy);
+  if (dist < 0.001) return;
+
+  const maxStep = 6;
+  const steps = Math.max(1, Math.ceil(dist / maxStep));
+
+  for (let i = 0; i < steps; i++) {
+    const prevX = entity.x;
+    const prevY = entity.y;
+    entity.x += dx / steps;
+    entity.y += dy / steps;
+    resolveDungeonCollision(entity, radius);
+    blockLockedRoomExit(entity, radius, prevX, prevY);
+    resolveDoorGates(entity, radius);
   }
 }
 
@@ -573,9 +657,10 @@ function createCapturePoint(room, order) {
     roomId: room.id,
   };
 
-  const bossPt = getSafeSpawnPointInRoom(room, 120) || getRoomCenter(room);
+  const bossPt =
+    getSafeSpawnPointInRoom(room, 180, 60) || getRoomCenter(room);
   if (order === 1) {
-    spawnMiniBoss(bossPt.x, bossPt.y, cp.miniBossId);
+    spawnMiniBoss(bossPt.x, bossPt.y, cp.miniBossId, room.id);
   }
   return cp;
 }

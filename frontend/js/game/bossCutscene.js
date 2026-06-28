@@ -2,6 +2,11 @@ import { state } from "../state.js";
 import { BOSS_TYPES } from "../entities/bosses/boss_manager.js";
 import { MAP_LORE } from "../world/storyLore.js";
 import { setupBossArenaVisual } from "../world/bossArenaVisual.js";
+import {
+  getBossGateRoom,
+  getRoomCenter,
+  getRoomBossArenaRadius,
+} from "../world/dungeonLayout.js";
 
 const EXTRA_LORE = {
   void: {
@@ -99,10 +104,23 @@ function hideSkipButton() {
 export function beginBossCutscene(bossType, onComplete) {
   const data = getCutsceneData(bossType);
   const p = state.player;
-  const cx = p?.x ?? state.world.width / 2;
-  const cy = p?.y ?? state.world.height / 2;
+  const bossRoom = state.dungeon && !state.bossArenaMode ? getBossGateRoom() : null;
+  const center = bossRoom
+    ? getRoomCenter(bossRoom)
+    : { x: p?.x ?? state.world.width / 2, y: p?.y ?? state.world.height / 2 };
 
-  setupBossArenaVisual(bossType, cx, cy);
+  setupBossArenaVisual(bossType, center.x, center.y, {
+    roomId: bossRoom?.id || null,
+    maxRadius: bossRoom ? getRoomBossArenaRadius(bossRoom, bossType) : undefined,
+  });
+
+  if (bossRoom && p) {
+    p.x = center.x;
+    p.y = center.y + 100;
+  }
+
+  state.elementalEnemies = [];
+  state.elementalZones = [];
 
   state.bossCutscene = {
     bossType,

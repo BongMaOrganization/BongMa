@@ -1,5 +1,10 @@
 import { state } from "../state.js";
 import { isBossCutsceneActive } from "../game/bossCutscene.js";
+import {
+  getRoomById,
+  constrainToRoomBounds,
+  isDungeonCampaignBoss,
+} from "./dungeonLayout.js";
 
 const ARENA_THEMES = {
   fire: {
@@ -72,16 +77,19 @@ const ARENA_THEMES = {
 
 const OMNI_COLORS = ["#ff4400", "#66ccff", "#b88844", "#55ffcc", "#ffee55"];
 
-export function setupBossArenaVisual(bossType, cx, cy) {
+export function setupBossArenaVisual(bossType, cx, cy, opts = {}) {
   const theme = ARENA_THEMES[bossType] || ARENA_THEMES.fire;
   const pillarCount = bossType === "omni" ? 10 : bossType === "void" ? 8 : 6;
-  const baseRadius = bossType === "omni" ? 700 : bossType === "earth" ? 660 : 620;
+  const defaultRadius =
+    bossType === "omni" ? 700 : bossType === "earth" ? 660 : 620;
+  const baseRadius = opts.maxRadius ?? defaultRadius;
 
   state.bossArenaVisual = {
     bossType,
     cx,
     cy,
     radius: baseRadius,
+    roomId: opts.roomId || null,
     reveal: 0,
     theme,
     pillars: Array.from({ length: pillarCount }, (_, i) => ({
@@ -167,6 +175,11 @@ export function constrainToBossArena(entity, entityRadius = 20) {
   if (d > maxR && d > 0) {
     entity.x = ar.cx + (dx / d) * maxR;
     entity.y = ar.cy + (dy / d) * maxR;
+  }
+
+  if (ar.roomId && isDungeonCampaignBoss()) {
+    const room = getRoomById(ar.roomId);
+    if (room) constrainToRoomBounds(entity, room, entityRadius);
   }
 }
 

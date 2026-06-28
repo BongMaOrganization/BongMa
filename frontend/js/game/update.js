@@ -22,16 +22,19 @@ import {
 import {
   resolveDungeonCollision,
   resolveDoorGates,
+  moveEntityWithDungeonGates,
   updateDungeonRoomState,
   getCurrentRoom,
   getRoomById,
   getSafeSpawnPointInRoom,
   moveWithDungeonCollision,
+  moveEntityWithDungeonGates,
   constrainToRoomBounds,
   countElementalsInRoom,
   getBossGateRoom,
-  getRoomCenter,
   getMapElement,
+  getBossGatePortalPosition,
+  isDungeonCampaignBoss,
   updateHealStations,
   updateUpgradePedestals,
 } from "../world/dungeonLayout.js";
@@ -333,14 +336,26 @@ export function update(ctx, canvas, changeStateFn) {
   }
 
   if (player.dashTimeLeft > 0) {
-    player.x += player.dashDx * (currentSpeed * PLAYER_DASH_SPEED_MULTIPLIER);
-    player.y += player.dashDy * (currentSpeed * PLAYER_DASH_SPEED_MULTIPLIER);
+    const mdx = player.dashDx * (currentSpeed * PLAYER_DASH_SPEED_MULTIPLIER);
+    const mdy = player.dashDy * (currentSpeed * PLAYER_DASH_SPEED_MULTIPLIER);
+    if (state.dungeon && !state.isBossLevel && !state.bossArenaMode) {
+      moveEntityWithDungeonGates(player, mdx, mdy, player.radius);
+    } else {
+      player.x += mdx;
+      player.y += mdy;
+    }
     if (player.dashEffect) player.dashEffect();
     player.dashTimeLeft--;
     player.isInvincible = player.dashTimeLeft > 2;
   } else {
-    player.x += dx * currentSpeed;
-    player.y += dy * currentSpeed;
+    const mdx = dx * currentSpeed;
+    const mdy = dy * currentSpeed;
+    if (state.dungeon && !state.isBossLevel && !state.bossArenaMode) {
+      moveEntityWithDungeonGates(player, mdx, mdy, player.radius);
+    } else {
+      player.x += mdx;
+      player.y += mdy;
+    }
     player.isInvincible = false;
   }
 
@@ -484,6 +499,12 @@ export function update(ctx, canvas, changeStateFn) {
   if (boss && !boss.entityPhase) {
     if (!state.isMultiplayer || state.isHost) {
       updateBoss(boss);
+    }
+    if (isDungeonCampaignBoss()) {
+      resolveDungeonCollision(boss, boss.radius || 45);
+      const bossRoom = getBossGateRoom();
+      if (bossRoom) constrainToRoomBounds(boss, bossRoom, boss.radius || 45);
+      constrainToBossArena(boss, boss.radius || 45);
     }
   }
 
@@ -774,8 +795,24 @@ export function update(ctx, canvas, changeStateFn) {
       // 3. MiniBoss & Guard AI
       else if (g.isMiniBoss || g.behavior === "guard" || g.isSubBoss) {
         activeGhosts++;
+
+        if (g.isMiniBoss && g.roomId) {
+          const homeRoom = getRoomById(g.roomId);
+          if (homeRoom && !getCurrentRoom(g.x, g.y)) {
+            const pt = getSafeSpawnPointInRoom(homeRoom, 160, g.radius || 60);
+            if (pt) {
+              g.x = pt.x;
+              g.y = pt.y;
+            }
+          }
+        }
+
         if (g.isStunned > 0) g.isStunned--;
         else if (g.isMiniBoss && g.originalX !== undefined) {
+          const homeRoom = g.roomId ? getRoomById(g.roomId) : null;
+          const playerRoom = getCurrentRoom(player.x, player.y);
+          const sameRoom =
+            homeRoom && playerRoom && playerRoom.id === homeRoom.id;
           const dToPlayer = dist(g.x, g.y, player.x, player.y);
           const dPlayerFromHome = dist(
             player.x,
@@ -783,7 +820,7 @@ export function update(ctx, canvas, changeStateFn) {
             g.originalX,
             g.originalY,
           );
-          if (dToPlayer < 600 && dPlayerFromHome < 900) {
+          if (sameRoom && dToPlayer < 420 && dPlayerFromHome < 520) {
             let angle = Math.atan2(player.y - g.y, player.x - g.x);
             let moveSpeed = (g.speedRate || 1.0) * (g.speed || 1.1);
             moveGhostInDungeon(
@@ -1203,11 +1240,13 @@ function updateCapturePoints(ctx, canvas, changeStateFn) {
       const prev = state.capturePoints.find((p) => p.order === cp.order - 1);
       if (prev?.state === "completed") {
         cp.state = "guarding";
-        const room = state.dungeon?.rooms?.find((r) => r.id === cp.roomId);
+        const room = getRoomById(cp.roomId);
         const pt = room
-          ? { x: room.x + room.w / 2 + 80, y: room.y + room.h / 2 }
-          : { x: cp.x + 80, y: cp.y + 80 };
-        spawnMiniBoss(pt.x, pt.y, cp.miniBossId);
+          ? getSafeSpawnPointInRoom(room, 180, 60)
+          : null;
+        if (room && pt) {
+          spawnMiniBoss(pt.x, pt.y, cp.miniBossId, room.id);
+        }
         state.floatingTexts.push({
           x: cp.x,
           y: cp.y - 120,
@@ -1433,6 +1472,7 @@ function updateStagePortal() {
         0) >= 2;
 
     if (puzzleSolved && swarmsDone && specialsDone) {
+      const portalPos = getBossGatePortalPosition();
       state.stagePortal = {
         x: portalPos.x,
         y: portalPos.y,

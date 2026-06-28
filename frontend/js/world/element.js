@@ -123,30 +123,30 @@ export function spawnCapturePoint() {
     }
 }
 
-export function spawnMiniBoss(x, y, id) {
-    // Mini boss là một con ma cực kỳ trâu bò và to lớn
+export function spawnMiniBoss(x, y, id, roomId = null) {
     const hp = 1000 + state.currentLevel * 100;
     state.ghosts.push({
         id: id,
         isMiniBoss: true,
-        isSubBoss: true, // Thêm flag này để thừa hưởng AI và chống 1-hit
+        isSubBoss: true,
         x,
         y,
-        radius: 60, // To hơn nữa
+        radius: 60,
         hp: hp,
         maxHp: hp,
-        shield: Math.floor(hp * 0.2), // Giáp bằng 20% HP
+        shield: Math.floor(hp * 0.2),
         maxShield: Math.floor(hp * 0.2),
         shieldActive: true,
-        speed: 1.1, // Chậm hơn một chút để lỳ lợm hơn
-        speedRate: 1.0, // Thêm speedRate mặc định để không bị lỗi NaN khi update
-        color: "#ff0055", // Màu đặc trưng
+        speed: 1.1,
+        speedRate: 1.0,
+        color: "#ff0055",
         lastHazardDamageTime: 0,
         burnTimer: 0,
         isStunned: 0,
         behavior: "guard",
         originalX: x,
         originalY: y,
+        roomId: roomId || null,
         historyPath: []
     });
 }

@@ -27,12 +27,16 @@ import { beginBossCutscene, getCutsceneData } from "../game/bossCutscene.js";
 import {
   clearBossArenaVisual,
   getBossSpawnPosition,
+  setupBossArenaVisual,
 } from "../world/bossArenaVisual.js";
 import {
   generateDungeon,
   clearDungeon,
   getStartSpawnPosition,
   getSafeSpawnPointInRoom,
+  getBossGateRoom,
+  getRoomCenter,
+  getRoomBossArenaRadius,
   placeStageObjectives,
   unlockNextMap,
   unlockOmniMap,
@@ -351,6 +355,20 @@ export function activateBossFight(bossType) {
     else selectedBossType = state.pendingBossType || "fire";
   }
 
+  const bossRoom =
+    state.dungeon && !state.bossArenaMode ? getBossGateRoom() : null;
+  if (bossRoom) {
+    const center = getRoomCenter(bossRoom);
+    setupBossArenaVisual(selectedBossType, center.x, center.y, {
+      roomId: bossRoom.id,
+      maxRadius: getRoomBossArenaRadius(bossRoom, selectedBossType),
+    });
+    if (state.player) {
+      state.player.x = center.x;
+      state.player.y = center.y + 100;
+    }
+  }
+
   const spawn = getBossSpawnPosition();
   state.boss = createBoss(selectedBossType);
   if (state.boss) {
@@ -365,6 +383,8 @@ export function activateBossFight(bossType) {
   state.stagePortal = null;
   state.ghosts = [];
   state.bullets = [];
+  state.elementalEnemies = [];
+  state.elementalZones = [];
 
   UI.bossUi.style.display = "block";
   UI.bossName.innerText = state.boss.name;

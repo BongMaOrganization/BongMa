@@ -8,6 +8,11 @@ import {
   BOSS_SPECIAL_COOLDOWN_VARIANCE,
 } from "../../config.js";
 import { SPECIAL_SKILLS, ATTACK_MODES } from "./patterns.js";
+import {
+  getBossGateRoom,
+  clampPointToRoom,
+  isDungeonCampaignBoss,
+} from "../../world/dungeonLayout.js";
 
 /**
  * Trả về vị trí player sống gần boss nhất (local hoặc remote).
@@ -357,6 +362,20 @@ export function updateBoss(boss) {
       100,
       Math.min(state.world.height - 100, boss.moveTargetY),
     );
+
+    if (isDungeonCampaignBoss()) {
+      const room = getBossGateRoom();
+      if (room) {
+        const clamped = clampPointToRoom(
+          room,
+          boss.moveTargetX,
+          boss.moveTargetY,
+          boss.radius || 45,
+        );
+        boss.moveTargetX = clamped.x;
+        boss.moveTargetY = clamped.y;
+      }
+    }
   }
 
   const phaseIdx = getBossPhase(boss);
