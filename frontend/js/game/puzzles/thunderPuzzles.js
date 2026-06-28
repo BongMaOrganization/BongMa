@@ -29,10 +29,15 @@ export const lightningNodes = {
     puzzle.sequence = [0, 2, 4, 1, 3];
     puzzle.center = center;
     puzzle.flashStep = 0;
+    puzzle.touchLock = 0;
   },
 
   update(puzzle) {
     if (puzzle.solved || state.isBossLevel) return;
+    if (puzzle.touchLock > 0) {
+      puzzle.touchLock--;
+      if (puzzle.phase === "play") return;
+    }
 
     if (puzzle.phase === "show") {
       puzzle.showTimer--;
@@ -48,15 +53,18 @@ export const lightningNodes = {
     if (playerNear(node.x, node.y, 55)) {
       node.visited = true;
       puzzle.step++;
+      puzzle.touchLock = 25;
       if (puzzle.step >= puzzle.sequence.length) {
         onPuzzleComplete(puzzle, "Chuỗi Sét", "#ffee55");
       }
+      return;
     }
 
     for (const n of puzzle.nodes) {
       if (n.visited || n.id === idx) continue;
       if (playerNear(n.x, n.y, 55)) {
         puzzle.step = 0;
+        puzzle.touchLock = 30;
         puzzle.nodes.forEach((nd) => { nd.visited = false; });
         state.floatingTexts.push({
           x: state.player.x,

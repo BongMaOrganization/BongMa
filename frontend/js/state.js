@@ -6,7 +6,7 @@ export const state = {
   maxFramesToSurvive: 0,
   isBossLevel: false,
 
-  world: { width: 5000, height: 5000 },
+  world: { width: 3000, height: 3000 },
   camera: { x: 0, y: 0, width: 1536, height: 864 },
 
   player: null,
@@ -135,6 +135,8 @@ export const state = {
   },
 
   phaseTransitionTimer: 0,
+  bossCutscene: null,
+  bossArenaVisual: null,
 
   bossSpecial: {
     name: "",
@@ -198,6 +200,7 @@ export const state = {
     { id: "earth", unlocked: false },
     { id: "wind", unlocked: false },
     { id: "thunder", unlocked: false },
+    { id: "omni", unlocked: false },
   ],
   selectedMap: "fire",
   currentMapTheme: "fire",
@@ -205,7 +208,12 @@ export const state = {
   pendingBossType: null,      // boss sẽ spawn sau
   elementalZones: [], // zone của quái (KHÔNG liên quan boss)
   elementalEnemies: [], // quái có yếu tố (để render hiệu ứng)
-  dungeon: null, // layout phòng kiểu Soul Knight
+  dungeon: null,
+  healStations: [],
+  dungeonUpgradePedestals: [],
+  storySigns: [],
+  storyLog: [],
+  storyToast: null,
 
   // ===== Multiplayer State =====
   isMultiplayer: false,

@@ -35,15 +35,17 @@ export const windTotems = {
 
     if (puzzle.dashCooldown > 0) puzzle.dashCooldown--;
 
-    if (p.dashTimeLeft === 12 && puzzle.dashCooldown <= 0) {
+    const dashing = p.dashTimeLeft > 0;
+    if (dashing && !puzzle.wasDashing) {
       for (const totem of puzzle.totems) {
-        if (playerNear(totem.x, totem.y, 55)) {
+        if (playerNear(totem.x, totem.y, 60)) {
           totem.dir = (totem.dir + 1) % 4;
-          puzzle.dashCooldown = 30;
+          puzzle.dashCooldown = 20;
           break;
         }
       }
     }
+    puzzle.wasDashing = dashing;
 
     const aligned = puzzle.totems.every((t) => t.dir === t.targetDir);
     if (aligned) onPuzzleComplete(puzzle, "Trụ Gió", "#66ffcc");
@@ -124,23 +126,28 @@ export const cycloneOrbs = {
     if (puzzle.solved || state.isBossLevel) return;
 
     puzzle.orbs.forEach((orb) => {
-      orb.angle += orb.speed;
+      if (!orb.got) orb.angle += orb.speed;
     });
 
-    const orb = puzzle.orbs[puzzle.activeIndex];
+    let idx = puzzle.activeIndex;
+    for (let tries = 0; tries < puzzle.orbs.length; tries++) {
+      const orb = puzzle.orbs[idx];
+      if (orb && !orb.got) break;
+      idx = (idx + 1) % puzzle.orbs.length;
+    }
+    puzzle.activeIndex = idx;
+
+    const orb = puzzle.orbs[idx];
     if (!orb || orb.got) return;
 
-    orb.active = true;
     puzzle.windowTimer--;
 
     const x = puzzle.center.x + Math.cos(orb.angle) * orb.radius;
     const y = puzzle.center.y + Math.sin(orb.angle) * orb.radius;
 
-    if (playerNear(x, y, 50)) {
+    if (playerNear(x, y, 55)) {
       orb.got = true;
-      orb.active = false;
       puzzle.collected++;
-      puzzle.activeIndex = (puzzle.activeIndex + 1) % puzzle.orbs.length;
       puzzle.windowTimer = 150;
 
       if (puzzle.collected >= puzzle.needed) {
@@ -150,7 +157,7 @@ export const cycloneOrbs = {
     }
 
     if (puzzle.windowTimer <= 0) {
-      puzzle.activeIndex = (puzzle.activeIndex + 1) % puzzle.orbs.length;
+      puzzle.activeIndex = (idx + 1) % puzzle.orbs.length;
       puzzle.windowTimer = 150;
     }
   },

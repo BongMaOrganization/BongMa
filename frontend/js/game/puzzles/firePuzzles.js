@@ -28,10 +28,15 @@ export const emberSequence = {
       lit: false,
     }));
     puzzle.center = center;
+    puzzle.touchLock = 0;
   },
 
   update(puzzle) {
     if (puzzle.solved || state.isBossLevel) return;
+    if (puzzle.touchLock > 0) {
+      puzzle.touchLock--;
+      return;
+    }
 
     if (puzzle.phase === "show") {
       puzzle.showTimer--;
@@ -49,16 +54,18 @@ export const emberSequence = {
     if (playerNear(target.x, target.y, 58)) {
       target.lit = true;
       puzzle.step++;
+      puzzle.touchLock = 25;
       if (puzzle.step >= puzzle.sequence.length) {
         onPuzzleComplete(puzzle, "Chuỗi Than Hồng", "#ff8844");
       }
+      return;
     }
 
-    for (let i = 0; i < puzzle.braziers.length; i++) {
-      const b = puzzle.braziers[i];
-      if (b.lit || i === targetIdx) continue;
+    for (const b of puzzle.braziers) {
+      if (b.lit || b.id === targetIdx) continue;
       if (playerNear(b.x, b.y, 58)) {
         puzzle.step = 0;
+        puzzle.touchLock = 30;
         puzzle.braziers.forEach((br) => { br.lit = false; });
         state.floatingTexts.push({
           x: state.player.x,
@@ -142,11 +149,9 @@ export const lavaValve = {
     let allEmpty = true;
     for (const v of puzzle.valves) {
       if (playerNear(v.x, v.y, 72)) {
-        v.pressure = Math.max(0, v.pressure - 1.2);
-      } else {
-        v.pressure = Math.min(100, v.pressure + 0.15);
+        v.pressure = Math.max(0, v.pressure - 1.8);
       }
-      if (v.pressure > 5) allEmpty = false;
+      if (v.pressure > 2) allEmpty = false;
     }
 
     puzzle.pools.forEach((pool, i) => {

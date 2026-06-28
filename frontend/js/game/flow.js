@@ -22,12 +22,18 @@ import { initSkills } from "./skills.js";
 import { playBGM, stopAllBGM, playSound } from "./audio.js";
 import { spawnCrate, spawnCapturePoint } from "../world/element.js";
 import { createBoss, BOSS_TYPES } from "../entities/bosses/boss_manager.js";
+import { beginBossCutscene, getCutsceneData } from "../game/bossCutscene.js";
+import {
+  clearBossArenaVisual,
+  getBossSpawnPosition,
+} from "../world/bossArenaVisual.js";
 import {
   generateDungeon,
   clearDungeon,
   getStartSpawnPosition,
   placeStageObjectives,
   unlockNextMap,
+  unlockOmniMap,
   mergeMapProgress,
 } from "../world/dungeonLayout.js";
 export function initGame(isNextLevel = false) {
@@ -311,20 +317,33 @@ export async function startGame(gameLoopFn) {
   changeState("PLAYING", gameLoopFn);
 }
 
-export function startBossFight() {
-  let selectedBossType;
+export function beginBossEncounter(bossType) {
+  const type =
+    bossType ||
+    (state.bossArenaMode ? state.bossArenaType : null) ||
+    state.pendingBossType ||
+    state.selectedMap ||
+    "fire";
+  beginBossCutscene(type, () => activateBossFight(type));
+}
 
-  // 🎯 Boss Arena
-  if (state.bossArenaMode) {
-    selectedBossType = state.bossArenaType;
+export function activateBossFight(bossType) {
+  let selectedBossType = bossType;
+
+  if (!selectedBossType) {
+    if (state.bossArenaMode) selectedBossType = state.bossArenaType;
+    else selectedBossType = state.pendingBossType || "fire";
   }
 
-  // 🎮 Map thường
-  else {
-    selectedBossType = state.pendingBossType || "fire";
-  }
-
+  const spawn = getBossSpawnPosition();
   state.boss = createBoss(selectedBossType);
+  if (state.boss) {
+    state.boss.x = spawn.x;
+    state.boss.y = spawn.y;
+    state.boss.moveTargetX = state.player?.x ?? spawn.x;
+    state.boss.moveTargetY = state.player?.y ?? spawn.y;
+  }
+
   state.currentBossType = selectedBossType;
   state.isBossLevel = true;
   state.stagePortal = null;
@@ -333,6 +352,8 @@ export function startBossFight() {
 
   UI.bossUi.style.display = "block";
   UI.bossName.innerText = state.boss.name;
+  const bossIconEl = document.getElementById("boss-icon");
+  if (bossIconEl) bossIconEl.textContent = state.boss.icon || "👹";
   UI.bossHp.style.width = "100%";
   if (UI.bossHpTrail) UI.bossHpTrail.style.width = "100%";
   if (UI.bossHpMarkers) UI.bossHpMarkers.innerHTML = "";
@@ -341,15 +362,20 @@ export function startBossFight() {
 
   if (!state.floatingTexts) state.floatingTexts = [];
   state.floatingTexts.push({
-    x: state.player.x,
-    y: state.player.y - 120,
-    text: `⚠ ${state.boss.name} XUẤT HIỆN! ⚠`,
-    color: "#ff3300",
+    x: state.player?.x || spawn.x,
+    y: (state.player?.y || spawn.y) - 120,
+    text: `⚔ ${state.boss.name} — CHIẾN!`,
+    color: state.boss.color || "#ff3300",
     life: 200,
     opacity: 1,
   });
 
   playBGM(`BOSS_${state.currentLevel}`);
+}
+
+/** @deprecated — dùng beginBossEncounter() */
+export function startBossFight() {
+  beginBossEncounter();
 }
 
 export function nextStage(gameLoopFn) {
@@ -368,6 +394,23 @@ export function nextStage(gameLoopFn) {
           color: "#ffd700",
           size: 28,
           life: 240,
+          opacity: 1,
+        });
+      }
+      if (bossType === "thunder" && unlockOmniMap()) {
+        state.storyToast = {
+          title: "🌌 Trung Tâm Trạm Không Gian",
+          text:
+            "Năm Bá Chủ đã gục ngã. Lõi Trạm rung chuyển — Chúa Tể Nguyên Tố, thực thể gốc trước khi bị chia thành năm miền, đang thức giấc. Map OMNI đã mở khóa.",
+          timer: 420,
+        };
+        state.floatingTexts.push({
+          x: state.player?.x || state.world.width / 2,
+          y: (state.player?.y || state.world.height / 2) - 140,
+          text: "🌌 MAP OMNI — TRUNG TÂM TRẠM ĐÃ MỞ!",
+          color: "#ffd080",
+          size: 26,
+          life: 280,
           opacity: 1,
         });
       }
@@ -466,7 +509,7 @@ function showFragmentDrop(fragment) {
 }
 
 // ========== BOSS ARENA (Chọn boss để farm) ==========
-export async function openBossArena(changeStateFn, gameLoopFn) {
+export function openBossArena(changeStateFn, gameLoopFn) {
   const overlay = document.getElementById("screen-boss-arena");
   if (!overlay) return;
   overlay.classList.remove("hidden");
@@ -475,34 +518,49 @@ export async function openBossArena(changeStateFn, gameLoopFn) {
   const container = document.getElementById("boss-arena-cards");
   container.innerHTML = "";
 
-  const { BOSS_TYPES } = await import("../entities/bosses/boss_manager.js");
-  const bossKeys = Object.keys(BOSS_TYPES);
+  const ELEMENTAL_BOSSES = ["fire", "ice", "earth", "wind", "thunder", "omni"];
+  const SPECIAL_BOSSES = ["void", "glitch"];
 
-  bossKeys.forEach((key) => {
-    const cfg = BOSS_TYPES[key];
-    const frag = BOSS_FRAGMENTS.find((f) => f.bossType === key);
-    const reward = BOSS_ARENA_REWARDS[key] || { coins: 100, rareTicket: 0.1 };
-    const owned = (state.bossFragments || []).includes(frag?.id);
+  function appendSection(title, keys) {
+    const heading = document.createElement("div");
+    heading.className = "boss-arena-section-title";
+    heading.textContent = title;
+    container.appendChild(heading);
 
-    const card = document.createElement("div");
-    card.className = "premium-card boss-arena-card";
-    card.style.setProperty("--theme-color", cfg.color);
-    card.innerHTML = `
-      <div class="premium-card-icon" style="color:${cfg.color};text-shadow:0 0 15px ${cfg.color}">${cfg.icon || "👹"}</div>
-      <div class="premium-card-title">${cfg.name}</div>
-      <div class="premium-card-subtitle">${cfg.phaseCount || 2} Phase | HP: ${cfg.hp}</div>
-      <div class="premium-card-drop">${frag ? `${frag.icon} ${frag.name} ${owned ? "✅" : "❌"}` : ""}</div>
-      <div class="premium-card-reward">💰 ${reward.coins} | 🎟️ ${Math.round(reward.rareTicket * 100)}%</div>
-    `;
+    keys.forEach((key) => {
+      if (!BOSS_TYPES[key]) return;
+      const cfg = BOSS_TYPES[key];
+      const cs = getCutsceneData(key);
+      const frag = BOSS_FRAGMENTS.find((f) => f.bossType === key);
+      const reward = BOSS_ARENA_REWARDS[key] || { coins: 100, rareTicket: 0.1 };
+      const owned = (state.bossFragments || []).includes(frag?.id);
 
-    card.onclick = () => {
-      overlay.classList.add("hidden");
-      UI.main.classList.add("hidden"); // Ensure main menu is gone
-      startBossArenaFight(key, changeStateFn, gameLoopFn);
-    };
+      const card = document.createElement("div");
+      card.className = "premium-card boss-arena-card";
+      card.style.setProperty("--theme-color", cfg.color);
+      card.innerHTML = `
+        <div class="premium-card-icon" style="color:${cfg.color};text-shadow:0 0 15px ${cfg.color}">${cfg.icon || "👹"}</div>
+        <div class="premium-card-title">${cfg.name}</div>
+        <div class="boss-arena-realm">${cs.arenaIntro}</div>
+        <div class="premium-card-subtitle">${cfg.phaseCount || cfg.phases?.length || 3} Phase · HP ${cfg.hp}</div>
+        <div class="boss-arena-flavor">${cs.lines[0] || ""}</div>
+        <div class="premium-card-drop">${frag ? `${frag.icon} ${frag.name} ${owned ? "✅" : "❌"}` : ""}</div>
+        <div class="premium-card-reward">💰 ${reward.coins} · 🎟️ ${Math.round(reward.rareTicket * 100)}%</div>
+        <div class="boss-arena-fight-hint">▶ VÀO ĐẤU TRƯỜNG</div>
+      `;
 
-    container.appendChild(card);
-  });
+      card.onclick = () => {
+        overlay.classList.add("hidden");
+        UI.main.classList.add("hidden");
+        startBossArenaFight(key, changeStateFn, gameLoopFn);
+      };
+
+      container.appendChild(card);
+    });
+  }
+
+  appendSection("BÁ CHỦ NGUYÊN TỐ", ELEMENTAL_BOSSES);
+  appendSection("THỰC THỂ ĐẶC BIỆT", SPECIAL_BOSSES);
 }
 
 export function startBossArenaFight(bossType, changeStateFn, gameLoopFn) {
@@ -510,27 +568,21 @@ export function startBossArenaFight(bossType, changeStateFn, gameLoopFn) {
   state.bossArenaType = bossType;
   initGame(false);
 
-  // Override to boss level — xoá sạch thực thể map thường do initGame sinh ra
-  state.isBossLevel = true;
+  state.isBossLevel = false;
+  state.boss = null;
   state.swarmZones = [];
   state.crates = [];
   state.capturePoints = [];
   state.maxFramesToSurvive = 999999;
   state.currentBossType = bossType;
-  state.boss = createBoss(bossType);
-  state.ghosts = [];
 
-  // ✅ THÊM DÒNG NÀY: Ép tải lại bối cảnh theo đúng con Boss vừa tạo
   import("../game/mapTheme.js").then((m) => m.initMapTheme());
 
-  UI.bossUi.style.display = "block";
-  UI.bossName.innerText = state.boss.name;
-  UI.bossHp.style.width = "100%";
-  if (UI.bossHpTrail) UI.bossHpTrail.style.width = "100%";
-  if (UI.bossHpMarkers) UI.bossHpMarkers.innerHTML = "";
+  UI.bossUi.style.display = "none";
   UI.timer.innerText = "BOSS ARENA";
 
   changeState("PLAYING", gameLoopFn);
+  beginBossCutscene(bossType, () => activateBossFight(bossType));
 }
 
 export function handleBossArenaReward(gameLoopFn) {
@@ -661,6 +713,8 @@ export function resetSkillsState() {
     freezeTimer: 0,
     fieldBurn: 0,
   };
+  state.bossCutscene = null;
+  clearBossArenaVisual();
   state.windForce = { x: 0, y: 0, timer: 0 };
   resetGlitchState();
   // Cập nhật lại UI kĩ năng (CD và Border)

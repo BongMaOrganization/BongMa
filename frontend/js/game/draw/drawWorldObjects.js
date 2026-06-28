@@ -105,6 +105,24 @@ export function drawCapturePoints(ctx) {
     if (cp.state === "completed") return;
 
     ctx.save();
+
+    if (cp.state === "locked") {
+      ctx.strokeStyle = "rgba(120,120,120,0.5)";
+      ctx.lineWidth = 3;
+      ctx.setLineDash([10, 8]);
+      ctx.beginPath();
+      ctx.arc(cp.x, cp.y, 80, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = "#888";
+      ctx.font = "bold 20px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(`🔒 CP ${cp.order}`, cp.x, cp.y + 6);
+      ctx.font = "13px Arial";
+      ctx.fillText("Chiếm CP trước đó", cp.x, cp.y + 28);
+      ctx.restore();
+      return;
+    }
+
     const pulse = Math.sin(state.frameCount * 0.1) * 10;
     const progressRatio = cp.progress / cp.totalProgress;
 
@@ -293,7 +311,9 @@ export function drawCapturePoints(ctx) {
     ctx.font = "bold 18px Arial";
     ctx.textAlign = "center";
     const label =
-      cp.state === "guarding" ? "🛡️ DIỆT THỦ VỆ" : "⚡ ĐANG CHIẾM ĐỨNG...";
+      cp.state === "guarding"
+        ? `🛡️ CP ${cp.order || ""} — DIỆT THỦ VỆ`
+        : `⚡ CP ${cp.order || ""} — CHIẾM ĐÓNG...`;
     ctx.fillText(label, cp.x, cp.y - 145);
 
     ctx.restore();

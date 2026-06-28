@@ -36,6 +36,11 @@ import {
 } from "./draw/drawHUD.js";
 import { drawMinimap } from "./draw/drawMinimap.js";
 import { drawWorldObjects, drawFloatingTexts } from "./draw/drawWorldObjects.js";
+import { drawStoryToast } from "../world/storyLore.js";
+import { drawBossCutscene } from "./bossCutscene.js";
+import {
+  drawBossArenaVisual,
+} from "../world/bossArenaVisual.js";
 import { drawRemotePlayers, drawRemoteBullets, drawReviveZones, drawMpPlayersHUD } from "./draw/drawRemotePlayers.js";
 import { shouldSkipCharacterVfxFrame, getPerfLoadLevel } from "./vfxBudget.js";
 import { beginFrameQuality, getRenderScale } from "./graphics.js";
@@ -88,6 +93,7 @@ export function draw(ctx, canvas) {
   // --- Background ---
   drawThemedBackground(ctx);
   drawDungeon(ctx);
+  drawBossArenaVisual(ctx);
   drawPermanentScars(ctx);
 
   // --- World objects (crates, puzzles, portals, swarm zones, items, floating texts) ---
@@ -216,6 +222,12 @@ export function draw(ctx, canvas) {
 
   // --- Minimap ---
   drawMinimap(ctx, canvas);
+
+  // --- Story lore toast ---
+  drawStoryToast(ctx, canvas);
+
+  // --- Boss intro cutscene ---
+  drawBossCutscene(ctx, canvas);
 
   // --- Nuke flash ---
   drawNukeFlash(ctx, canvas);

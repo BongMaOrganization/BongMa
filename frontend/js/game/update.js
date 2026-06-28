@@ -16,13 +16,17 @@ import {
 } from "../entities/elementalEnemies.js";
 import {
   resolveDungeonCollision,
+  resolveDoorGates,
   updateDungeonRoomState,
   getCurrentRoom,
   countElementalsInRoom,
   getBossGateRoom,
   getRoomCenter,
   getMapElement,
+  updateHealStations,
+  updateUpgradePedestals,
 } from "../world/dungeonLayout.js";
+import { updateStorySigns } from "../world/storyLore.js";
 import {
   updateBullets,
   playerTakeDamage,
@@ -30,9 +34,17 @@ import {
   addExperience,
 } from "./combat.js";
 import { updateBoss } from "../entities/bosses/boss_manager.js";
-import { startBossFight } from "./flow.js";
+import { beginBossEncounter } from "./flow.js";
+import {
+  updateBossCutscene,
+  isBossCutsceneActive,
+} from "./bossCutscene.js";
+import {
+  updateBossArenaVisual,
+  constrainToBossArena,
+} from "../world/bossArenaVisual.js";
 import { spawnBullet } from "../entities/helpers.js";
-import { spawnCrate, spawnCrystal } from "../world/element.js";
+import { spawnCrate, spawnCrystal, spawnMiniBoss } from "../world/element.js";
 import { ATTACK_MODES, SPECIAL_SKILLS } from "../entities/bosses/patterns.js";
 import { updateMultiplayer, onMultiplayerPlayerDead } from "../multiplayer/mpFlow.js";
 import { enforceBulletBudget, enforceVfxBudget } from "./vfxBudget.js";
@@ -118,8 +130,33 @@ export function update(ctx, canvas, changeStateFn) {
     return null;
   }
 
+  if (isBossCutsceneActive()) {
+    updateBossCutscene();
+    updateBossArenaVisual();
+    if (player && canvas) {
+      state.camera.width = canvas.width;
+      state.camera.height = canvas.height;
+      state.camera.x = Math.max(
+        0,
+        Math.min(player.x - canvas.width / 2, state.world.width - canvas.width),
+      );
+      state.camera.y = Math.max(
+        0,
+        Math.min(player.y - canvas.height / 2, state.world.height - canvas.height),
+      );
+    }
+    state.frameCount++;
+    return null;
+  }
+
+  if (state.isBossLevel || state.bossArenaVisual) {
+    updateBossArenaVisual();
+  }
+
   updateElementalZones(state.player);
   updateElementalEnemies(state.player);
+  updateHealStations();
+  updateUpgradePedestals();
   // --- 1. Quản lý Camera & Boundaries ---
   state.camera.width = canvas.width;
   state.camera.height = canvas.height;
@@ -303,7 +340,14 @@ export function update(ctx, canvas, changeStateFn) {
   );
 
   resolveDungeonCollision(player, player.radius);
+  resolveDoorGates(player, player.radius);
   updateDungeonRoomState(player);
+  updateStorySigns(player);
+
+  if (state.isBossLevel || state.bossArenaVisual) {
+    constrainToBossArena(player, player.radius);
+    if (boss) constrainToBossArena(boss, boss.radius || 45);
+  }
 
   // --- 5. Bắn Súng (Dùng chung) ---
   let shotThisFrame = false;
@@ -1024,7 +1068,7 @@ export function update(ctx, canvas, changeStateFn) {
       dist(player.x, player.y, state.stagePortal.x, state.stagePortal.y) <
       state.stagePortal.radius
     ) {
-      startBossFight();
+      beginBossEncounter(state.pendingBossType || state.selectedMap);
     }
   }
 
@@ -1095,6 +1139,27 @@ function updateCapturePoints(ctx, canvas, changeStateFn) {
   if (!state.capturePoints) return;
   state.capturePoints.forEach((cp) => {
     if (cp.state === "completed") return;
+
+    if (cp.state === "locked") {
+      const prev = state.capturePoints.find((p) => p.order === cp.order - 1);
+      if (prev?.state === "completed") {
+        cp.state = "guarding";
+        const room = state.dungeon?.rooms?.find((r) => r.id === cp.roomId);
+        const pt = room
+          ? { x: room.x + room.w / 2 + 80, y: room.y + room.h / 2 }
+          : { x: cp.x + 80, y: cp.y + 80 };
+        spawnMiniBoss(pt.x, pt.y, cp.miniBossId);
+        state.floatingTexts.push({
+          x: cp.x,
+          y: cp.y - 120,
+          text: `🚩 CỨ ĐIỂM ${cp.order} ĐÃ MỞ — DIỆT THỦ VỆ!`,
+          color: "#FFD700",
+          life: 160,
+          opacity: 1,
+        });
+      }
+      return;
+    }
 
     if (cp.state === "guarding") {
       // Tìm boss theo id (đáng tin cậy hơn), fallback theo vị trí nhưng bán kính lớn hơn

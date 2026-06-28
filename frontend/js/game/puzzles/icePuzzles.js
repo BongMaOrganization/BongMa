@@ -30,10 +30,15 @@ export const frostPath = {
     }));
     puzzle.sequence = [0, 2, 4, 1, 3];
     puzzle.center = center;
+    puzzle.touchLock = 0;
   },
 
   update(puzzle) {
     if (puzzle.solved || state.isBossLevel) return;
+    if (puzzle.touchLock > 0) {
+      puzzle.touchLock--;
+      if (puzzle.phase === "play") return;
+    }
 
     if (puzzle.phase === "show") {
       puzzle.showTimer--;
@@ -56,15 +61,18 @@ export const frostPath = {
       tile.active = true;
       puzzle.step++;
       puzzle.replayTimer = 0;
+      puzzle.touchLock = 25;
       if (puzzle.step >= puzzle.sequence.length) {
         onPuzzleComplete(puzzle, "Đường Băng", "#88eeff");
       }
+      return;
     }
 
     for (const t of puzzle.tiles) {
       if (t.active || t.id === idx) continue;
       if (playerNear(t.x, t.y, 52)) {
         puzzle.step = 0;
+        puzzle.touchLock = 30;
         puzzle.tiles.forEach((tl) => { tl.active = false; });
         puzzle.replayTimer = 0;
         break;

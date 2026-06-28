@@ -6,7 +6,7 @@ export function getPuzzleLayout() {
   const center = room
     ? { x: room.x + room.w / 2, y: room.y + room.h / 2 }
     : { x: state.world.width / 2, y: state.world.height / 2 };
-  const radius = room ? Math.min(room.w, room.h) * 0.36 : 360;
+  const radius = room ? Math.min(room.w, room.h) * 0.32 : 280;
   return { room, center, radius };
 }
 
@@ -50,6 +50,9 @@ export function onPuzzleComplete(puzzle, title, color = "#00ffcc") {
     opacity: 1,
   });
   state.screenShake = { timer: 20, intensity: 8, x: 0, y: 0 };
+
+  const puzzleRoom = state.dungeon?.rooms?.find((r) => r.type === "puzzle");
+  if (puzzleRoom) puzzleRoom.cleared = true;
 }
 
 export function drawMarker(ctx, x, y, color, radius = 18, pulse = true) {

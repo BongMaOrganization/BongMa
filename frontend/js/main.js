@@ -15,6 +15,7 @@ import {
   openBossArena,
   handleBossArenaReward,
 } from "./game/flow.js";
+import { skipBossCutscene } from "./game/bossCutscene.js";
 import { update } from "./game/update.js";
 import { draw } from "./game/draw.js";
 import { initGraphics, needsAutoDetect, sampleAutoDetect } from "./game/graphics.js";
@@ -238,6 +239,13 @@ if (arenaBack) {
   arenaBack.onclick = () => {
     document.getElementById("screen-boss-arena").classList.add("hidden");
     document.getElementById("screen-main").classList.remove("hidden");
+  };
+}
+const skipCutsceneBtn = document.getElementById("btn-skip-cutscene");
+if (skipCutsceneBtn) {
+  skipCutsceneBtn.onclick = (e) => {
+    e.stopPropagation();
+    skipBossCutscene();
   };
 }
 const mapBack = document.getElementById("btn-map-back");

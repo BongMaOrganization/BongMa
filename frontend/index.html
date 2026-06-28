@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bóng Ma - Huyết Chiến Thời Gian</title>
     <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/ui-polish.css" />
     <link rel="stylesheet" href="css/multiplayer.css" />
   </head>
 
@@ -13,6 +14,9 @@
 
     <div id="game-container">
       <canvas id="gameCanvas" width="1536" height="864"></canvas>
+      <div id="boss-cutscene-skip" class="boss-cutscene-skip hidden">
+        <button id="btn-skip-cutscene" type="button">⏭ Bỏ qua cutscene (Esc)</button>
+      </div>
       <div id="fps-counter" style="display:none">— FPS</div>
 
       <div class="hud-layer">
@@ -116,10 +120,10 @@
       <!-- UI Screens -->
       <div id="screen-main" class="overlay">
         <div class="panel main-menu-panel">
-          <div class="menu-header">
+          <div class="menu-header panel-header-block">
             <h2 id="main-title" class="title-main text-cyan glitch-text" data-text="TRẠM KHÔNG GIAN">TRẠM KHÔNG GIAN</h2>
             <p id="main-desc" class="desc">
-              Hành trình đối mặt với những ảo ảnh của chính bạn. Hãy lựa chọn điểm đến tiếp theo.
+              Bạn là Echo — bóng ma của vòng lặp thời gian. Chọn điểm đến, sống sót, và đối đầu chính mình.
             </p>
           </div>
 
@@ -200,13 +204,13 @@
         </div>
       </div>
       <div id="screen-map-select" class="overlay hidden">
-        <div class="panel" style="max-width: 800px;">
-          <h2 class="title-main text-cyan" style="text-shadow: 0 0 15px cyan;">CHỌN BẢN ĐỒ</h2>
-          <p class="desc">Đánh bại boss để mở khóa map mới. Chọn chiến trường của bạn.</p>
-
+        <div class="panel" style="max-width: 860px;">
+          <div class="panel-header-block">
+            <h2 class="title-main text-cyan">CHỌN BẢN ĐỒ</h2>
+            <p class="desc">Đánh bại Bá Chủ từng miền để mở khóa chiến trường tiếp theo. Mỗi map là một mảnh vỡ của Trạm Không Gian.</p>
+          </div>
           <div id="map-list" class="premium-card-container"></div>
-
-          <button id="btn-map-back" class="menu-btn-utility" style="margin-top: 25px; padding: 10px 40px;">Quay Lại</button>
+          <button id="btn-map-back" class="menu-btn-utility" style="margin-top: 25px; padding: 10px 40px;">← Quay Lại</button>
         </div>
       </div>
       <div id="screen-upgrade" class="overlay hidden">
@@ -308,13 +312,15 @@
       </div>
     </div>
     <div id="screen-boss-arena" class="overlay hidden">
-      <div class="panel" style="max-width: 900px;">
-        <h2 class="title-main" style="color: #ff4444; text-shadow: 0 0 15px #ff4444;">⚔️ BOSS ARENA</h2>
-        <p class="desc">
-          Đấu trường sinh tử vô tận. Hạ gục Boss để nhận mảnh ghép Mythical.
-        </p>
+      <div class="panel boss-arena-panel">
+        <div class="panel-header-block">
+          <h2 class="title-main" style="color: #ff5566; text-shadow: 0 0 20px rgba(255,80,80,0.5);">⚔ BOSS ARENA</h2>
+          <p class="desc">
+            Đấu trường riêng cho từng Bá Chủ — cutscene hoành tráng, vòng đấu theo nguyên tố, rồi chiến đấu sinh tử. Hạ boss để farm mảnh Mythical.
+          </p>
+        </div>
         <div class="premium-card-container" id="boss-arena-cards"></div>
-        <button id="btn-arena-back" class="menu-btn-utility" style="margin-top: 25px; padding: 10px 40px;">Quay Lại</button>
+        <button id="btn-arena-back" class="menu-btn-utility" style="margin-top: 25px; padding: 10px 40px;">← Quay Lại</button>
       </div>
     </div>
     <div id="fragment-drop-overlay" class="overlay hidden">

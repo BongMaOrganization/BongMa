@@ -258,9 +258,14 @@ export function updateBossUI() {
   // Update theme
   const bossThemeClass = `boss-theme-${boss.bossType || boss.id || "default"}`;
   if (!UI.bossUi.classList.contains(bossThemeClass)) {
-    UI.bossUi.className = ""; // clear all
+    UI.bossUi.className = "";
+    UI.bossUi.id = "boss-ui";
+    UI.bossUi.style.display = "block";
     UI.bossUi.classList.add(bossThemeClass);
   }
+
+  const bossIconEl = document.getElementById("boss-icon");
+  if (bossIconEl && boss.icon) bossIconEl.textContent = boss.icon;
 
   let phase;
   if (boss.phaseCount === 5) {
@@ -428,8 +433,9 @@ const MAP_CARD_META = {
   omni: {
     title: "OMNI",
     icon: "&#10024;",
-    flavor: "Hoi tu moi nguyen to",
-    status: "Tin hieu kha dung",
+    flavor: "Trung tam tram — hoi tu 5 nguyen to",
+    status: "San sang",
+    lockedHint: "Ha Loi Than de mo",
     color: "#ffd96b",
     colorSoft: "rgba(255, 217, 107, 0.18)",
     core: "rgba(129, 111, 42, 0.32)",
@@ -476,7 +482,7 @@ export function renderMapSelect(onSelect) {
       </div>
       <div class="premium-card-title">${meta.title}</div>
       <div class="map-card-flavor">${meta.flavor}</div>
-      <div class="premium-card-subtitle">${map.unlocked ? meta.status : "Chua thu thap du du lieu &#128274;"}</div>
+      <div class="premium-card-subtitle">${map.unlocked ? meta.status : (meta.lockedHint || "Chua thu thap du du lieu") + " &#128274;"}</div>
     `;
 
     if (!map.unlocked) {

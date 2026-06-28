@@ -22,6 +22,9 @@ export function getPuzzlesForMap(mapId) {
 }
 
 export function pickPuzzleForMap(mapId) {
+  if (mapId === "omni") {
+    return ALL_PUZZLES[Math.floor(Math.random() * ALL_PUZZLES.length)];
+  }
   const pool = getPuzzlesForMap(mapId);
   return pool[Math.floor(Math.random() * pool.length)];
 }
