@@ -14,7 +14,6 @@ import {
   updateMapMechanic,
   applyMapEnemyModifier,
   isMapObjectiveDone,
-  getMapElement,
 } from "../game/mapMechanics.js";
 import {
   updateElementalEnemies,
