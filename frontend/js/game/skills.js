@@ -123,8 +123,12 @@ function triggerSkill(key, canvas, changeStateFn) {
 
 export function handleSkillsUpdate(canvas, changeStateFn) {
   if (!state.skillsCD) initSkills();
+  // Chết (đang chờ hồi sinh trong MP) thì không được dùng chiêu. update() đã
+  // chặn bắn/di chuyển khi chết, nhưng skill trigger ở đây (trước update) nên
+  // phải chặn riêng.
+  const canCast = !state.player?.isDead;
   ["q", "e", "r"].forEach((key) => {
-    if (state.keys[key] && !state.prevKeys[key] && state.skillsCD[key] <= 0) {
+    if (canCast && state.keys[key] && !state.prevKeys[key] && state.skillsCD[key] <= 0) {
       triggerSkill(key, canvas, changeStateFn);
     }
     if (state.skillsCD[key] > 0) state.skillsCD[key]--;
