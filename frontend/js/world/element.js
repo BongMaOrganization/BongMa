@@ -1,6 +1,9 @@
 import { state } from "../state.js";
 import { FPS } from "../config.js";
 import { dist } from "../utils.js";
+import { spawnMiniBoss } from "../entities/miniBosses.js";
+
+export { spawnMiniBoss };
 
 export function spawnCrate() {
     const maxCrates = 10;
@@ -119,36 +122,8 @@ export function spawnCapturePoint() {
         });
 
         // Spawn Mini-Boss hơi lệch ra một chút để không bị đè lên Trụ
-        spawnMiniBoss(x + 100, y + 100, id + "_boss");
+        spawnMiniBoss(x + 100, y + 100, id + "_boss", null, 1);
     }
-}
-
-export function spawnMiniBoss(x, y, id, roomId = null) {
-    const hp = 1000 + state.currentLevel * 100;
-    state.ghosts.push({
-        id: id,
-        isMiniBoss: true,
-        isSubBoss: true,
-        x,
-        y,
-        radius: 60,
-        hp: hp,
-        maxHp: hp,
-        shield: Math.floor(hp * 0.2),
-        maxShield: Math.floor(hp * 0.2),
-        shieldActive: true,
-        speed: 1.1,
-        speedRate: 1.0,
-        color: "#ff0055",
-        lastHazardDamageTime: 0,
-        burnTimer: 0,
-        isStunned: 0,
-        behavior: "guard",
-        originalX: x,
-        originalY: y,
-        roomId: roomId || null,
-        historyPath: []
-    });
 }
 
 export function spawnCrystal(x, y, rewardType) {

@@ -1,6 +1,7 @@
 import { state } from "../../state.js";
 import { dist } from "../../utils.js";
 import { shouldUseMinimalEnemyDraw } from "../vfxBudget.js";
+import { drawMiniBoss } from "../../entities/miniBosses.js";
 
 function isVisible(x, y, radius = 0, padding = 180) {
   const cam = state.camera;
@@ -26,24 +27,9 @@ export function drawEnemies(ctx) {
     if (g.x < 0) continue;
     if (!isVisible(g.x, g.y, g.radius || 12)) continue;
 
-    // Guard zone indicator for mini-boss
-    if (g.isMiniBoss && g.behavior === "guard") {
-      const guardRadius = 800;
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(g.originalX, g.originalY, guardRadius, 0, Math.PI * 2);
-
-      ctx.fillStyle = "rgba(255, 0, 85, 0.04)";
-      ctx.fill();
-
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = "rgba(255, 0, 85, 0.3)";
-      ctx.setLineDash([15, 15]);
-      ctx.lineDashOffset = -(state.frameCount * 0.5);
-      ctx.stroke();
-
-      ctx.restore();
+    if (g.isMiniBoss) {
+      drawMiniBoss(ctx, g, minimalDraw);
+      continue;
     }
 
     let isDashing =
@@ -120,43 +106,6 @@ export function drawEnemies(ctx) {
       ctx.strokeStyle = isDashing ? "#00ffcc" : "#ff0000";
       ctx.lineWidth = 2;
       ctx.stroke();
-    }
-
-    // Mini-boss HP bar
-    if (g.isMiniBoss && g.hp !== undefined) {
-      const barWidth = 100;
-      const barHeight = 12;
-      const bx = g.x - barWidth / 2;
-      const by = g.y - g.radius - 25;
-
-      ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-      ctx.fillRect(bx, by, barWidth, barHeight);
-
-      const hpRatio = Math.max(0, g.hp / g.maxHp);
-      ctx.fillStyle = g.hp > g.maxHp * 0.3 ? "#ff1144" : "#ff9900";
-      ctx.fillRect(bx, by, barWidth * hpRatio, barHeight);
-
-      if (g.shieldActive && (g.shield || 0) > 0) {
-        const shieldRatio = Math.max(0, g.shield / g.maxShield);
-        ctx.fillStyle = "rgba(0, 255, 255, 0.7)";
-        ctx.fillRect(bx, by, barWidth * shieldRatio, barHeight);
-
-        const pulse = (Math.sin(state.frameCount * 0.2) + 1) * 0.5;
-        ctx.strokeStyle = `rgba(255, 255, 255, ${0.4 + pulse * 0.4})`;
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(bx, by, barWidth * shieldRatio, barHeight);
-      }
-
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.9)";
-      ctx.lineWidth = 2;
-      ctx.strokeRect(bx, by, barWidth, barHeight);
-
-      if (g.hp > 0) {
-        ctx.fillStyle = "#fff";
-        ctx.font = "bold 10px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("MINI BOSS", g.x, by - 5);
-      }
     }
   }
 

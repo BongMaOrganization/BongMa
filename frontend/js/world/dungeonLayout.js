@@ -698,7 +698,7 @@ function createCapturePoint(room, order) {
   const bossPt =
     getSafeSpawnPointInRoom(room, 180, 60) || getRoomCenter(room);
   if (order === 1) {
-    spawnMiniBoss(bossPt.x, bossPt.y, cp.miniBossId, room.id);
+    spawnMiniBoss(bossPt.x, bossPt.y, cp.miniBossId, room.id, order);
   }
   return cp;
 }

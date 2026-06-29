@@ -6,6 +6,7 @@ import {
   isRoomExitAllowed,
   getStartRoomGuidance,
 } from "../../world/dungeonLayout.js";
+import { getMiniBossDisplayName } from "../../entities/miniBosses.js";
 import {
   getMapObjectiveLabel,
   isMapObjectiveDone,
@@ -216,12 +217,18 @@ export function drawStageConditionsHUD(ctx, canvas) {
   const cp2 = cp.find((c) => c.order === 2);
   const cp1Done = cp1?.state === "completed";
   const cp2Done = cp2?.state === "completed";
+  const cp1Boss =
+    state.ghosts?.find((g) => g.id === cp1?.miniBossId)?.miniBossName ||
+    getMiniBossDisplayName(1);
+  const cp2Boss =
+    state.ghosts?.find((g) => g.id === cp2?.miniBossId)?.miniBossName ||
+    getMiniBossDisplayName(2);
   lines.push({
-    text: `🚩 Cứ điểm 1: ${cp1Done ? "✔️" : cp1?.state === "locked" ? "🔒" : cp1?.state === "guarding" ? "Diệt boss" : "Đang chiếm"}`,
+    text: `🚩 CP1: ${cp1Done ? "✔️" : cp1?.state === "locked" ? "🔒" : cp1?.state === "guarding" ? `Diệt ${cp1Boss}` : "Đang chiếm"}`,
     color: cp1Done ? "#00ffcc" : "#fff",
   });
   lines.push({
-    text: `🚩 Cứ điểm 2: ${cp2Done ? "✔️" : !cp1Done ? "🔒 (cần CP1)" : cp2?.state === "guarding" ? "Diệt boss" : "Đang chiếm"}`,
+    text: `🚩 CP2: ${cp2Done ? "✔️" : !cp1Done ? "🔒 (cần CP1)" : cp2?.state === "guarding" ? `Diệt ${cp2Boss}` : "Đang chiếm"}`,
     color: cp2Done ? "#00ffcc" : !cp1Done ? "#888" : "#fff",
   });
 

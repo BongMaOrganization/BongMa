@@ -56,6 +56,7 @@ import {
 } from "../world/bossArenaVisual.js";
 import { spawnBullet } from "../entities/helpers.js";
 import { spawnCrate, spawnCrystal, spawnMiniBoss } from "../world/element.js";
+import { updateMiniBossCombat } from "../entities/miniBosses.js";
 import { ATTACK_MODES, SPECIAL_SKILLS } from "../entities/bosses/patterns.js";
 import {
   updateMultiplayer,
@@ -827,8 +828,7 @@ export function update(ctx, canvas, changeStateFn) {
               Math.cos(angle) * moveSpeed,
               Math.sin(angle) * moveSpeed,
             );
-            if (state.frameCount % 60 === 0)
-              spawnBullet(g.x, g.y, player.x, player.y, false, 2, "ghost", 1.5);
+            updateMiniBossCombat(g, player, true);
           } else {
             // Rút về nhà — KHÔNG hồi máu trong khi di chuyển
             const dHome = dist(g.x, g.y, g.originalX, g.originalY);
@@ -1244,12 +1244,14 @@ function updateCapturePoints(ctx, canvas, changeStateFn) {
           ? getSafeSpawnPointInRoom(room, 180, 60)
           : null;
         if (room && pt) {
-          spawnMiniBoss(pt.x, pt.y, cp.miniBossId, room.id);
+          spawnMiniBoss(pt.x, pt.y, cp.miniBossId, room.id, cp.order);
         }
+        const bossName =
+          state.ghosts.find((g) => g.id === cp.miniBossId)?.miniBossName || "Thủ vệ";
         state.floatingTexts.push({
           x: cp.x,
           y: cp.y - 120,
-          text: `🚩 CỨ ĐIỂM ${cp.order} ĐÃ MỞ — DIỆT THỦ VỆ!`,
+          text: `🚩 CỨ ĐIỂM ${cp.order} — DIỆT ${bossName.toUpperCase()}!`,
           color: "#FFD700",
           life: 160,
           opacity: 1,
