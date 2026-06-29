@@ -171,6 +171,7 @@ export function initGame(isNextLevel = false) {
     );
     if (startRoom) {
       state.ghosts.forEach((g, idx) => {
+        if (g.isMiniBoss) return;
         const pt = getSafeSpawnPointInRoom(startRoom, 140);
         if (!pt) return;
         g.x = pt.x + (idx % 3) * 36 - 36;
