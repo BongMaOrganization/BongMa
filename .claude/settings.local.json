@@ -24,7 +24,8 @@
       "Bash(node --check /tmp/c.mjs)",
       "Bash(rm -f /tmp/c.mjs)",
       "Bash(cp input.js /tmp/c.mjs)",
-      "Bash(cp game/skills.js /tmp/c.mjs)"
+      "Bash(cp game/skills.js /tmp/c.mjs)",
+      "mcp__Claude_Preview__preview_start"
     ]
   }
 }

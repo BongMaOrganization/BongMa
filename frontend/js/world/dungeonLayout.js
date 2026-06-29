@@ -25,11 +25,14 @@ const DEFAULT_MAPS = [
 ];
 
 export function mergeMapProgress(savedMaps) {
-  if (!Array.isArray(savedMaps)) return DEFAULT_MAPS.map((m) => ({ ...m }));
-  return DEFAULT_MAPS.map((def) => {
-    const found = savedMaps.find((m) => m.id === def.id);
-    return found ? { ...def, unlocked: !!found.unlocked } : { ...def };
-  });
+  // TẠM (TEST): mở hết map bất kể tiến trình lưu. XOÁ block này khi test xong.
+  return DEFAULT_MAPS.map((m) => ({ ...m, unlocked: true }));
+  // --- bản gốc ---
+  // if (!Array.isArray(savedMaps)) return DEFAULT_MAPS.map((m) => ({ ...m }));
+  // return DEFAULT_MAPS.map((def) => {
+  //   const found = savedMaps.find((m) => m.id === def.id);
+  //   return found ? { ...def, unlocked: !!found.unlocked } : { ...def };
+  // });
 }
 
 const ROOM_SIZE = 1000;

@@ -569,6 +569,11 @@ function drawFirePool(ctx, pool, frame) {
   ctx.strokeStyle = "rgba(44, 18, 10, 0.94)";
   ctx.lineWidth = 10;
   ctx.stroke();
+  // Vành cảnh báo sáng nhấp nháy — tách vũng lửa khỏi nền đỏ
+  const warn = 0.5 + Math.sin(frame * 0.08 + pool.pulse) * 0.5;
+  ctx.strokeStyle = `rgba(255, 240, 120, ${0.5 + warn * 0.45})`;
+  ctx.lineWidth = 4;
+  ctx.stroke();
   ctx.strokeStyle = "rgba(255, 150, 58, 0.34)";
   ctx.lineWidth = 3;
   ctx.stroke();
@@ -583,6 +588,16 @@ function drawFirePool(ctx, pool, frame) {
     ctx.fill();
     ctx.restore();
   });
+
+  // Marker vùng sát thương thật (vòng rx*0.85) — nét đứt đỏ chạy quanh
+  ctx.setLineDash([14, 10]);
+  ctx.lineDashOffset = -(frame * 0.6) % 24;
+  ctx.strokeStyle = `rgba(255, 60, 40, ${0.55 + warn * 0.4})`;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, pool.rx * 0.85, pool.ry * 0.85, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
 
   ctx.restore();
 }
