@@ -990,6 +990,16 @@ export function update(ctx, canvas, changeStateFn) {
         }
       }
 
+      // Rock telegraph → nhô lên rồi mới active (gây damage). Trước đây rock
+      // spawn active:false và KHÔNG bao giờ bật → mọi chiêu đất vô hại.
+      // Telegraph scale theo maxLife: đá lăn (life ngắn, đã có warning riêng)
+      // bật nhanh; cọc lớn (life dài) cảnh báo ~0.3s.
+      if (h.type === "rock" && !h.active) {
+        h.telegraph = (h.telegraph || 0) + 1;
+        if (h.telegraph >= Math.min(18, Math.floor((h.maxLife || 60) * 0.4)))
+          h.active = true;
+      }
+
       // Boss gây sát thương & debuff người chơi
       if (h.owner === "boss" && h.active) {
         const d = dist(player.x, player.y, h.x, h.y);
@@ -1485,7 +1495,7 @@ function updateStagePortal() {
       (state.capturePoints?.filter((cp) => cp.state === "completed").length ||
         0) >= 2;
 
-    if (puzzleSolved && swarmsDone && specialsDone) {
+    if (puzzleSolved && swarmsDone && specialsDone && isMapObjectiveDone()) {
       const portalPos = getBossGatePortalPosition();
       state.stagePortal = {
         x: portalPos.x,

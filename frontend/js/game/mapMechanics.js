@@ -133,7 +133,9 @@ const MAP_MECHANICS = {
       mm.meterMax = 280;
       mm.eventTimer = 14 * 60;
       mm.eruptTimer = 12 * 60;
-      mm.objectiveTarget = 3;
+      // 🔥 Mục tiêu: TÔI LUYỆN — chịu nhiệt cao (≥70%) tổng cộng 8s
+      mm.objectiveTarget = 8;
+      mm.objFrames = 0;
     },
     updateEnv(player, mm, frame, isAuthority) {
       if (isEnvDamageImmune(player)) {
@@ -172,6 +174,12 @@ const MAP_MECHANICS = {
         state.playerStatus.burnTimer = Math.max(state.playerStatus.burnTimer, 20);
       }
 
+      // 🔥 Objective: tích giây khi "ôm lửa" — nhiệt ≥50% HOẶC đang trong lava.
+      // Ngưỡng thấp + tính lava → không softlock khi player né liên tục.
+      if (mm.meter >= mm.meterMax * 0.5 || inLava)
+        mm.objFrames = (mm.objFrames || 0) + 1;
+      mm.objectiveProgress = Math.floor(mm.objFrames / 60);
+
       if (!isAuthority) return;
 
       // Field-event: sóng lửa toàn map (reuse globalHazard fire)
@@ -195,7 +203,6 @@ const MAP_MECHANICS = {
               scheduleStrike(mm, pt.x, pt.y, 80, 75, "geyser", 1, 0);
           });
         }
-        mm.objectiveProgress++; // sống sót thêm một đợt
         mm.eruptTimer = 6 * 60;
       }
     },
@@ -205,7 +212,7 @@ const MAP_MECHANICS = {
       if (typeof e.speedRate === "number") e.speedRate *= 1.1;
     },
     objectiveLabel(mm) {
-      return `🔥 Sống sót đợt phun: ${Math.min(mm.objectiveProgress, mm.objectiveTarget)}/${mm.objectiveTarget}`;
+      return `🔥 Tôi luyện trong lửa: ${Math.min(mm.objectiveProgress, mm.objectiveTarget)}/${mm.objectiveTarget}s`;
     },
   },
 
@@ -215,7 +222,9 @@ const MAP_MECHANICS = {
       mm.meterMax = 260; // cold
       mm.eventTimer = 9 * 60;
       mm.eruptTimer = 7 * 60;
-      mm.objectiveTarget = 3;
+      // ❄️ Mục tiêu: GIỮ ĐÀ — luôn trượt nhanh (đừng đóng băng) tổng 10s
+      mm.objectiveTarget = 10;
+      mm.objFrames = 0;
     },
     updateEnv(player, mm, frame, isAuthority) {
       const data = state.mapThemeData || {};
@@ -248,6 +257,11 @@ const MAP_MECHANICS = {
         mm.meter = mm.meterMax * 0.55;
       }
 
+      // ❄️ Objective: tích giây khi giữ đà trượt nhanh (không bị stun/đứng yên)
+      if (Math.hypot(dx, dy) > 2 && (state.playerStatus.stunTimer || 0) <= 0)
+        mm.objFrames = (mm.objFrames || 0) + 1;
+      mm.objectiveProgress = Math.floor(mm.objFrames / 60);
+
       if (!isAuthority) return;
 
       // Field-event: bão tuyết toàn map (globalHazard ice → damage + slow)
@@ -256,7 +270,6 @@ const MAP_MECHANICS = {
         if (mm.eventTimer <= 0) {
           triggerGlobalHazard("ice", 3 * 60, 0.4);
           state.cinematicEffects.fogAlpha = 0.4;
-          mm.objectiveProgress++;
           mm.eventTimer = 9 * 60;
         }
       }
@@ -273,7 +286,7 @@ const MAP_MECHANICS = {
       }
     },
     objectiveLabel(mm) {
-      return `❄️ Sống sót bão tuyết: ${Math.min(mm.objectiveProgress, mm.objectiveTarget)}/${mm.objectiveTarget}`;
+      return `❄️ Giữ đà trượt: ${Math.min(mm.objectiveProgress, mm.objectiveTarget)}/${mm.objectiveTarget}s`;
     },
   },
 
@@ -282,7 +295,9 @@ const MAP_MECHANICS = {
     onStageInit(mm) {
       mm.eventTimer = 7 * 60;
       mm.eruptTimer = 7 * 60;
-      mm.objectiveTarget = 3;
+      // 🪨 Mục tiêu: NÚP SAU ĐÁ — đứng gần cụm đá tổng 7s
+      mm.objectiveTarget = 7;
+      mm.objFrames = 0;
     },
     updateEnv(player, mm, frame, isAuthority) {
       const data = state.mapThemeData || {};
@@ -309,12 +324,24 @@ const MAP_MECHANICS = {
         }
       }
 
+      // 🪨 Objective: tích giây khi núp gần cụm đá (cover < 110px)
+      let nearCover = false;
+      for (const sc of data.stoneClusters || []) {
+        if (dist(player.x, player.y, sc.x, sc.y) < 110) {
+          nearCover = true;
+          break;
+        }
+      }
+      if (nearCover) mm.objFrames = (mm.objFrames || 0) + 1;
+      mm.objectiveProgress = Math.floor(mm.objFrames / 60);
+
       if (!isAuthority) return;
 
-      // Động đất (objective): rung màn hình + đá rơi telegraph quanh player
+      // Động đất: rung màn hình + đá rơi telegraph quanh player
       mm.eruptTimer--;
       if (mm.eruptTimer <= 0) {
         state.screenShake = { x: 0, y: 0, timer: 80, intensity: 14 };
+        state.cinematicEffects.distortion = 1; // overlay bụi địa chấn
         for (let i = 0; i < 5; i++) {
           const ang = Math.random() * Math.PI * 2;
           const r = 120 + Math.random() * 360;
@@ -329,7 +356,6 @@ const MAP_MECHANICS = {
             18,
           );
         }
-        mm.objectiveProgress++;
         mm.eruptTimer = 7 * 60;
       }
     },
@@ -343,7 +369,7 @@ const MAP_MECHANICS = {
       }
     },
     objectiveLabel(mm) {
-      return `🪨 Sống sót động đất: ${Math.min(mm.objectiveProgress, mm.objectiveTarget)}/${mm.objectiveTarget}`;
+      return `🪨 Núp sau đá: ${Math.min(mm.objectiveProgress, mm.objectiveTarget)}/${mm.objectiveTarget}s`;
     },
   },
 
@@ -351,11 +377,20 @@ const MAP_MECHANICS = {
   wind: {
     onStageInit(mm) {
       mm.eventTimer = 6 * 60;
-      mm.objectiveTarget = 3;
+      // 🌪️ Mục tiêu: ĐI NGƯỢC GIÓ — chủ động đi ngược hướng gió tổng 8s
+      mm.objectiveTarget = 8;
+      mm.objFrames = 0;
       mm.windAngle = Math.random() * Math.PI * 2;
     },
     updateEnv(player, mm, frame, isAuthority) {
       const data = state.mapThemeData || {};
+
+      // 🌪️ Objective: tích giây khi player đi ngược chiều gió (trước khi gió đẩy)
+      const mvx = player.x - mm.lastX;
+      const mvy = player.y - mm.lastY;
+      const against = -(mvx * Math.cos(mm.windAngle) + mvy * Math.sin(mm.windAngle));
+      if (against > 1.0) mm.objFrames = (mm.objFrames || 0) + 1;
+      mm.objectiveProgress = Math.floor(mm.objFrames / 60);
 
       // Gió thổi liên tục: đẩy đạn (qua windForce — đã có sẵn) + đẩy player
       const fx = Math.cos(mm.windAngle) * 0.18;
@@ -382,7 +417,6 @@ const MAP_MECHANICS = {
         mm.windAngle = Math.random() * Math.PI * 2;
         state.cinematicEffects.vortexPower = 1;
         state.cinematicEffects.vortexCenter = { x: player.x, y: player.y };
-        mm.objectiveProgress++;
         mm.eventTimer = 6 * 60;
       }
     },
@@ -392,7 +426,7 @@ const MAP_MECHANICS = {
       if (typeof e.speedRate === "number") e.speedRate *= 1.15;
     },
     objectiveLabel(mm) {
-      return `🌪️ Trụ qua cơn lốc: ${Math.min(mm.objectiveProgress, mm.objectiveTarget)}/${mm.objectiveTarget}`;
+      return `🌪️ Đi ngược gió: ${Math.min(mm.objectiveProgress, mm.objectiveTarget)}/${mm.objectiveTarget}s`;
     },
   },
 
@@ -401,7 +435,9 @@ const MAP_MECHANICS = {
     onStageInit(mm) {
       mm.eventTimer = 9 * 60;
       mm.eruptTimer = 2.2 * 60;
-      mm.objectiveTarget = 3;
+      // ⚡ Mục tiêu: TRÁNH NHIỄM ĐIỆN — đứng ngoài vùng điện tổng 12s
+      mm.objectiveTarget = 12;
+      mm.objFrames = 0;
     },
     updateEnv(player, mm, frame, isAuthority) {
       const data = state.mapThemeData || {};
@@ -419,6 +455,11 @@ const MAP_MECHANICS = {
         state.playerStatus.stunTimer = Math.max(state.playerStatus.stunTimer, 6);
       }
 
+      // ⚡ Objective: tích giây khi ở ngoài vùng điện (và không bị stun)
+      if (!charged && (state.playerStatus.stunTimer || 0) <= 0)
+        mm.objFrames = (mm.objFrames || 0) + 1;
+      mm.objectiveProgress = Math.floor(mm.objFrames / 60);
+
       if (!isAuthority) return;
 
       // Sét đánh ngẫu nhiên có telegraph quanh player
@@ -435,7 +476,6 @@ const MAP_MECHANICS = {
         mm.eventTimer--;
         if (mm.eventTimer <= 0) {
           triggerGlobalHazard("electric", 2.5 * 60, 0.5);
-          mm.objectiveProgress++;
           mm.eventTimer = 9 * 60;
         }
       }
@@ -444,7 +484,7 @@ const MAP_MECHANICS = {
       if (typeof e.speed === "number") e.speed *= 1.1;
     },
     objectiveLabel(mm) {
-      return `⚡ Sống sót surge: ${Math.min(mm.objectiveProgress, mm.objectiveTarget)}/${mm.objectiveTarget}`;
+      return `⚡ Tránh nhiễm điện: ${Math.min(mm.objectiveProgress, mm.objectiveTarget)}/${mm.objectiveTarget}s`;
     },
   },
 };
@@ -466,6 +506,7 @@ export function initMapMechanic() {
   mm.eruptTimer = 360;
   mm.objectiveProgress = 0;
   mm.objectiveTarget = 3;
+  mm.objFrames = 0; // bộ đếm giây cho mục tiêu riêng từng map
   mm.lastX = state.player?.x || 0;
   mm.lastY = state.player?.y || 0;
   mm.inertiaX = 0;

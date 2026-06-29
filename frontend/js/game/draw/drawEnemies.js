@@ -114,6 +114,22 @@ export function drawEnemies(ctx) {
     if (!isVisible(e.x, e.y, e.radius || 15)) return;
     ctx.save();
 
+    // 🪨 Đang lặn dưới đất → gò đất mờ + bụi, không vẽ thân (bất khả xâm)
+    if (e.burrowed) {
+      const r = (e.radius || 14) * 1.1;
+      ctx.fillStyle = "rgba(120, 80, 45, 0.5)";
+      ctx.beginPath();
+      ctx.ellipse(e.x, e.y, r, r * 0.55, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(60, 40, 20, 0.7)";
+      ctx.setLineDash([5, 5]);
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+      return;
+    }
+
     if (!minimalDraw) {
       ctx.shadowBlur = 15;
       ctx.shadowColor = state.elementColors[e.element];

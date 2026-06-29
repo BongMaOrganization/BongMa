@@ -207,6 +207,9 @@ export function draw(ctx, canvas) {
   // --- Screen-space particles (after camera restore) ---
   drawScreenParticles(ctx);
 
+  // --- Map cinematic overlays (sóng lửa / bão tuyết / xoáy gió / địa chấn) ---
+  if (!state.isBossLevel && !state.bossArenaMode) drawMapCinematics(ctx, canvas);
+
   // --- HUD ---
   drawHUD(ctx, canvas);
   if (!state.isBossLevel && !state.bossArenaMode)
@@ -240,6 +243,104 @@ export function draw(ctx, canvas) {
     realCtx.setTransform(1, 0, 0, 1, 0, 0);
     realCtx.clearRect(0, 0, canvas.width, canvas.height);
     realCtx.drawImage(_offCanvas, 0, 0, canvas.width, canvas.height);
+  }
+}
+
+// ============================================================================
+// Overlay cinematic theo map — đọc state.cinematicEffects (trước đây set mà
+// không ai vẽ). Screen-space, procedural (không tích particle vào state), tự fade.
+// ============================================================================
+function drawMapCinematics(ctx, canvas) {
+  const ce = state.cinematicEffects;
+  if (!ce) return;
+  const W = canvas.width;
+  const H = canvas.height;
+  const f = state.frameCount || 0;
+
+  // 🔥 LỬA — sóng lửa: ám đỏ pulse + tàn lửa bay lên
+  if (ce.fieldBurn > 0.01) {
+    const a = ce.fieldBurn;
+    const g = ctx.createRadialGradient(W / 2, H * 0.55, H * 0.15, W / 2, H * 0.55, H * 0.85);
+    g.addColorStop(0, "rgba(255,90,0,0)");
+    g.addColorStop(1, `rgba(255,40,0,${0.3 * a})`);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (let i = 0; i < 22; i++) {
+      const seed = i * 127.1;
+      const x = (seed * 53 + f * 1.3) % W;
+      const y = H - ((f * (1.2 + (i % 4) * 0.5) + seed * 7) % (H + 60));
+      ctx.fillStyle = `rgba(255,${140 + (i % 5) * 20},40,${0.5 * a})`;
+      ctx.beginPath();
+      ctx.arc(x, y, 1.5 + (i % 3), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+    ce.fieldBurn = Math.max(0, ce.fieldBurn - 0.01); // ~1.6s fade
+  }
+
+  // ❄️ BĂNG — bão tuyết: phủ trắng mờ + tuyết trôi xiên
+  if (ce.fogAlpha > 0.01) {
+    const a = ce.fogAlpha;
+    ctx.fillStyle = `rgba(225,242,255,${0.4 * a})`;
+    ctx.fillRect(0, 0, W, H);
+    ctx.save();
+    ctx.strokeStyle = `rgba(255,255,255,${0.5 * a})`;
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 40; i++) {
+      const seed = i * 311.7;
+      const x = ((seed * 13 + f * 4) % (W + 40)) - 20;
+      const y = ((seed * 29 + f * 7) % (H + 40)) - 20;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x - 6, y + 10);
+      ctx.stroke();
+    }
+    ctx.restore();
+    ce.fogAlpha = Math.max(0, ce.fogAlpha - 0.004); // fade dần
+  }
+
+  // 🌪️ GIÓ — xoáy quanh tâm (world→screen qua camera)
+  if (ce.vortexPower > 0.01) {
+    const a = ce.vortexPower;
+    const cx = (ce.vortexCenter?.x || 0) - (state.camera?.x || 0);
+    const cy = (ce.vortexCenter?.y || 0) - (state.camera?.y || 0);
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.strokeStyle = `rgba(200,255,245,${0.5 * a})`;
+    ctx.lineWidth = 2;
+    for (let k = 0; k < 4; k++) {
+      const rot = f * 0.08 + (k * Math.PI) / 2;
+      ctx.beginPath();
+      for (let t = 0; t < Math.PI * 1.6; t += 0.2) {
+        const r = 30 + t * 70;
+        const x = Math.cos(t + rot) * r;
+        const y = Math.sin(t + rot) * r;
+        if (t === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+    ce.vortexPower = Math.max(0, ce.vortexPower - 0.012); // ~1.4s
+  }
+
+  // 🪨 ĐẤT — địa chấn: ám bụi nâu + hạt đá rung (field distortion vốn bỏ không)
+  if (ce.distortion > 0.01) {
+    const a = ce.distortion;
+    ctx.fillStyle = `rgba(120,85,45,${0.18 * a})`;
+    ctx.fillRect(0, 0, W, H);
+    ctx.save();
+    for (let i = 0; i < 26; i++) {
+      const seed = i * 91.3;
+      const x = (seed * 17 + f * 0.7) % W;
+      const y = (seed * 37 + f * 2.2) % H;
+      ctx.fillStyle = `rgba(150,110,70,${0.5 * a})`;
+      ctx.fillRect(x, y, 2 + (i % 2), 2);
+    }
+    ctx.restore();
+    ce.distortion = Math.max(0, ce.distortion - 0.02); // ~1s
   }
 }
 

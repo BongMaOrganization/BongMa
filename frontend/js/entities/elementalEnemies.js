@@ -1,7 +1,7 @@
 import { state } from "../state.js";
 import { dist } from "../utils.js";
 import { spawnBullet } from "./helpers.js";
-import { spawnElementalZone } from "../game/elementalZone.js";
+import { spawnElementalZone, spawnGroundZone, pushParticles } from "../game/elementalZone.js";
 import { applyMapEnemyModifier } from "../game/mapMechanics.js";
 import {
   getMapElement,
@@ -35,6 +35,8 @@ function createEnemyData(x, y, element, roomId) {
     wanderX: x,
     wanderY: y,
     losTimer: 0,
+    traitTimer: Math.floor(Math.random() * 60), // lệch pha trait giữa các quái
+    burrowed: false,
   };
   applyMapEnemyModifier(e);
   return e;
@@ -141,6 +143,19 @@ export function updateElementalEnemies(player) {
     else if (sameRoom && d < e.aggroRange * 1.2) e.state = "aggro";
     else e.state = "idle";
 
+    // Trait hành vi riêng theo hệ (blink/burrow/trail/lunge/dodge)
+    updateElementTrait(e, player, d, homeRoom);
+
+    if (e.burrowed) {
+      // Dưới đất: chỉ di chuyển ngầm (trong trait), không đánh, không bị bắn
+      if (e.cooldown > 0) e.cooldown--;
+      if (!Number.isFinite(e.hp) || e.hp <= 0) {
+        spawnElementalZone(e);
+        state.elementalEnemies.splice(i, 1);
+      }
+      continue;
+    }
+
     if (e.state === "idle" || !sameRoom) {
       updateWander(e, homeRoom);
     } else if (e.state === "aggro") {
@@ -181,6 +196,79 @@ export function updateElementalEnemies(player) {
       spawnElementalZone(e);
       state.elementalEnemies.splice(i, 1);
     }
+  }
+}
+
+// ============================================================================
+// TRAIT HÀNH VI RIÊNG THEO HỆ — mỗi map quái "đánh khác", không chỉ đổi đạn
+//   🔥 fire   : lao tới (lunge) — áp sát hung hăng
+//   ❄️ ice    : để lại vệt băng làm chậm khi di chuyển
+//   ⚡ lightning: chớp dịch (blink) — nhảy quanh khó đoán
+//   🌪️ wind   : né ngang bất chợt (dodge)
+//   🪨 earth  : trồi/lặn — lặn xuống (bất khả xâm) rồi trồi gần player
+// ============================================================================
+function updateElementTrait(e, player, d, homeRoom) {
+  e.traitTimer = (e.traitTimer || 0) - 1;
+  const active = e.state === "aggro" || e.state === "attack";
+
+  switch (e.element) {
+    case "ice":
+      if (e.state !== "idle" && e.traitTimer <= 0) {
+        spawnGroundZone(e.x, e.y, "ice", 36, 70);
+        e.traitTimer = 26;
+      }
+      break;
+
+    case "lightning":
+      if (active && e.traitTimer <= 0) {
+        const ang =
+          Math.atan2(player.y - e.y, player.x - e.x) + (Math.random() - 0.5) * 1.7;
+        const hop = 110 + Math.random() * 70;
+        e.x += Math.cos(ang) * hop;
+        e.y += Math.sin(ang) * hop;
+        if (homeRoom) constrainToRoomBounds(e, homeRoom, e.radius || 14);
+        pushParticles({ x: e.x, y: e.y, color: "#ffff66", count: 10, speed: 3, life: 14, size: 2 });
+        e.traitTimer = 100 + Math.floor(Math.random() * 60);
+      }
+      break;
+
+    case "earth":
+      if (e.burrowed) {
+        moveToward(e, player.x, player.y, (e.speed || 2) * 1.8);
+        if (homeRoom) constrainToRoomBounds(e, homeRoom, e.radius || 14);
+        if (e.traitTimer <= 0) {
+          e.burrowed = false;
+          pushParticles({ x: e.x, y: e.y, color: "#996633", count: 16, speed: 3.5, life: 20, size: 3 });
+          e.traitTimer = 180 + Math.floor(Math.random() * 90);
+        }
+      } else if (e.state !== "idle" && e.traitTimer <= 0) {
+        e.burrowed = true;
+        pushParticles({ x: e.x, y: e.y, color: "#996633", count: 14, speed: 3, life: 18, size: 3 });
+        e.traitTimer = 55; // thời gian lặn
+      }
+      break;
+
+    case "fire":
+      if (e.state === "attack" && e.traitTimer <= 0 && d > 60) {
+        const ang = Math.atan2(player.y - e.y, player.x - e.x);
+        e.x += Math.cos(ang) * 26;
+        e.y += Math.sin(ang) * 26;
+        if (homeRoom) constrainToRoomBounds(e, homeRoom, e.radius || 14);
+        pushParticles({ x: e.x, y: e.y, color: "#ff7722", count: 6, speed: 2, life: 12, size: 2 });
+        e.traitTimer = 12;
+      }
+      break;
+
+    case "wind":
+      if (active && e.traitTimer <= 0 && Math.random() < 0.04) {
+        const side =
+          Math.atan2(player.y - e.y, player.x - e.x) + (Math.PI / 2) * (e.strafeDir || 1);
+        e.x += Math.cos(side) * 70;
+        e.y += Math.sin(side) * 70;
+        if (homeRoom) constrainToRoomBounds(e, homeRoom, e.radius || 14);
+        e.traitTimer = 40;
+      }
+      break;
   }
 }
 

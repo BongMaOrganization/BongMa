@@ -97,6 +97,15 @@ export function spawnElementalZone(enemy, forcedElement) {
   pushParticles({ x: enemy.x, y: enemy.y, color: def.color, count: 14, speed: 2.5, life: 24, size: 2 });
 }
 
+// Vũng nền nhỏ (vd vệt băng quái để lại). noMerge → không gộp thành glacier spam.
+export function spawnGroundZone(x, y, element, radius, duration, noMerge = true) {
+  state.elementalZones ||= [];
+  const z = createZone(x, y, element, radius, duration);
+  if (noMerge) z.mergeCooldown = duration + 999;
+  state.elementalZones.push(z);
+  return z;
+}
+
 function spawnMergedZone(a, b, mergedElement) {
   const def = ELEMENT_DEFS[mergedElement];
   const x = (a.x + b.x) / 2;

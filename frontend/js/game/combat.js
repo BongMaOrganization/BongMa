@@ -563,6 +563,7 @@ export function updateBullets(
         let e = state.elementalEnemies[j];
 
         if (b.hitList.includes(e)) continue;
+        if (e.burrowed) continue; // đất đang lặn → đạn xuyên qua
 
         if (withinRadiusSq(b.x, b.y, e.x, e.y, e.radius + b.radius)) {
           b.hitList.push(e);
