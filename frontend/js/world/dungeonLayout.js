@@ -683,9 +683,10 @@ function createCapturePoint(room, order) {
     y: center.y,
     radius: 160,
     maxRadius: 160,
-    minRadius: 55,
+    minRadius: 85, // co ít lại (was 55) → còn chỗ né
     progress: 0,
-    totalProgress: 260,
+    totalProgress: 200, // ~22s (was 260 ~29s) → bớt lê thê
+
     type: order === 1 ? "fortress" : "shrine",
     state: order === 1 ? "guarding" : "locked",
     miniBossId: `${id}_boss`,

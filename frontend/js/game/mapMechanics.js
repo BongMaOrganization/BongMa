@@ -11,6 +11,18 @@ function isEnvDamageImmune(player) {
   return room && (room.type === "start" || room.type === "heal" || room.type === "upgrade");
 }
 
+// True nếu (x,y) đang trong một cứ điểm đang chiếm (charging).
+// Player bị ÉP đứng giữ trụ → miễn damage môi trường (lava/hazard) trong vùng
+// để tránh tình huống lava ngẫu nhiên đè lên trụ = bất khả thi.
+export function isInActiveCapture(x, y) {
+  const cps = state.capturePoints;
+  if (!cps) return false;
+  for (const cp of cps) {
+    if (cp.state === "charging" && dist(x, y, cp.x, cp.y) < cp.radius) return true;
+  }
+  return false;
+}
+
 // ============================================================================
 // MAP IDENTITY SYSTEM
 // Mỗi map nguyên tố có bản sắc cơ chế riêng ảnh hưởng 3 lớp:
@@ -134,10 +146,12 @@ const MAP_MECHANICS = {
       const data = state.mapThemeData || {};
       const moved =
         Math.hypot(player.x - mm.lastX, player.y - mm.lastY) > movedThreshold;
+      // Đang giữ trụ → miễn bỏng lava/nhiệt (player bị ép đứng yên trong vùng)
+      const captureSafe = isInActiveCapture(player.x, player.y);
 
       // Lava pools = vùng bỏng thật (giảm DoT, tick chậm hơn)
       let inLava = false;
-      if (frame % 2 === 0) {
+      if (frame % 2 === 0 && !captureSafe) {
         for (const p of data.lavaPools || []) {
           if (inEllipse(player.x, player.y, p.x, p.y, p.rx * 0.85, p.ry * 0.85, p.angle)) {
             inLava = true;
@@ -153,7 +167,7 @@ const MAP_MECHANICS = {
       // Heat meter: đứng yên → nóng lên chậm hơn, di chuyển → hạ nhiệt
       if (moved) mm.meter = Math.max(0, mm.meter - 2.5);
       else mm.meter = Math.min(mm.meterMax, mm.meter + 0.55);
-      if (mm.meter >= mm.meterMax && frame % 3 === 0) {
+      if (mm.meter >= mm.meterMax && frame % 3 === 0 && !captureSafe) {
         player.hp -= 0.018;
         state.playerStatus.burnTimer = Math.max(state.playerStatus.burnTimer, 20);
       }

@@ -14,6 +14,7 @@ import {
   updateMapMechanic,
   applyMapEnemyModifier,
   isMapObjectiveDone,
+  isInActiveCapture,
 } from "../game/mapMechanics.js";
 import {
   updateElementalEnemies,
@@ -218,6 +219,11 @@ export function update(ctx, canvas, changeStateFn) {
   }
   if (state.playerStatus.slowTimer > 0) {
     state.playerStatus.slowTimer--;
+  }
+  // Burn là DoT có hạn (~0.5s sau lần chạm lửa cuối) — trước đây quên trừ
+  // nên cháy vĩnh viễn = đốt hết máu. Trừ dần như slow/stun.
+  if (state.playerStatus.burnTimer > 0) {
+    state.playerStatus.burnTimer--;
   }
   state.playerFireRateMultiplier = 1;
   state.playerMultiShotModifier = player.multiShot || 1;
@@ -998,14 +1004,18 @@ export function update(ctx, canvas, changeStateFn) {
             player.x += Math.cos(angle) * 2;
             player.y += Math.sin(angle) * 2;
           }
-          if (!isInvulnerable) {
+          // Đang giữ trụ → miễn hazard lửa (lava đè lên trụ không công bằng)
+          const hazardSafe =
+            (h.type === "fire" || h.type === "fire_ring") &&
+            isInActiveCapture(player.x, player.y);
+          if (!isInvulnerable && !hazardSafe) {
             if (h.type === "fire" || h.type === "fire_ring")
               state.playerStatus.burnTimer = 30;
             if (h.type === "frost") state.playerStatus.slowTimer = 30;
             if (h.type === "static") state.playerStatus.stunTimer = 10;
           }
           if (h.firstEnterTime === 0) h.firstEnterTime = state.frameCount;
-          if (state.frameCount - h.firstEnterTime >= 6) {
+          if (!hazardSafe && state.frameCount - h.firstEnterTime >= 6) {
             if (state.frameCount - (player.lastHazardDamageTime || 0) >= 30) {
               playerTakeDamage(ctx, canvas, changeStateFn, h.damage || 0.5);
               player.lastHazardDamageTime = state.frameCount;
@@ -1290,10 +1300,8 @@ function updateCapturePoints(ctx, canvas, changeStateFn) {
 
       if (isInside) {
         cp.progress = Math.min(cp.totalProgress, cp.progress + 0.15);
-        state.playerStatus.slowTimer = Math.max(
-          state.playerStatus.slowTimer || 0,
-          5,
-        );
+        // (Bỏ slow khi giữ trụ — 50% slow + bị hút quái + đứng yên = quá nặng.
+        //  Áp lực giữ từ swarm pull bên dưới.)
         const ratio = Math.max(0, Math.min(1, cp.progress / cp.totalProgress));
         cp.radius = Math.max(
           cp.minRadius,
