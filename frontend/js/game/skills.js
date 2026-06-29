@@ -13,6 +13,13 @@ const RARITY_COLORS = {
 // Tự suy ra icon từ tên/mô tả kỹ năng (không cần thêm field vào data.js).
 // Quy tắc nào khớp trước thì dùng -> để cụ thể lên trên.
 const SKILL_ICON_RULES = [
+  // Tên chiêu đặc thù (cụm duy nhất) — đặt trước để khỏi rơi vào icon generic.
+  [/phán xét/i, "⚖️"],
+  [/càn quét/i, "🧹"],
+  [/hiến tế/i, "🩸"],
+  [/bắn xuyên/i, "🏹"],
+  [/hạt mầm|rừng|mầm/i, "🌿"],
+  [/phản công/i, "🔄"],
   [/bẫy/i, "🪤"],
   [/lưỡi hái|chém|trảm|kết liễu/i, "🗡️"],
   [/hố đen|hư không|nuốt|hút|hấp thụ/i, "🕳️"],
@@ -20,6 +27,7 @@ const SKILL_ICON_RULES = [
   [/vẽ|màu|tranh|nét/i, "🎨"],
   [/triệu hồi|minion|linh hồn|tháp|turret|drone|hộ vệ|bầy|sáng tạo|thiên khải|địa ngục/i, "✨"],
   [/mìn|bom|nổ|pháo kích|không kích|chấn động|thiên thạch|đại phản|bình nổ|shockwave/i, "💥"],
+  [/nguyên tố/i, "🔮"], // sau 💥 để "Bùng Nổ Nguyên Tố" vẫn ra 💥
   [/laser|tia|vết nứt|rạch|súng điện|hủy diệt/i, "🔆"],
   [/băng|đóng băng|tuyết|frost|giáp băng/i, "❄️"],
   [/lửa|cháy|hỏa|phượng|\btro\b|cầu lửa/i, "🔥"],
