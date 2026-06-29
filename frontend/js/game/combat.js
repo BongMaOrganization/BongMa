@@ -14,6 +14,34 @@ function withinRadiusSq(x1, y1, x2, y2, radius) {
   return dx * dx + dy * dy < radius * radius;
 }
 
+// Hiệu ứng nổ nhỏ khi đạn trúng địch (ring + vài hạt văng ra).
+// Hạt bị giới hạn bởi VFX budget nên không gây lag dù bắn dày.
+function spawnHitImpact(x, y, color = "#ffffff", big = false) {
+  if (!state.explosions) state.explosions = [];
+  state.explosions.push({
+    x,
+    y,
+    radius: big ? 24 : 12,
+    life: big ? 13 : 9,
+    color,
+  });
+  if (!state.particles) state.particles = [];
+  const n = big ? 6 : 3;
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const sp = 1.4 + Math.random() * 2.6;
+    state.particles.push({
+      x,
+      y,
+      vx: Math.cos(a) * sp,
+      vy: Math.sin(a) * sp,
+      life: 10 + Math.random() * 10,
+      color: Math.random() > 0.5 ? color : "#ffffff",
+      size: 1.5 + Math.random() * 2,
+    });
+  }
+}
+
 function setStyleIfChanged(el, prop, value) {
   if (!el) return;
   if (el.style[prop] !== value) el.style[prop] = value;
@@ -456,6 +484,9 @@ export function updateBullets(
       if (boss && withinRadiusSq(b.x, b.y, boss.x, boss.y, boss.radius + b.radius)) {
         if (!b.hitList.includes("boss")) {
           b.hitList.push("boss");
+          // Boss nhấp nháy trắng + nổ nhỏ khi trúng đạn (drawBoss đọc hitFlashFrame)
+          boss.hitFlashFrame = state.frameCount;
+          spawnHitImpact(b.x, b.y, "rgba(255,90,90,0.9)", true);
           let finalDmg = b.damage || 1;
           // 🔥 ELEMENT EFFECT (CHÈN Ở ĐÂY)
           if (b.element === "fire") {
@@ -585,6 +616,7 @@ export function updateBullets(
           }
 
           e.hp -= finalDmg;
+          spawnHitImpact(b.x, b.y, "rgba(255,120,80,0.85)", finalDmg >= 2);
 
           // 💀 chết → spawn zone
           if (e.hp <= 0) {
@@ -750,6 +782,7 @@ export function updateBullets(
 
             if (finalDmg > 0) {
               g.hp = (g.hp || 1) - finalDmg;
+              spawnHitImpact(b.x, b.y, "rgba(255,120,80,0.85)", finalDmg >= 2);
             }
           }
           hitGhost = true;

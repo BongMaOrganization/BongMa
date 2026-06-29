@@ -410,6 +410,18 @@ export function drawBoss(ctx) {
     _drawDefaultBoss(ctx, boss, color, fc, isRage);
   }
 
+  // Nhấp nháy trắng khi trúng đạn (combat.js set boss.hitFlashFrame)
+  const sinceHit = fc - (boss.hitFlashFrame ?? -999);
+  if (sinceHit >= 0 && sinceHit < 6) {
+    const a = (1 - sinceHit / 6) * 0.55;
+    ctx.globalCompositeOperation = "lighter";
+    ctx.beginPath();
+    ctx.arc(0, 0, boss.radius * 1.05, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,255,255,${a})`;
+    ctx.fill();
+    ctx.globalCompositeOperation = "source-over";
+  }
+
   ctx.restore();
 }
 

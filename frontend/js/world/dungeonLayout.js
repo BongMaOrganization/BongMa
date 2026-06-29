@@ -202,7 +202,8 @@ export function generateDungeon(level = 1) {
   const doors = {};
   const startRow = 1;
   const startCol = 0;
-  const targetRooms = 7 + Math.min(2, Math.floor(level / 3));
+  // Lấp đầy toàn bộ lưới 3x3 -> dùng trọn map 3000x3000, hết vùng chết.
+  const targetRooms = GRID_COLS * GRID_ROWS;
 
   activeGrid[startRow][startCol] = true;
   const stack = [[startRow, startCol]];
