@@ -28,7 +28,6 @@ import {
   getRoomById,
   getSafeSpawnPointInRoom,
   moveWithDungeonCollision,
-  moveEntityWithDungeonGates,
   constrainToRoomBounds,
   countElementalsInRoom,
   getBossGateRoom,
