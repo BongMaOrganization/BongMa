@@ -4,6 +4,7 @@ import {
   getCurrentRoom,
   roomRequiresClear,
   isRoomExitAllowed,
+  getStartRoomGuidance,
 } from "../../world/dungeonLayout.js";
 import {
   getMapObjectiveLabel,
@@ -225,7 +226,12 @@ export function drawStageConditionsHUD(ctx, canvas) {
   });
 
   const curRoom = state.player ? getCurrentRoom(state.player.x, state.player.y) : null;
-  if (curRoom && roomRequiresClear(curRoom) && !isRoomExitAllowed(curRoom)) {
+  if (curRoom?.type === "start") {
+    const guide = getStartRoomGuidance();
+    if (guide) {
+      lines.unshift({ text: guide, color: "#00ffcc" });
+    }
+  } else if (curRoom && roomRequiresClear(curRoom) && !isRoomExitAllowed(curRoom)) {
     lines.unshift({ text: "🔒 Cửa khóa — hoàn thành phòng!", color: "#ff8866" });
   }
 

@@ -496,13 +496,51 @@ function pushOutOfRect(entity, radius, rect) {
 
 let _doorBlockCooldown = 0;
 
+function getDirectionLabel(from, to) {
+  if (to.row < from.row) return "phía Bắc";
+  if (to.row > from.row) return "phía Nam";
+  if (to.col < from.col) return "phía Tây";
+  return "phía Đông";
+}
+
+export function getStartRoomGuidance() {
+  const start = state.dungeon?.rooms?.find((r) => r.id === state.dungeon.startRoomId);
+  if (!start || !state.dungeon?.rooms) return null;
+
+  const neighbors = getNeighbors(start, state.dungeon.rooms);
+  if (!neighbors.length) return "Khám phá các lối ra quanh bạn";
+
+  const priority = {
+    capture: 0,
+    swarm: 1,
+    puzzle: 2,
+    combat: 3,
+    treasure: 4,
+    heal: 5,
+    upgrade: 6,
+    boss_gate: 7,
+  };
+  const target = [...neighbors].sort(
+    (a, b) => (priority[a.type] ?? 8) - (priority[b.type] ?? 8),
+  )[0];
+  const dir = getDirectionLabel(start, target);
+  const label = ROOM_LABELS[target.type] || "Phòng mới";
+  let extra = "";
+  if (target.type === "capture" && target.captureOrder === 1) extra = " — diệt Mini Boss";
+  else if (target.type === "swarm") extra = " — tiêu diệt bầy đàn";
+  else if (target.type === "puzzle") extra = " — giải đố";
+  return `→ Đi ${dir}: ${label}${extra}`;
+}
+
 export function resolveDoorGates(entity, radius) {
   if (!state.dungeon?.rooms || state.isBossLevel || state.bossArenaMode) return;
 
   let blocked = false;
+  const entityRoom = getCurrentRoom(entity.x, entity.y);
 
   for (const room of state.dungeon.rooms) {
     if (!roomRequiresClear(room) || isRoomExitAllowed(room)) continue;
+    if (entityRoom?.id !== room.id) continue;
     for (const gate of getDoorGateRects(room)) {
       const prevX = entity.x;
       const prevY = entity.y;
@@ -907,6 +945,25 @@ export function updateDungeonRoomState(player) {
         });
       }
     }
+    if (room.type === "start") {
+      const guide = getStartRoomGuidance();
+      if (guide) {
+        state.floatingTexts.push({
+          x: player.x,
+          y: player.y - 110,
+          text: guide,
+          color: "#00ffcc",
+          size: 18,
+          life: 200,
+          opacity: 1,
+        });
+        state.storyToast = {
+          title: "🧭 Bắt đầu hành trình",
+          text: `${guide}\n\nCửa sáng xanh = lối vào phòng mới.\n🔒 Chỉ khóa khi bạn muốn rời phòng chưa hoàn thành.`,
+          timer: 420,
+        };
+      }
+    }
   }
 
   const spawnTypes = new Set(["combat", "swarm", "treasure"]);
@@ -1058,15 +1115,27 @@ function drawLockedDoors(ctx) {
     if (!roomRequiresClear(room) || isRoomExitAllowed(room)) continue;
     for (const gate of getDoorGateRects(room)) {
       ctx.save();
-      ctx.fillStyle = `rgba(255, 60, 40, ${0.35 + Math.sin(t * 0.15) * 0.15})`;
-      ctx.strokeStyle = "#ff6644";
-      ctx.lineWidth = 2;
-      ctx.fillRect(gate.x, gate.y, gate.w, gate.h);
-      ctx.strokeRect(gate.x + 0.5, gate.y + 0.5, gate.w - 1, gate.h - 1);
-      ctx.font = "bold 14px Arial";
-      ctx.textAlign = "center";
-      ctx.fillStyle = "#ffaa88";
-      ctx.fillText("🔒", gate.x + gate.w / 2, gate.y + gate.h / 2 + 5);
+      if (!room.visited) {
+        ctx.fillStyle = `rgba(0, 255, 204, ${0.22 + Math.sin(t * 0.12) * 0.12})`;
+        ctx.strokeStyle = "#00ffcc";
+        ctx.lineWidth = 2;
+        ctx.fillRect(gate.x, gate.y, gate.w, gate.h);
+        ctx.strokeRect(gate.x + 0.5, gate.y + 0.5, gate.w - 1, gate.h - 1);
+        ctx.font = "bold 16px Arial";
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#aaffee";
+        ctx.fillText("→", gate.x + gate.w / 2, gate.y + gate.h / 2 + 6);
+      } else {
+        ctx.fillStyle = `rgba(255, 60, 40, ${0.35 + Math.sin(t * 0.15) * 0.15})`;
+        ctx.strokeStyle = "#ff6644";
+        ctx.lineWidth = 2;
+        ctx.fillRect(gate.x, gate.y, gate.w, gate.h);
+        ctx.strokeRect(gate.x + 0.5, gate.y + 0.5, gate.w - 1, gate.h - 1);
+        ctx.font = "bold 14px Arial";
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#ffaa88";
+        ctx.fillText("🔒", gate.x + gate.w / 2, gate.y + gate.h / 2 + 5);
+      }
       ctx.restore();
     }
   }
