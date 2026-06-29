@@ -280,7 +280,14 @@ function runPattern(g, player) {
     case "fire_sentinel":
       fanBullets(g, player, 5, 0.9, 1, 1.8, 1.1);
       if (fc % 3 === 0) {
-        spawnHazard("fire", player.x, player.y, 90, 5 * FPS, 0.6, "boss", 90);
+        // Telegraph rồi mới đẻ vũng (0.75s) → cho player né, không đập thẳng vào chân
+        const hx = player.x;
+        const hy = player.y;
+        spawnWarning(hx, hy, 90, 45, "fire_warn");
+        state.delayedTasks.push({
+          delay: 45,
+          action: () => spawnHazard("fire", hx, hy, 90, 5 * FPS, 0.6, "boss", 90),
+        });
       }
       g.attackCooldown = g.baseAttackCd || 48;
       break;

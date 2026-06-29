@@ -725,6 +725,9 @@ export function updateBullets(
               finalDmg *= 2;
             }
 
+            // Đánh dấu thời điểm trúng đòn → chặn leash full-heal khi đang bị bắn
+            if (g.isMiniBoss || g.isSubBoss) g.lastHitFrame = state.frameCount;
+
             if (g.isMiniBoss && g.shieldActive && (g.shield || 0) > 0) {
               // CƠ CHẾ GIÁP BOSS: Giảm trừ vào giáp trước
               g.shield -= finalDmg;

@@ -836,8 +836,13 @@ export function update(ctx, canvas, changeStateFn) {
               let angleHome = Math.atan2(g.originalY - g.y, g.originalX - g.x);
               moveGhostInDungeon(g, Math.cos(angleHome) * 4.5, Math.sin(angleHome) * 4.5);
             } else {
-              // Đã về đến nhà → mới hồi máu/khiên
-              if (g.hp < g.maxHp || (g.shield || 0) < (g.maxShield || 0)) {
+              // Đã về đến nhà + 3s không trúng đòn → mới hồi máu/khiên
+              // (tránh reset full khi player vẫn đang bắn từ xa = hp không bao giờ tụt)
+              const sinceHit = state.frameCount - (g.lastHitFrame || -9999);
+              if (
+                sinceHit > 180 &&
+                (g.hp < g.maxHp || (g.shield || 0) < (g.maxShield || 0))
+              ) {
                 g.hp = g.maxHp;
                 g.shield = g.maxShield;
                 g.shieldActive = true;
