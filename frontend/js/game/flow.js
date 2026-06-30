@@ -229,6 +229,7 @@ export function changeState(newGameState, gameLoopFn) {
   UI.main.classList.add("hidden");
   UI.upgrade.classList.add("hidden");
   UI.bossReward.classList.add("hidden");
+  document.getElementById("screen-gameover")?.classList.add("hidden");
 
   if (state.loopId) cancelAnimationFrame(state.loopId);
   if (state.loopTimeoutId) clearTimeout(state.loopTimeoutId);
@@ -244,49 +245,34 @@ export function changeState(newGameState, gameLoopFn) {
 
     state.lastLoopTimestamp = 0;
     if (gameLoopFn) state.loopId = requestAnimationFrame(gameLoopFn);
-  } else if (newGameState === "MENU" || newGameState === "GAME_OVER") {
-    if (newGameState === "MENU") playBGM("MENU");
-    if (newGameState === "GAME_OVER") {
-      stopAllBGM();
-      playSound("gameOver");
-    }
+  } else if (newGameState === "MENU") {
+    playBGM("MENU");
 
     UI.main.classList.remove("hidden");
-    UI.title.className =
-      newGameState === "GAME_OVER"
-        ? "title-main text-red"
-        : "title-main text-cyan";
-    UI.title.innerText =
-      newGameState === "GAME_OVER" ? "VÒNG LẶP DỪNG LẠI" : "BÓNG MA";
-    UI.desc.innerText =
-      newGameState === "GAME_OVER"
-        ? "Quá khứ đã bắt kịp bạn. Mất 1 Mạng."
-        : "Sẵn sàng sinh tồn.";
+    UI.title.className = "title-main text-cyan";
+    UI.title.innerText = "BÓNG MA";
+    UI.desc.innerText = "Sẵn sàng sinh tồn.";
+    UI.btnStart.innerText = "VÀO TRẬN";
+    UI.btnStart.onclick = () => {
+      startGame(gameLoopFn);
+    };
+  } else if (newGameState === "GAME_OVER") {
+    stopAllBGM();
+    playSound("gameOver");
 
-    if (state.player && state.player.hp <= 0) {
-      UI.desc.innerText = "BẠN ĐÃ CHẾT HOÀN TOÀN. BẮT ĐẦU LẠI TỪ MÀN 1.";
-      UI.btnStart.innerText = "LÀM LẠI TỪ ĐẦU";
+    // Lưu số liệu trước khi reset để hiển thị trên màn hình thua
+    const reachedLevel = state.currentLevel;
+    const coins = state.player?.coins || 0;
 
-      state.currentLevel = 1;
-      state.pastRuns = [];
+    // Reset run về Màn 1 + dựng lại nhân vật (giữ tiền)
+    state.currentLevel = 1;
+    state.pastRuns = [];
+    state.player = applyCharacterToPlayer(state.selectedCharacter);
+    state.player.coins = coins;
+    saveGame(state, GHOST_DATA_KEY);
+    persistState();
 
-      let savedCoins = state.player.coins || 0;
-      state.player = applyCharacterToPlayer(state.selectedCharacter);
-      state.player.coins = savedCoins;
-
-      saveGame(state, GHOST_DATA_KEY);
-      persistState();
-
-      UI.btnStart.onclick = () => {
-        initGame(false);
-        changeState("PLAYING", gameLoopFn);
-      };
-    } else {
-      UI.btnStart.innerText = "VÀO TRẬN";
-      UI.btnStart.onclick = () => {
-        startGame(gameLoopFn);
-      };
-    }
+    showGameOverScreen(gameLoopFn, reachedLevel, coins);
   } else if (newGameState === "UPGRADE") {
     playBGM("UPGRADE");
     UI.upgrade.classList.remove("hidden");
@@ -305,6 +291,41 @@ export function changeState(newGameState, gameLoopFn) {
       true,
       () => onCardSelected(gameLoopFn),
     );
+  }
+}
+
+// Màn hình thua riêng: Chơi lại (về Màn 1) hoặc Về Menu — thay vì văng thẳng vào menu chính.
+function showGameOverScreen(gameLoopFn, reachedLevel, coins) {
+  const screen = document.getElementById("screen-gameover");
+  if (!screen) {
+    // Thiếu overlay → fallback về menu để không kẹt
+    changeState("MENU", gameLoopFn);
+    return;
+  }
+
+  const statsEl = document.getElementById("gameover-stats");
+  if (statsEl) {
+    statsEl.innerHTML =
+      `Màn đạt được: <b style="color:#ffcc66">${reachedLevel}</b>` +
+      `<br>Vàng tích lũy: <b style="color:#ffd700">${coins}</b>`;
+  }
+
+  screen.classList.remove("hidden");
+
+  const retry = document.getElementById("btn-retry");
+  if (retry) {
+    retry.onclick = () => {
+      screen.classList.add("hidden");
+      initGame(false);
+      changeState("PLAYING", gameLoopFn);
+    };
+  }
+
+  const toMenu = document.getElementById("btn-to-menu");
+  if (toMenu) {
+    toMenu.onclick = () => {
+      changeState("MENU", gameLoopFn);
+    };
   }
 }
 
