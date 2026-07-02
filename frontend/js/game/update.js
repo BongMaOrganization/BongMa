@@ -1246,9 +1246,13 @@ export function update(ctx, canvas, changeStateFn) {
     }
   }
 
-  // Timer
+  // Timer (echo mode tự ghi UI.timer theo WAVE trong updateEchoWaves)
   state.frameCount++;
-  if (!state.isBossLevel && state.frameCount % FPS === 0) {
+  if (
+    !state.isBossLevel &&
+    state.gameMode !== "echo" &&
+    state.frameCount % FPS === 0
+  ) {
     state.scoreTime++;
     let maxMins = Math.floor(state.maxFramesToSurvive / FPS / 60)
       .toString()

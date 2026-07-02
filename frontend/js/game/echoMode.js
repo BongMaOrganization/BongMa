@@ -314,6 +314,11 @@ export function updateEchoWaves(player, changeStateFn) {
     eco.waveTimer = ECHO.INTERMISSION;
   }
 
+  // HUD: thời gian sống sót — ghi mỗi giây, tránh ghi DOM mỗi frame
+  if (eco.wave > 0 && eco.timeFrames % FPS === 0) {
+    UI.timer.innerText = `VÒNG LẶP — WAVE ${eco.wave} · ${formatFrames(eco.timeFrames)}`;
+  }
+
   // Cập nhật HUD đếm quái khi số lượng đổi (tránh ghi DOM mỗi frame)
   if (state.ghosts.length !== eco.lastGhostCount) {
     eco.lastGhostCount = state.ghosts.length;

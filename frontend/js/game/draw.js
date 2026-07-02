@@ -212,7 +212,8 @@ export function draw(ctx, canvas) {
 
   // --- HUD ---
   drawHUD(ctx, canvas);
-  if (!state.isBossLevel && !state.bossArenaMode)
+  // Echo mode (Vòng Lặp) không có mục tiêu màn — HUD wave tự quản trong echoMode.js
+  if (!state.isBossLevel && !state.bossArenaMode && state.gameMode !== "echo")
     drawStageConditionsHUD(ctx, canvas);
 
   // --- Player burn vignette ---
