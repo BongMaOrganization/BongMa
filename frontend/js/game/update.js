@@ -637,12 +637,16 @@ export function update(ctx, canvas, changeStateFn) {
     }
 
     // Kiểm tra quái chết
-    // Bóng Ma (Echo) không chết vì stun — chỉ chết khi cạn HP
+    // Bóng Ma + quái wave Echo không chết vì stun — chỉ chết khi cạn HP
     const hasDeadHp =
       g.hp !== undefined && (!Number.isFinite(g.hp) || g.hp <= 0);
     let isHit =
       hasDeadHp ||
-      (!g.isSubBoss && !g.isMiniBoss && !g.isEchoGhost && g.isStunned > 0);
+      (!g.isSubBoss &&
+        !g.isMiniBoss &&
+        !g.isEchoGhost &&
+        !g.isEchoEnemy &&
+        g.isStunned > 0);
     if (isHit && g.isEchoGhost) {
       // Diệt được chính mình → thưởng đậm + rơi mộ bia
       addExperience(g.isNemesis ? 30 : 10, changeStateFn);
@@ -683,9 +687,21 @@ export function update(ctx, canvas, changeStateFn) {
           }
         }
       } else {
-        addExperience(g.isHorde ? 2 : 4, changeStateFn);
+        addExperience(g.isEchoElite ? 20 : g.isHorde ? 2 : 4, changeStateFn);
         if (g.x > 0)
-          state.player.coins = (state.player.coins || 0) + (g.isHorde ? 1 : 3);
+          state.player.coins =
+            (state.player.coins || 0) + (g.bounty || (g.isHorde ? 1 : 3));
+        if (g.bounty) {
+          state.floatingTexts.push({
+            x: g.x,
+            y: g.y - 30,
+            text: `💰 +${g.bounty}`,
+            color: "#ffd700",
+            size: 20,
+            life: 100,
+            opacity: 1,
+          });
+        }
       }
 
       if (!state.explosions) state.explosions = [];
@@ -777,7 +793,8 @@ export function update(ctx, canvas, changeStateFn) {
             spawnBullet(g.x, g.y, frame[2], frame[3], false, 0, "ghost");
           }
           g.lastIdx = idx;
-          g.timer = (g.timer || 0) + 1;
+          // Tái Chiếu replay nhanh hơn (speedRate 1.25)
+          g.timer = (g.timer || 0) + (g.speedRate || 1);
         }
         activeGhosts++;
 

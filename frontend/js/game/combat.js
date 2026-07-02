@@ -772,10 +772,15 @@ export function updateBullets(
               finalDmg = 0; // Không trừ HP khi còn giáp
             }
 
-            if (!g.isMiniBoss && !g.isSubBoss && !g.isEchoGhost) {
+            if (
+              !g.isMiniBoss &&
+              !g.isSubBoss &&
+              !g.isEchoGhost &&
+              !g.isEchoEnemy
+            ) {
               g.isStunned = finalDmg >= 2 ? 600 : 300;
-            } else if (g.isEchoGhost || !g.isMiniBoss) {
-              // SubBoss/Bóng Ma (Echo) chỉ khựng nhẹ — chết theo HP, không stun-chết
+            } else if (g.isEchoGhost || g.isEchoEnemy || !g.isMiniBoss) {
+              // SubBoss/Bóng Ma/quái wave Echo chỉ khựng nhẹ — chết theo HP, không stun-chết
               g.isStunned = Math.max(g.isStunned || 0, 20);
             }
             // MiniBoss: không stun per-hit sau khi khiên vỡ (chỉ stun lúc khiên vỡ - xử lý bên trên)

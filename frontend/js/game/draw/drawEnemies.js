@@ -39,7 +39,7 @@ function drawEchoGraves(ctx) {
 function drawEchoGhost(ctx, g, minimalDraw) {
   const materializing = (g.spawnProtect || 0) > 0;
   const alpha = materializing ? 0.3 : g.isStunned > 0 ? 0.5 : 0.85;
-  const color = g.isNemesis ? "#ffd700" : "#00ffcc";
+  const color = g.isNemesis ? "#ffd700" : g.isReEcho ? "#ff5599" : "#00ffcc";
 
   // Vệt di chuyển — dấu vết vòng lặp
   if (!minimalDraw && g.historyPath && g.historyPath.length > 1) {
@@ -64,7 +64,7 @@ function drawEchoGhost(ctx, g, minimalDraw) {
   }
   ctx.beginPath();
   ctx.arc(g.x, g.y, g.radius, 0, Math.PI * 2);
-  ctx.fillStyle = g.isNemesis ? "#2a2440" : "#0a3d38";
+  ctx.fillStyle = g.isNemesis ? "#2a2440" : g.isReEcho ? "#401824" : "#0a3d38";
   ctx.fill();
   ctx.strokeStyle = color;
   ctx.lineWidth = 2;
@@ -95,6 +95,52 @@ function drawEchoGhost(ctx, g, minimalDraw) {
   }
 }
 
+// ===== ECHO MODE (Vòng Lặp): Elite "Kẻ Nuốt Vòng Lặp" =====
+function drawEchoElite(ctx, g, minimalDraw) {
+  ctx.save();
+  if (!minimalDraw) {
+    ctx.shadowBlur = 16;
+    ctx.shadowColor = "#b870ff";
+  }
+  ctx.globalAlpha = g.isStunned > 0 ? 0.6 : 1.0;
+  ctx.beginPath();
+  ctx.arc(g.x, g.y, g.radius, 0, Math.PI * 2);
+  ctx.fillStyle = "#241533";
+  ctx.fill();
+  ctx.strokeStyle = "#b870ff";
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  // Lõi xoáy nhấp nháy
+  if (!minimalDraw) {
+    ctx.beginPath();
+    ctx.arc(
+      g.x,
+      g.y,
+      g.radius * 0.45 + Math.sin(state.frameCount * 0.15) * 2,
+      0,
+      Math.PI * 2,
+    );
+    ctx.strokeStyle = "rgba(184,112,255,0.7)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Thanh máu
+  if (g.maxHp) {
+    const w = g.radius * 2.2;
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fillRect(g.x - w / 2, g.y - g.radius - 14, w, 5);
+    ctx.fillStyle = "#b870ff";
+    ctx.fillRect(
+      g.x - w / 2,
+      g.y - g.radius - 14,
+      w * Math.max(0, Math.min(1, g.hp / g.maxHp)),
+      5,
+    );
+  }
+}
+
 // ===== GHOSTS =====
 export function drawEnemies(ctx) {
   const { ghosts, activeBuffs, player } = state;
@@ -115,6 +161,11 @@ export function drawEnemies(ctx) {
 
     if (g.isEchoGhost) {
       drawEchoGhost(ctx, g, minimalDraw);
+      continue;
+    }
+
+    if (g.isEchoElite) {
+      drawEchoElite(ctx, g, minimalDraw);
       continue;
     }
 

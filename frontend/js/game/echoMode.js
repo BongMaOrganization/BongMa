@@ -196,7 +196,9 @@ export function startEchoRun(gameLoopFn) {
     timeFrames: 0,
     coinsAtStart: state.player.coins,
     kills: 0,
-    lastGhostCount: -1,
+    pendingSpawns: [], // hàng chờ spawn nhỏ giọt trong wave
+    spawnTick: 0,
+    lastGhostLabel: "",
   };
   state.echoGraves = [];
   state._echoGameOverHandled = false;
@@ -279,13 +281,13 @@ export function updateEchoWaves(player, changeStateFn) {
   }
 
   const alive = state.ghosts.reduce((n, g) => n + (g.isEchoEnemy ? 1 : 0), 0);
+  const cap = concurrentCap(eco.wave);
 
   if (eco.waveTimer > 0) {
     eco.waveTimer--;
     if (eco.waveTimer === 0) {
       eco.wave++;
-      spawnWave(eco.wave, player);
-      UI.timer.innerText = `VÒNG LẶP — WAVE ${eco.wave}`;
+      buildWave(eco, player);
       UI.level.innerText = `Wave: ${eco.wave}`;
       state.floatingTexts.push({
         x: player.x,
@@ -298,9 +300,9 @@ export function updateEchoWaves(player, changeStateFn) {
       });
       playSound("fragment");
     }
-  } else if (alive === 0) {
+  } else if (alive === 0 && eco.pendingSpawns.length === 0) {
     // Wave sạch → thưởng vàng + nghỉ ngắn
-    const bonus = 10 + eco.wave * 5;
+    const bonus = 15 + eco.wave * 6;
     state.player.coins = (state.player.coins || 0) + bonus;
     state.floatingTexts.push({
       x: player.x,
@@ -312,6 +314,16 @@ export function updateEchoWaves(player, changeStateFn) {
       opacity: 1,
     });
     eco.waveTimer = ECHO.INTERMISSION;
+  } else if (eco.pendingSpawns.length > 0) {
+    // Nhỏ giọt phần còn lại của wave — áp lực liên tục, không chờ dọn sạch
+    eco.spawnTick--;
+    if (eco.spawnTick <= 0 && alive < cap) {
+      const batch = Math.min(2, eco.pendingSpawns.length, cap - alive);
+      for (let k = 0; k < batch; k++) {
+        spawnFromDesc(eco.pendingSpawns.shift(), eco.wave, player);
+      }
+      eco.spawnTick = 45; // 0.75s một nhịp
+    }
   }
 
   // HUD: thời gian sống sót — ghi mỗi giây, tránh ghi DOM mỗi frame
@@ -319,18 +331,105 @@ export function updateEchoWaves(player, changeStateFn) {
     UI.timer.innerText = `VÒNG LẶP — WAVE ${eco.wave} · ${formatFrames(eco.timeFrames)}`;
   }
 
-  // Cập nhật HUD đếm quái khi số lượng đổi (tránh ghi DOM mỗi frame)
-  if (state.ghosts.length !== eco.lastGhostCount) {
-    eco.lastGhostCount = state.ghosts.length;
-    UI.ghosts.innerText = `Quái: ${state.ghosts.length}`;
+  // HUD đếm quái (kèm số đang chờ spawn) — chỉ ghi DOM khi đổi
+  const aliveNow = state.ghosts.reduce(
+    (n, g) => n + (g.isEchoEnemy ? 1 : 0),
+    0,
+  );
+  const pendingNow = eco.pendingSpawns.length;
+  const label = `Quái: ${aliveNow}${pendingNow > 0 ? ` (+${pendingNow})` : ""}`;
+  if (label !== eco.lastGhostLabel) {
+    eco.lastGhostLabel = label;
+    UI.ghosts.innerText = label;
   }
 }
 
-function spawnWave(wave, player) {
-  const fodder = Math.min(24, 5 + wave * 2);
-  const shooters = Math.min(6, Math.floor(wave / 2));
-  for (let i = 0; i < fodder; i++) spawnWaveEnemy(false, wave, player);
-  for (let i = 0; i < shooters; i++) spawnWaveEnemy(true, wave, player);
+// ---- Công thức độ khó ----
+// Nguyên tắc: HP có thành phần MŨ sau wave 10 (không trần) để chắc chắn vượt
+// power curve của player → mọi run đều kết thúc, leaderboard mới có nghĩa.
+// Số lượng/tốc độ có trần (perf + né được), áp lực dồn vào HP + elite + Tái Chiếu.
+
+function lateMult(wave) {
+  return Math.pow(1.05, Math.max(0, wave - 10));
+}
+
+function concurrentCap(wave) {
+  return Math.min(26, 12 + wave); // quái đồng thời trên sân
+}
+
+function fodderHp(wave) {
+  // 1 hit tới wave 7 (giữ cảm giác cũ), sau đó +1 mỗi 4 wave, nhân mũ về sau
+  const base = 1 + Math.max(0, Math.floor((wave - 4) / 4));
+  return Math.max(1, Math.round(base * lateMult(wave)));
+}
+
+function shooterHp(wave) {
+  return Math.round((3 + Math.floor(wave * 0.8)) * lateMult(wave));
+}
+
+function buildWave(eco, player) {
+  const wave = eco.wave;
+  const total = Math.min(60, 7 + Math.floor(wave * 2.5)); // tổng quái của wave
+  const shooters = Math.min(8, Math.floor(wave / 2));
+  const fodder = total - shooters;
+
+  eco.pendingSpawns = [];
+  for (let i = 0; i < fodder; i++) eco.pendingSpawns.push("fodder");
+  for (let i = 0; i < shooters; i++) eco.pendingSpawns.push("shooter");
+  // Trộn để shooter không dồn hết về cuối wave
+  eco.pendingSpawns.sort(() => Math.random() - 0.5);
+
+  // Elite mỗi 5 wave: "Kẻ Nuốt Vòng Lặp" — trâu, chậm, bounty vàng
+  if (wave % 5 === 0) {
+    const elites = 1 + Math.floor(wave / 15);
+    for (let i = 0; i < elites; i++) eco.pendingSpawns.unshift("elite");
+  }
+
+  // Tái Chiếu: từ wave 6, mỗi 3 wave một Bóng Ma cũ quay lại — tua nhanh ×1.25
+  if (wave >= 6 && wave % 3 === 0) spawnReEcho(player);
+
+  // Đợt đầu spawn ngay tới cap, phần còn lại nhỏ giọt trong updateEchoWaves
+  const initial = Math.min(eco.pendingSpawns.length, concurrentCap(wave));
+  for (let k = 0; k < initial; k++) {
+    spawnFromDesc(eco.pendingSpawns.shift(), wave, player);
+  }
+  eco.spawnTick = 45;
+}
+
+function spawnReEcho(player) {
+  const runs = loadEchoData().runs;
+  if (!runs || runs.length === 0) return;
+  const run = runs[Math.floor(Math.random() * runs.length)];
+  if (!run.record || run.record.length < ECHO.MIN_RECORD_FRAMES) return;
+
+  const hp = Math.round(Math.min(30, 6 + (run.wave || 0) * 2) * 0.8);
+  state.ghosts.push({
+    isEchoGhost: true,
+    isReEcho: true, // không rơi mộ bia (chặn farm), replay nhanh hơn
+    name: null,
+    record: run.record,
+    graveCoins: 0,
+    timer: 0,
+    lastIdx: -1,
+    speedRate: 1.25,
+    x: run.record[0][0],
+    y: run.record[0][1],
+    radius: 12,
+    hp,
+    maxHp: hp,
+    isStunned: 0,
+    spawnProtect: ECHO.GHOST_SPAWN_PROTECT,
+    historyPath: [],
+  });
+  state.floatingTexts.push({
+    x: player.x,
+    y: player.y - 150,
+    text: "⏪ TÁI CHIẾU — quá khứ quay lại nhanh hơn!",
+    color: "#ff5599",
+    size: 20,
+    life: 160,
+    opacity: 1,
+  });
 }
 
 function randomArenaPoint(player) {
@@ -345,11 +444,30 @@ function randomArenaPoint(player) {
   return { x: ECHO.CX, y: ECHO.CY - ECHO.RADIUS + 120 };
 }
 
-function spawnWaveEnemy(isShooter, wave, player) {
+function spawnFromDesc(kind, wave, player) {
   const pt = randomArenaPoint(player);
-  if (isShooter) {
-    // isSubBoss → dùng AI đuổi + bắn có sẵn (update.js nhánh 3), chết theo HP
-    const hp = 3 + Math.floor(wave * 0.8);
+  if (kind === "elite") {
+    // isSubBoss AI (đuổi + bắn), to, trâu, chậm — chết rơi bounty vàng
+    const hp = Math.round((20 + wave * 2) * lateMult(wave));
+    state.ghosts.push({
+      isSubBoss: true,
+      isEchoEnemy: true,
+      isEchoElite: true,
+      x: pt.x,
+      y: pt.y,
+      radius: 22,
+      hp,
+      maxHp: hp,
+      speed: 0.9,
+      speedRate: 1,
+      isStunned: 0,
+      historyPath: [],
+      color: "#b870ff",
+      bounty: 15 + wave,
+    });
+  } else if (kind === "shooter") {
+    // isSubBoss → AI đuổi + bắn có sẵn (update.js nhánh 3), chết theo HP
+    const hp = shooterHp(wave);
     state.ghosts.push({
       isSubBoss: true,
       isEchoEnemy: true,
@@ -358,21 +476,24 @@ function spawnWaveEnemy(isShooter, wave, player) {
       radius: 15,
       hp,
       maxHp: hp,
-      speed: Math.min(2.2, 1.0 + wave * 0.06),
+      speed: Math.min(2.4, 1.0 + wave * 0.06),
       speedRate: 1,
       isStunned: 0,
       historyPath: [],
       color: wave % 2 === 0 ? "#ff4400" : "#66ccff",
     });
   } else {
-    // isHorde → AI lao thẳng (update.js nhánh 2), 1 hit chết
+    // isHorde → AI lao thẳng (update.js nhánh 2), HP theo fodderHp()
+    const hp = fodderHp(wave);
     state.ghosts.push({
       isHorde: true,
       isEchoEnemy: true,
       x: pt.x,
       y: pt.y,
       radius: 11,
-      speed: Math.min(1.6, 0.9 + wave * 0.05),
+      hp,
+      maxHp: hp,
+      speed: Math.min(1.75, 0.9 + wave * 0.05),
       speedRate: 1,
       isStunned: 0,
       historyPath: [],
@@ -387,12 +508,16 @@ function spawnWaveEnemy(isShooter, wave, player) {
 // ---------------------------------------------------------------------------
 
 export function onEchoGhostDeath(g, reason) {
-  state.echoGraves.push({
-    x: g.x,
-    y: g.y,
-    coins: g.graveCoins || 10,
-    pulse: 0,
-  });
+  // Tái Chiếu không rơi mộ bia — tránh farm vàng từ cùng một run
+  const graveCoins = g.isReEcho ? 0 : g.graveCoins || 10;
+  if (graveCoins > 0) {
+    state.echoGraves.push({
+      x: g.x,
+      y: g.y,
+      coins: graveCoins,
+      pulse: 0,
+    });
+  }
   if (!state.explosions) state.explosions = [];
   state.explosions.push({
     x: g.x,
