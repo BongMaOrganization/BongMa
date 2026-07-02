@@ -64,6 +64,7 @@ import {
   onMultiplayerPlayerDead,
 } from "../multiplayer/mpFlow.js";
 import { enforceBulletBudget, enforceVfxBudget } from "./vfxBudget.js";
+import { updateEchoWaves, onEchoGhostDeath } from "./echoMode.js";
 
 function moveGhostInDungeon(g, dx, dy) {
   const radius = g.radius || 12;
@@ -183,6 +184,10 @@ export function update(ctx, canvas, changeStateFn) {
 
   updateElementalZones(state.player);
   updateMapMechanic(state.player, ctx, canvas, changeStateFn);
+  // Chế độ Vòng Lặp: waves + mộ bia + HUD
+  if (state.gameMode === "echo" && state.echo) {
+    updateEchoWaves(player, changeStateFn);
+  }
   updateElementalEnemies(state.player);
   updateHealStations();
   updateUpgradePedestals();
@@ -632,9 +637,20 @@ export function update(ctx, canvas, changeStateFn) {
     }
 
     // Kiểm tra quái chết
+    // Bóng Ma (Echo) không chết vì stun — chỉ chết khi cạn HP
     const hasDeadHp =
       g.hp !== undefined && (!Number.isFinite(g.hp) || g.hp <= 0);
-    let isHit = hasDeadHp || (!g.isSubBoss && !g.isMiniBoss && g.isStunned > 0);
+    let isHit =
+      hasDeadHp ||
+      (!g.isSubBoss && !g.isMiniBoss && !g.isEchoGhost && g.isStunned > 0);
+    if (isHit && g.isEchoGhost) {
+      // Diệt được chính mình → thưởng đậm + rơi mộ bia
+      addExperience(g.isNemesis ? 30 : 10, changeStateFn);
+      state.player.coins = (state.player.coins || 0) + (g.isNemesis ? 15 : 5);
+      onEchoGhostDeath(g, "killed");
+      state.ghosts.splice(i, 1);
+      continue;
+    }
     if (isHit && !g.isRespawning) {
       if (g.parentZoneId) {
         const zone = state.swarmZones.find((sz) => sz.id === g.parentZoneId);
@@ -734,8 +750,46 @@ export function update(ctx, canvas, changeStateFn) {
 
     // --- AI DI CHUYỂN ---
     if (!state.timeFrozenModifier) {
+      // 0. ECHO REPLAY (Vòng Lặp) — phát lại NGUYÊN BẢN run cũ:
+      // vị trí tuyệt đối từ record + bắn đúng target chuột đã ghi.
+      // Arena cố định nên tọa độ tuyệt đối luôn hợp lệ.
+      if (g.isEchoGhost) {
+        if (g.spawnProtect > 0) g.spawnProtect--;
+        if (g.isStunned > 0) {
+          g.isStunned--; // khựng nhẹ khi trúng đạn → replay tạm dừng
+        } else {
+          const idx = Math.floor(g.timer || 0);
+          if (!g.record || idx >= g.record.length) {
+            // Record kết thúc = khoảnh khắc chết của run cũ → mộ bia
+            onEchoGhostDeath(g, "expired");
+            state.ghosts.splice(i, 1);
+            continue;
+          }
+          const frame = g.record[idx];
+          g.x = frame[0];
+          g.y = frame[1];
+          if (!g.historyPath) g.historyPath = [];
+          g.historyPath.push({ x: g.x, y: g.y });
+          if (g.historyPath.length > 8) g.historyPath.shift();
+
+          // Bắn theo target ĐÃ GHI (không phải vị trí player hiện tại)
+          if (g.lastIdx !== idx && frame.length === 4) {
+            spawnBullet(g.x, g.y, frame[2], frame[3], false, 0, "ghost");
+          }
+          g.lastIdx = idx;
+          g.timer = (g.timer || 0) + 1;
+        }
+        activeGhosts++;
+
+        if (
+          !isInvulnerable &&
+          (g.spawnProtect || 0) <= 0 &&
+          dist(g.x, g.y, player.x, player.y) < player.radius + g.radius - 2
+        )
+          playerTakeDamage(ctx, canvas, changeStateFn);
+      }
       // 1. Swarm Zone AI
-      if (g.parentZoneId) {
+      else if (g.parentZoneId) {
         const angle = Math.atan2(player.y - g.y, player.x - g.x);
         const speed = 0.8 + state.currentLevel * 0.05;
         moveGhostInDungeon(g, Math.cos(angle) * speed, Math.sin(angle) * speed);

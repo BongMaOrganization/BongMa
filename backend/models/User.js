@@ -19,6 +19,11 @@ const UserSchema = new mongoose.Schema(
       default: [{ id: "fire", unlocked: true }],
     },
     gameState: { type: mongoose.Schema.Types.Mixed, default: {} },
+    // Kỷ lục chế độ Vòng Lặp (Echo Mode) — dùng cho bảng xếp hạng
+    echoBest: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null, // { wave, timeFrames, coins, characterId, score, achievedAt }
+    },
   },
   { timestamps: true },
 );

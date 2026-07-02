@@ -260,6 +260,13 @@ export function changeState(newGameState, gameLoopFn) {
     stopAllBGM();
     playSound("gameOver");
 
+    // Chế độ Vòng Lặp có death-flow riêng: run chết trở thành Bóng Ma,
+    // KHÔNG reset level/pastRuns campaign. (Dynamic import để tránh cycle.)
+    if (state.gameMode === "echo") {
+      import("./echoMode.js").then((m) => m.handleEchoGameOver(gameLoopFn));
+      return;
+    }
+
     // Lưu số liệu trước khi reset để hiển thị trên màn hình thua
     const reachedLevel = state.currentLevel;
     const coins = state.player?.coins || 0;
@@ -355,6 +362,9 @@ export async function onCardSelected(gameLoopFn) {
 export async function startGame(gameLoopFn) {
   saveGame(state, GHOST_DATA_KEY);
   persistState();
+  state.gameMode = "campaign";
+  state.echo = null;
+  state.echoGraves = [];
   initGame(false);
   changeState("PLAYING", gameLoopFn);
 }
@@ -622,6 +632,9 @@ export function openBossArena(changeStateFn, gameLoopFn) {
 }
 
 export function startBossArenaFight(bossType, changeStateFn, gameLoopFn) {
+  state.gameMode = "bossArena";
+  state.echo = null;
+  state.echoGraves = [];
   state.bossArenaMode = true;
   state.bossArenaType = bossType;
   initGame(false);

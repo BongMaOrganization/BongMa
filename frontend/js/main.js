@@ -16,6 +16,7 @@ import {
   handleBossArenaReward,
 } from "./game/flow.js";
 import { skipBossCutscene } from "./game/bossCutscene.js";
+import { openEchoMenu } from "./game/echoMode.js";
 import { update } from "./game/update.js";
 import { draw } from "./game/draw.js";
 import { initGraphics, needsAutoDetect, sampleAutoDetect } from "./game/graphics.js";
@@ -232,6 +233,11 @@ if (arenaBtn) {
       showLoginScreen();
     }
   };
+}
+// Echo Mode (Vòng Lặp) — chơi được cả offline; điểm chỉ nộp khi đã đăng nhập
+const echoBtn = document.getElementById("btn-echo-mode");
+if (echoBtn) {
+  echoBtn.onclick = () => openEchoMenu(gameLoop);
 }
 // Arena back button
 const arenaBack = document.getElementById("btn-arena-back");

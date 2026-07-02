@@ -92,6 +92,33 @@ export async function saveGameToServer(state, GHOST_DATA_KEY) {
   }
 }
 
+// ========== ECHO MODE (Vòng Lặp) — API bảng xếp hạng ==========
+export async function submitEchoScore(payload) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/echo-score`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (error) {
+    console.warn("Echo score submit failed, offline mode:", error);
+    return null;
+  }
+}
+
+export async function fetchEchoLeaderboard() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/echo-leaderboard`);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (error) {
+    console.warn("Echo leaderboard fetch failed:", error);
+    return null;
+  }
+}
+
 export async function loadGameFromServer() {
   try {
     const res = await fetch(`${API_BASE_URL}/api/load`, {

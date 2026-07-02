@@ -31,7 +31,8 @@ app.use((req, res, next) => {
   next();
 });
 app.use(cors(corsOptions));
-app.use(express.json());
+// Save campaign gửi cả pastRuns (record dài) — limit mặc định 100kb làm save fail im lặng
+app.use(express.json({ limit: "5mb" }));
 
 const httpServer = createServer(app);
 const io = new SocketIOServer(httpServer, {
@@ -120,6 +121,49 @@ app.get("/api/load", authenticateToken, async (req, res) => {
   const user = await User.findById(req.user.id);
   if (!user) return res.status(404).json({ message: "Not found" });
   res.json(user);
+});
+
+// ========== ECHO MODE (Vòng Lặp) — Bảng xếp hạng ==========
+// Điểm = wave * 100000 + giây sống sót → so sánh 1 số duy nhất, wave luôn thắng thời gian
+app.post("/api/echo-score", authenticateToken, async (req, res) => {
+  const wave = Math.max(0, Math.floor(Number(req.body.wave) || 0));
+  const timeFrames = Math.max(0, Math.floor(Number(req.body.timeFrames) || 0));
+  const coins = Math.max(0, Math.floor(Number(req.body.coins) || 0));
+  const characterId = String(req.body.characterId || "").slice(0, 40);
+  const score = wave * 100000 + Math.min(Math.floor(timeFrames / 60), 99999);
+
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "Not found" });
+
+    if (!user.echoBest || score > (user.echoBest.score || 0)) {
+      user.echoBest = {
+        wave,
+        timeFrames,
+        coins,
+        characterId,
+        score,
+        achievedAt: new Date(),
+      };
+      await user.save();
+      return res.json({ improved: true, best: user.echoBest });
+    }
+    res.json({ improved: false, best: user.echoBest });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+app.get("/api/echo-leaderboard", async (req, res) => {
+  try {
+    const top = await User.find({ "echoBest.score": { $gt: 0 } })
+      .sort({ "echoBest.score": -1 })
+      .limit(20)
+      .select("username echoBest -_id");
+    res.json(top);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 const PORT = process.env.PORT || 3000;

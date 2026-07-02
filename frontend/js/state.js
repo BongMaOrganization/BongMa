@@ -1,5 +1,7 @@
 export const state = {
   gameState: "MENU",
+  // Chế độ đang chơi: "campaign" | "bossArena" | "echo" (Vòng Lặp)
+  gameMode: "campaign",
   frameCount: 0,
   scoreTime: 0,
   currentLevel: 1,
@@ -232,6 +234,11 @@ export const state = {
   storySigns: [],
   storyLog: [],
   storyToast: null,
+
+  // ===== Echo Mode (Vòng Lặp) =====
+  // Runtime của chế độ Vòng Lặp — khởi tạo tại echoMode.initEchoRunState()
+  echo: null, // { wave, waveTimer, timeFrames, coinsAtStart, kills, ... }
+  echoGraves: [], // [{ x, y, coins, pulse }] — mộ bia rơi từ Bóng Ma
 
   // ===== Multiplayer State =====
   isMultiplayer: false,

@@ -16,6 +16,85 @@ function isVisible(x, y, radius = 0, padding = 180) {
   );
 }
 
+// ===== ECHO MODE (Vòng Lặp): Mộ bia =====
+function drawEchoGraves(ctx) {
+  const graves = state.echoGraves;
+  if (!graves || graves.length === 0) return;
+  for (const gr of graves) {
+    if (!isVisible(gr.x, gr.y, 30)) continue;
+    const bob = Math.sin((gr.pulse || 0) * 0.08) * 3;
+    ctx.save();
+    ctx.textAlign = "center";
+    ctx.font = "26px serif";
+    ctx.globalAlpha = 0.95;
+    ctx.fillText("🪦", gr.x, gr.y + bob);
+    ctx.font = "bold 12px monospace";
+    ctx.fillStyle = "#ffd700";
+    ctx.fillText(`${gr.coins} 💰`, gr.x, gr.y + 20 + bob);
+    ctx.restore();
+  }
+}
+
+// ===== ECHO MODE (Vòng Lặp): Bóng Ma replay =====
+function drawEchoGhost(ctx, g, minimalDraw) {
+  const materializing = (g.spawnProtect || 0) > 0;
+  const alpha = materializing ? 0.3 : g.isStunned > 0 ? 0.5 : 0.85;
+  const color = g.isNemesis ? "#ffd700" : "#00ffcc";
+
+  // Vệt di chuyển — dấu vết vòng lặp
+  if (!minimalDraw && g.historyPath && g.historyPath.length > 1) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(g.historyPath[0].x, g.historyPath[0].y);
+    for (let p of g.historyPath) ctx.lineTo(p.x, p.y);
+    ctx.strokeStyle = g.isNemesis
+      ? "rgba(255,215,0,0.3)"
+      : "rgba(0,255,204,0.28)";
+    ctx.lineWidth = g.radius * 1.6;
+    ctx.lineCap = "round";
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  if (!minimalDraw) {
+    ctx.shadowBlur = g.isNemesis ? 18 : 10;
+    ctx.shadowColor = color;
+  }
+  ctx.beginPath();
+  ctx.arc(g.x, g.y, g.radius, 0, Math.PI * 2);
+  ctx.fillStyle = g.isNemesis ? "#2a2440" : "#0a3d38";
+  ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+
+  // Thanh máu nhỏ trên đầu
+  if (g.maxHp) {
+    const w = g.radius * 2.4;
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fillRect(g.x - w / 2, g.y - g.radius - 12, w, 4);
+    ctx.fillStyle = color;
+    ctx.fillRect(
+      g.x - w / 2,
+      g.y - g.radius - 12,
+      w * Math.max(0, Math.min(1, g.hp / g.maxHp)),
+      4,
+    );
+  }
+
+  if (g.isNemesis) {
+    ctx.save();
+    ctx.font = "bold 13px monospace";
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#ffd700";
+    ctx.fillText(`👑 ${g.name || "NEMESIS"}`, g.x, g.y - g.radius - 18);
+    ctx.restore();
+  }
+}
+
 // ===== GHOSTS =====
 export function drawEnemies(ctx) {
   const { ghosts, activeBuffs, player } = state;
@@ -23,12 +102,19 @@ export function drawEnemies(ctx) {
   const char = player?.characterId;
   const minimalDraw = shouldUseMinimalEnemyDraw(state);
 
+  drawEchoGraves(ctx);
+
   for (let g of ghosts) {
     if (g.x < 0) continue;
     if (!isVisible(g.x, g.y, g.radius || 12)) continue;
 
     if (g.isMiniBoss) {
       drawMiniBoss(ctx, g, minimalDraw);
+      continue;
+    }
+
+    if (g.isEchoGhost) {
+      drawEchoGhost(ctx, g, minimalDraw);
       continue;
     }
 
