@@ -16,7 +16,7 @@ import {
   handleBossArenaReward,
 } from "./game/flow.js";
 import { skipBossCutscene } from "./game/bossCutscene.js";
-import { openEchoMenu } from "./game/echoMode.js";
+import { openEchoMenu, handleEchoBossKilled } from "./game/echoMode.js";
 import { update } from "./game/update.js";
 import { draw } from "./game/draw.js";
 import { initGraphics, needsAutoDetect, sampleAutoDetect } from "./game/graphics.js";
@@ -121,6 +121,16 @@ function gameLoop(timestamp = performance.now()) {
     }
     if (result === "BOSS_KILLED" && state.bossArenaMode) {
       handleBossArenaReward(gameLoop);
+      return;
+    }
+    // Echo boss wave: thưởng rồi CHƠI TIẾP (không nextStage). Wave-clear branch
+    // của updateEchoWaves sẽ tự mở thẻ lựa chọn ở frame kế.
+    if (result === "BOSS_KILLED" && state.gameMode === "echo") {
+      handleEchoBossKilled();
+      if (state.gameState === "PLAYING") {
+        renderAndSample();
+        state.loopId = requestAnimationFrame(gameLoop);
+      }
       return;
     }
     nextStageBound();

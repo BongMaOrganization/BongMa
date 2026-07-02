@@ -350,7 +350,8 @@
             Arena cố định, sóng quái vô tận. Mỗi lần bạn gục ngã, run đó trở thành một <b style="color:#00ffcc">Bóng Ma</b> — nó đi lại đúng con đường bạn đã đi, bắn vào những nơi bạn từng nhắm, và chết đúng chỗ bạn đã chết, để lại <b style="color:#ffd700">mộ bia chứa vàng</b>.
           </p>
         </div>
-        <div id="echo-menu-stats" style="margin: 18px 0 22px; font-size: 15px; color: #cfd6e6; line-height: 1.9;"></div>
+        <div id="echo-menu-stats" style="margin: 18px 0 14px; font-size: 15px; color: #cfd6e6; line-height: 1.9;"></div>
+        <div id="echo-menu-runs" style="margin: 0 0 18px; max-height: 180px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;"></div>
         <div style="margin: 0 0 16px; text-align: left;">
           <label style="font-size: 13px; color: #8899aa;">⚔ Thách đấu (tùy chọn) — nhập username để tải Bóng Ma của họ vào arena:</label>
           <input id="echo-rival-input" type="text" maxlength="30" placeholder="Để trống = ghép ngẫu nhiên theo trình độ" style="width: 100%; margin-top: 6px; padding: 10px 12px; background: rgba(0,0,0,0.45); border: 1px solid rgba(184,112,255,0.35); border-radius: 6px; color: #fff; font-size: 14px;" />
@@ -358,6 +359,17 @@
         <button id="btn-echo-start" class="menu-btn-epic btn-restart" style="width: 100%; margin-bottom: 12px;">▶ BẮT ĐẦU VÒNG LẶP</button>
         <button id="btn-echo-leaderboard" class="menu-btn-epic" style="width: 100%; margin-bottom: 12px;">🏆 BẢNG XẾP HẠNG</button>
         <button id="btn-echo-back" class="menu-btn-utility" style="width: 100%;">← Quay Lại</button>
+      </div>
+    </div>
+
+    <div id="screen-echo-choice" class="overlay hidden" style="z-index: 55;">
+      <div class="panel" style="max-width: 560px; text-align: center;">
+        <h2 class="title-main" style="color: #b870ff;">CHỌN HƯỚNG ĐI</h2>
+        <p class="desc" style="margin-bottom: 20px;">Trước wave kế — chọn an toàn hay đánh cược đổi thưởng lớn.</p>
+        <div style="display: flex; gap: 16px;">
+          <button id="echo-choice-a" class="premium-card" style="flex: 1; min-height: 130px; border-color: rgba(255,85,102,0.5); cursor: pointer;"></button>
+          <button id="echo-choice-b" class="premium-card" style="flex: 1; min-height: 130px; border-color: rgba(0,255,204,0.5); cursor: pointer;"></button>
+        </div>
       </div>
     </div>
 

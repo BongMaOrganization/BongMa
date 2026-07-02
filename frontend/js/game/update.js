@@ -123,6 +123,9 @@ export function update(ctx, canvas, changeStateFn) {
   const { player, boss, keys, mouse, activeBuffs } = state;
   const buffs = activeBuffs || { q: 0, e: 0, r: 0 };
 
+  // === ECHO: đang mở thẻ lựa chọn giữa wave → đóng băng mô phỏng ===
+  if (state.echoChoicePause) return null;
+
   // === MULTIPLAYER: update revive zones, check all dead ===
   updateMultiplayer(changeStateFn);
 

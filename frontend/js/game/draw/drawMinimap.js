@@ -29,8 +29,34 @@ export function drawMinimap(ctx, canvas) {
     ctx.fill();
   };
 
-  // 1. Enemies
-  state.ghosts.forEach((g) => drawDot(g, "#ff4444", 2));
+  // 1. Enemies (echo: Bóng Ma tô màu riêng để phân biệt trên minimap)
+  state.ghosts.forEach((g) => {
+    let color = "#ff4444";
+    if (g.isEchoGhost) {
+      color = g.isNemesis
+        ? "#ffd700"
+        : g.isRival
+          ? "#ff6600"
+          : g.isRemote
+            ? "#ffaa44"
+            : g.isReEcho
+              ? "#ff5599"
+              : "#00ffcc";
+    }
+    drawDot(g, color, g.isNemesis ? 3 : 2);
+  });
+
+  // 1.5. Echo graves (mộ bia — chấm vàng)
+  if (state.gameMode === "echo" && state.echoGraves) {
+    state.echoGraves.forEach((gr) => {
+      const x = mmX + gr.x * scaleX;
+      const y = mmY + gr.y * scaleY;
+      ctx.fillStyle = "#ffd700";
+      ctx.beginPath();
+      ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
 
   // 2. Boss
   if (state.boss && state.boss.hp > 0) {

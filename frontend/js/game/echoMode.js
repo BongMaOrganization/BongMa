@@ -9,9 +9,11 @@ import { CHARACTERS } from "../characters/data.js";
 import {
   setupBossArenaVisual,
   clearBossArenaVisual,
+  getBossSpawnPosition,
 } from "../world/bossArenaVisual.js";
 import { clearDungeon } from "../world/dungeonLayout.js";
-import { playSound } from "./audio.js";
+import { createBoss } from "../entities/bosses/boss_manager.js";
+import { playSound, playBGM } from "./audio.js";
 import { UI, updateHealthUI, updateXPUI } from "../ui.js";
 import {
   saveGame,
@@ -218,7 +220,12 @@ export function startEchoRun(gameLoopFn) {
     spawnTick: 0,
     lastGhostLabel: "",
     runToken: Math.random(), // chống spawn ghost remote vào nhầm run (fetch về trễ)
+    banner: null,
+    bannerTimer: 0,
+    mod: null, // mod áp cho wave hiện tại
+    modNext: null, // mod chọn từ thẻ, áp cho wave kế
   };
+  state.echoChoicePause = false;
   state.echoGraves = [];
   state._echoGameOverHandled = false;
 
@@ -409,26 +416,19 @@ export function updateEchoWaves(player, changeStateFn) {
   const alive = state.ghosts.reduce((n, g) => n + (g.isEchoEnemy ? 1 : 0), 0);
   const cap = concurrentCap(eco.wave);
 
+  if (eco.bannerTimer > 0) eco.bannerTimer--;
+
   if (eco.waveTimer > 0) {
     eco.waveTimer--;
     if (eco.waveTimer === 0) {
       eco.wave++;
       buildWave(eco, player);
       UI.level.innerText = `Wave: ${eco.wave}`;
-      state.floatingTexts.push({
-        x: player.x,
-        y: player.y - 120,
-        text: `⚔ WAVE ${eco.wave}`,
-        color: "#b870ff",
-        size: 30,
-        life: 150,
-        opacity: 1,
-      });
       playSound("fragment");
     }
-  } else if (alive === 0 && eco.pendingSpawns.length === 0) {
-    // Wave sạch → thưởng vàng + nghỉ ngắn
-    const bonus = 15 + eco.wave * 6;
+  } else if (alive === 0 && eco.pendingSpawns.length === 0 && !state.boss) {
+    // Wave sạch → thưởng vàng (nhân theo mod đã chọn) + mở thẻ lựa chọn
+    const bonus = Math.round((15 + eco.wave * 6) * (eco.mod?.gold || 1));
     state.player.coins = (state.player.coins || 0) + bonus;
     state.floatingTexts.push({
       x: player.x,
@@ -439,7 +439,8 @@ export function updateEchoWaves(player, changeStateFn) {
       life: 150,
       opacity: 1,
     });
-    eco.waveTimer = ECHO.INTERMISSION;
+    eco.mod = null; // mod đã tiêu thụ
+    openEchoChoice(eco);
   } else if (eco.pendingSpawns.length > 0) {
     // Nhỏ giọt phần còn lại của wave — áp lực liên tục, không chờ dọn sạch
     eco.spawnTick--;
@@ -495,9 +496,25 @@ function shooterHp(wave) {
 
 function buildWave(eco, player) {
   const wave = eco.wave;
-  const total = Math.min(60, 7 + Math.floor(wave * 2.5)); // tổng quái của wave
+  // Mod từ thẻ lựa chọn (nếu chọn thẻ rủi ro) — tiêu thụ cho đúng wave này
+  const mod = eco.modNext || {};
+  eco.mod = mod;
+  eco.modNext = null;
+
+  // === BOSS WAVE mỗi 10 wave — chỉ boss, không quái thường ===
+  if (wave % 10 === 0 && wave > 0) {
+    eco.pendingSpawns = [];
+    spawnEchoBoss(wave);
+    setBanner(eco, `⚠ BOSS WAVE ${wave}`);
+    return;
+  }
+
+  const total = Math.min(
+    60,
+    Math.round((7 + Math.floor(wave * 2.5)) * (mod.crowd || 1)),
+  );
   const shooters = Math.min(8, Math.floor(wave / 2));
-  const fodder = total - shooters;
+  const fodder = Math.max(0, total - shooters);
 
   eco.pendingSpawns = [];
   for (let i = 0; i < fodder; i++) eco.pendingSpawns.push("fodder");
@@ -506,8 +523,9 @@ function buildWave(eco, player) {
   eco.pendingSpawns.sort(() => Math.random() - 0.5);
 
   // Elite mỗi 5 wave: "Kẻ Nuốt Vòng Lặp" — trâu, chậm, bounty vàng
-  if (wave % 5 === 0) {
-    const elites = 1 + Math.floor(wave / 15);
+  const extraElite = mod.extraElite || 0;
+  if (wave % 5 === 0 || extraElite > 0) {
+    const elites = (wave % 5 === 0 ? 1 + Math.floor(wave / 15) : 0) + extraElite;
     for (let i = 0; i < elites; i++) eco.pendingSpawns.unshift("elite");
   }
 
@@ -520,6 +538,167 @@ function buildWave(eco, player) {
     spawnFromDesc(eco.pendingSpawns.shift(), wave, player);
   }
   eco.spawnTick = 45;
+  setBanner(eco, `WAVE ${wave}`);
+}
+
+function setBanner(eco, text) {
+  eco.banner = text;
+  eco.bannerTimer = 110;
+}
+
+// ---------------------------------------------------------------------------
+// BOSS WAVE — tái dùng boss campaign, scale HP theo wave
+// ---------------------------------------------------------------------------
+
+const ECHO_BOSS_ROTATION = ["fire", "ice", "earth", "wind", "thunder", "void"];
+
+function spawnEchoBoss(wave) {
+  const type =
+    ECHO_BOSS_ROTATION[
+      (Math.floor(wave / 10) - 1) % ECHO_BOSS_ROTATION.length
+    ];
+  const boss = createBoss(type);
+  if (!boss) return;
+
+  const mult = Math.min(1.5, 0.4 + wave * 0.015);
+  boss.maxHp = Math.round((boss.maxHp || boss.hp || 500) * mult);
+  boss.hp = boss.maxHp;
+
+  const spawn = getBossSpawnPosition();
+  boss.x = spawn.x;
+  boss.y = spawn.y;
+  boss.moveTargetX = state.player?.x ?? spawn.x;
+  boss.moveTargetY = state.player?.y ?? spawn.y;
+
+  state.boss = boss;
+  state.currentBossType = type;
+
+  UI.bossUi.style.display = "block";
+  UI.bossName.innerText = `${boss.name} — WAVE ${wave}`;
+  const iconEl = document.getElementById("boss-icon");
+  if (iconEl) iconEl.textContent = boss.icon || "👹";
+  if (UI.bossHp) UI.bossHp.style.width = "100%";
+  if (UI.bossHpTrail) UI.bossHpTrail.style.width = "100%";
+  if (UI.bossHpMarkers) UI.bossHpMarkers.innerHTML = "";
+
+  state.screenShake = { x: 0, y: 0, timer: 40, intensity: 14 };
+  playBGM(`BOSS_${Math.min(5, Math.floor(wave / 10))}`);
+}
+
+// Gọi từ main.js khi boss echo gục (update.js trả "BOSS_KILLED") — chơi tiếp,
+// KHÔNG nextStage. Wave-clear branch sẽ tự mở thẻ lựa chọn ngay sau đó.
+export function handleEchoBossKilled() {
+  const eco = state.echo;
+  const wave = eco?.wave || 10;
+  const bounty = 50 + wave * 5;
+  state.player.coins = (state.player.coins || 0) + bounty;
+  state.floatingTexts.push({
+    x: state.player.x,
+    y: state.player.y - 110,
+    text: `👑 BOSS GỤC NGÃ! +${bounty} Vàng`,
+    color: "#ffd700",
+    size: 26,
+    life: 180,
+    opacity: 1,
+  });
+  UI.bossUi.style.display = "none";
+  playBGM("PLAYING");
+}
+
+// ---------------------------------------------------------------------------
+// THẺ LỰA CHỌN GIỮA WAVE — 1 an toàn + 1 rủi ro; game đóng băng khi đang chọn
+// ---------------------------------------------------------------------------
+
+const ECHO_SAFE_CHOICES = [
+  {
+    icon: "❤",
+    title: "Hồi Phục",
+    desc: "Hồi 2 HP ngay lập tức",
+    apply: () => {
+      const p = state.player;
+      p.hp = Math.min(p.maxHp, p.hp + 2);
+      updateHealthUI();
+    },
+  },
+  {
+    icon: "🛡",
+    title: "Khiên Tạm",
+    desc: "+1 khiên chặn 1 đòn bất kỳ",
+    apply: () => {
+      state.player.shield = (state.player.shield || 0) + 1;
+      updateHealthUI();
+    },
+  },
+  {
+    icon: "💰",
+    title: "Tiền Tươi",
+    desc: "+40 vàng ngay lập tức",
+    apply: () => {
+      state.player.coins = (state.player.coins || 0) + 40;
+    },
+  },
+];
+
+const ECHO_RISKY_CHOICES = [
+  {
+    icon: "⚔",
+    title: "Cơn Lũ",
+    desc: "Wave kế +30% quái · thưởng vàng +50%",
+    apply: (eco) => {
+      eco.modNext = { crowd: 1.3, gold: 1.5 };
+    },
+  },
+  {
+    icon: "⚡",
+    title: "Tăng Tốc",
+    desc: "Wave kế quái nhanh +25% · thưởng vàng ×2",
+    apply: (eco) => {
+      eco.modNext = { speed: 1.25, gold: 2 };
+    },
+  },
+  {
+    icon: "👿",
+    title: "Săn Lớn",
+    desc: "Wave kế +1 Elite · bounty Elite ×2",
+    apply: (eco) => {
+      eco.modNext = { extraElite: 1, eliteBounty: 2 };
+    },
+  },
+];
+
+function openEchoChoice(eco) {
+  const screen = document.getElementById("screen-echo-choice");
+  if (!screen) {
+    eco.waveTimer = ECHO.INTERMISSION;
+    return;
+  }
+
+  const safe =
+    ECHO_SAFE_CHOICES[Math.floor(Math.random() * ECHO_SAFE_CHOICES.length)];
+  const risky =
+    ECHO_RISKY_CHOICES[Math.floor(Math.random() * ECHO_RISKY_CHOICES.length)];
+
+  state.echoChoicePause = true; // update.js đóng băng mô phỏng khi cờ này bật
+  screen.classList.remove("hidden");
+
+  const wire = (btnId, choice, accent) => {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.innerHTML =
+      `<div style="font-size:28px">${choice.icon}</div>` +
+      `<div style="font-weight:bold;margin:6px 0;color:${accent}">${choice.title}</div>` +
+      `<div style="font-size:13px;color:#aab4c8">${choice.desc}</div>`;
+    btn.onclick = () => {
+      choice.apply(eco);
+      screen.classList.add("hidden");
+      state.echoChoicePause = false;
+      eco.waveTimer = ECHO.INTERMISSION;
+      playSound("button");
+    };
+  };
+
+  wire("echo-choice-a", risky, "#ff5566");
+  wire("echo-choice-b", safe, "#00ffcc");
 }
 
 function spawnReEcho(player) {
@@ -572,6 +751,8 @@ function randomArenaPoint(player) {
 
 function spawnFromDesc(kind, wave, player) {
   const pt = randomArenaPoint(player);
+  const mod = state.echo?.mod || {}; // mod của wave hiện tại (từ thẻ rủi ro)
+  const spd = mod.speed || 1;
   if (kind === "elite") {
     // isSubBoss AI (đuổi + bắn), to, trâu, chậm — chết rơi bounty vàng
     const hp = Math.round((20 + wave * 2) * lateMult(wave));
@@ -584,12 +765,12 @@ function spawnFromDesc(kind, wave, player) {
       radius: 22,
       hp,
       maxHp: hp,
-      speed: 0.9,
+      speed: 0.9 * spd,
       speedRate: 1,
       isStunned: 0,
       historyPath: [],
       color: "#b870ff",
-      bounty: 15 + wave,
+      bounty: (15 + wave) * (mod.eliteBounty || 1),
     });
   } else if (kind === "shooter") {
     // isSubBoss → AI đuổi + bắn có sẵn (update.js nhánh 3), chết theo HP
@@ -602,7 +783,7 @@ function spawnFromDesc(kind, wave, player) {
       radius: 15,
       hp,
       maxHp: hp,
-      speed: Math.min(2.4, 1.0 + wave * 0.06),
+      speed: Math.min(2.4, 1.0 + wave * 0.06) * spd,
       speedRate: 1,
       isStunned: 0,
       historyPath: [],
@@ -619,13 +800,37 @@ function spawnFromDesc(kind, wave, player) {
       radius: 11,
       hp,
       maxHp: hp,
-      speed: Math.min(1.75, 0.9 + wave * 0.05),
+      speed: Math.min(1.75, 0.9 + wave * 0.05) * spd,
       speedRate: 1,
       isStunned: 0,
       historyPath: [],
       timer: 0,
     });
   }
+}
+
+// ---------------------------------------------------------------------------
+// BANNER giữa màn hình (thay floating text nhỏ)
+// ---------------------------------------------------------------------------
+export function drawEchoBanner(ctx, canvas) {
+  const eco = state.echo;
+  if (!eco || !eco.banner || eco.bannerTimer <= 0) return;
+
+  const t = eco.bannerTimer;
+  // Fade in nhanh, giữ, fade out
+  const alpha = t > 90 ? (110 - t) / 20 : t < 25 ? t / 25 : 1;
+  const isBoss = eco.banner.includes("BOSS");
+  const color = isBoss ? "#ff5566" : "#b870ff";
+
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+  ctx.textAlign = "center";
+  ctx.font = "bold 52px Orbitron, sans-serif";
+  ctx.shadowBlur = 24;
+  ctx.shadowColor = color;
+  ctx.fillStyle = color;
+  ctx.fillText(eco.banner, canvas.width / 2, canvas.height / 2 - 40);
+  ctx.restore();
 }
 
 // ---------------------------------------------------------------------------
@@ -776,9 +981,14 @@ function showEchoGameOverScreen(gameLoopFn, info) {
       `<br>Thời gian sống sót: <b style="color:#00ffcc">${formatFrames(info.eco.timeFrames)}</b>` +
       `<br>Vàng kiếm được: <b style="color:#ffd700">+${info.coinsEarned}</b>` +
       `<br>Bóng Ma đã diệt: <b>${info.eco.kills}</b>` +
+      (isAuthenticated()
+        ? `<br><span id="echo-gameover-rank" style="color:#8899aa">🏆 Đang tính hạng toàn cầu…</span>`
+        : `<br><span style="color:#8899aa">Đăng nhập để ghi danh bảng xếp hạng.</span>`) +
       (info.newGhostCreated
         ? '<br><br><span style="color:#8899aa">Run này đã trở thành một Bóng Ma — nó sẽ chờ bạn ở vòng lặp sau.</span>'
         : "");
+
+    if (isAuthenticated()) showGlobalRank(info.eco);
   }
 
   screen.classList.remove("hidden");
@@ -805,6 +1015,27 @@ function showEchoGameOverScreen(gameLoopFn, info) {
 function formatFrames(frames) {
   const s = Math.floor((frames || 0) / FPS);
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
+// Hạng toàn cầu: đếm số người điểm cao hơn mình trong top 20 → rank
+async function showGlobalRank(eco) {
+  const myScore =
+    eco.wave * 100000 + Math.min(Math.floor(eco.timeFrames / 60), 99999);
+  const rows = await fetchEchoLeaderboard();
+  const el = document.getElementById("echo-gameover-rank");
+  if (!el) return;
+  if (!rows) {
+    el.textContent = "🏆 Không kết nối được bảng xếp hạng.";
+    return;
+  }
+  const better = rows.filter((r) => (r.echoBest?.score || 0) > myScore).length;
+  if (better >= rows.length && rows.length >= 20) {
+    el.innerHTML = `🏆 Ngoài top 20 toàn cầu — leo tiếp!`;
+  } else {
+    const rank = better + 1;
+    const medal = rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : "🏆";
+    el.innerHTML = `${medal} Hạng <b style="color:#ffd700">#${rank}</b> toàn cầu`;
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -842,6 +1073,31 @@ export function openEchoMenu(gameLoopFn) {
       `<br><br>${remoteLine}`;
   }
 
+  // Danh sách Bóng Ma đang chờ — wave, nhân vật, thời điểm
+  const listEl = document.getElementById("echo-menu-runs");
+  if (listEl) {
+    const nemesis = getNemesisRun(data.runs);
+    if (data.runs.length === 0) {
+      listEl.innerHTML = `<div style="color:#8899aa;padding:10px;text-align:center">Chưa có Bóng Ma nào.</div>`;
+    } else {
+      listEl.innerHTML = [...data.runs]
+        .sort((a, b) => (b.date || 0) - (a.date || 0))
+        .map((r) => {
+          const ch = CHARACTERS.find((c) => c.id === r.characterId);
+          const isN = r === nemesis && (r.wave || 0) >= 2;
+          return (
+            `<div style="display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid rgba(255,255,255,0.06)">` +
+            `<span style="width:26px">${isN ? "👑" : "👻"}</span>` +
+            `<span style="flex:1;text-align:left;color:${isN ? "#ffd700" : "#cfd6e6"}">Wave ${r.wave || 0} · ${formatFrames(r.timeFrames)}</span>` +
+            `<span style="width:110px;color:#8899aa;font-size:12px">${escapeHtml(ch?.name || "?")}</span>` +
+            `<span style="width:80px;color:#667;font-size:11px">${timeAgo(r.date)}</span>` +
+            `</div>`
+          );
+        })
+        .join("");
+    }
+  }
+
   const start = document.getElementById("btn-echo-start");
   if (start)
     start.onclick = () => {
@@ -858,6 +1114,15 @@ export function openEchoMenu(gameLoopFn) {
       screen.classList.add("hidden");
       document.getElementById("screen-main")?.classList.remove("hidden");
     };
+}
+
+function timeAgo(ts) {
+  if (!ts) return "";
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60) return "vừa xong";
+  if (s < 3600) return `${Math.floor(s / 60)} phút`;
+  if (s < 86400) return `${Math.floor(s / 3600)} giờ`;
+  return `${Math.floor(s / 86400)} ngày`;
 }
 
 function escapeHtml(s) {

@@ -14,6 +14,7 @@ import {
 } from "./draw/drawHazards.js";
 import { drawBoss, drawBossBeams, drawBossEntityPhase, drawSuctionParticles } from "./draw/drawBoss.js";
 import { drawEnemies } from "./draw/drawEnemies.js";
+import { drawEchoBanner } from "./echoMode.js";
 import { drawBullets } from "./draw/drawBullets.js";
 import {
   drawPlayer,
@@ -215,6 +216,7 @@ export function draw(ctx, canvas) {
   // Echo mode (Vòng Lặp) không có mục tiêu màn — HUD wave tự quản trong echoMode.js
   if (!state.isBossLevel && !state.bossArenaMode && state.gameMode !== "echo")
     drawStageConditionsHUD(ctx, canvas);
+  if (state.gameMode === "echo") drawEchoBanner(ctx, canvas);
 
   // --- Player burn vignette ---
   if (state.playerStatus.burnTimer > 0) {
