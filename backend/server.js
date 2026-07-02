@@ -123,6 +123,27 @@ app.get("/api/load", authenticateToken, async (req, res) => {
   res.json(user);
 });
 
+// Auth tùy chọn: có token thì lấy danh tính (để exclude chính mình), không có vẫn cho qua
+const optionalAuth = (req, res, next) => {
+  const token = req.header("Authorization")?.split(" ")[1];
+  if (token) {
+    try {
+      req.user = jwt.verify(token, process.env.JWT_SECRET);
+    } catch {
+      /* token hỏng → coi như guest */
+    }
+  }
+  next();
+};
+
+// Sanity chống gian lận: mỗi wave tối thiểu ~5s (intermission 4s + dọn quái)
+function isEchoScorePlausible(wave, timeFrames) {
+  if (wave < 0 || wave > 500) return false;
+  if (timeFrames < 0 || timeFrames > 60 * 60 * 12 * 60) return false; // > 12h = láo
+  if (timeFrames < wave * 300) return false;
+  return true;
+}
+
 // ========== ECHO MODE (Vòng Lặp) — Bảng xếp hạng ==========
 // Điểm = wave * 100000 + giây sống sót → so sánh 1 số duy nhất, wave luôn thắng thời gian
 app.post("/api/echo-score", authenticateToken, async (req, res) => {
@@ -130,6 +151,11 @@ app.post("/api/echo-score", authenticateToken, async (req, res) => {
   const timeFrames = Math.max(0, Math.floor(Number(req.body.timeFrames) || 0));
   const coins = Math.max(0, Math.floor(Number(req.body.coins) || 0));
   const characterId = String(req.body.characterId || "").slice(0, 40);
+
+  if (!isEchoScorePlausible(wave, timeFrames)) {
+    return res.status(400).json({ message: "Invalid score" });
+  }
+
   const score = wave * 100000 + Math.min(Math.floor(timeFrames / 60), 99999);
 
   try {
@@ -161,6 +187,104 @@ app.get("/api/echo-leaderboard", async (req, res) => {
       .limit(20)
       .select("username echoBest -_id");
     res.json(top);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ========== ECHO MODE — Chia sẻ Bóng Ma giữa người chơi ==========
+
+// Upload record sau khi chết (giữ 2 run wave cao nhất mỗi user)
+app.post("/api/echo-ghost", authenticateToken, async (req, res) => {
+  const wave = Math.floor(Number(req.body.wave) || 0);
+  const timeFrames = Math.floor(Number(req.body.timeFrames) || 0);
+  const characterId = String(req.body.characterId || "").slice(0, 40);
+  const record = req.body.record;
+
+  // Chỉ nhận run đáng chia sẻ + record đúng định dạng nén v1, chặn payload phình
+  if (wave < 3 || !isEchoScorePlausible(wave, timeFrames)) {
+    return res.status(400).json({ message: "Run không hợp lệ" });
+  }
+  if (
+    !record ||
+    record.v !== 1 ||
+    typeof record.d !== "string" ||
+    record.d.length > 400000 ||
+    !Number.isFinite(record.n) ||
+    record.n > 40000
+  ) {
+    return res.status(400).json({ message: "Record không hợp lệ" });
+  }
+
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ message: "Not found" });
+
+    const list = Array.isArray(user.echoGhosts) ? user.echoGhosts : [];
+    list.push({
+      wave,
+      timeFrames,
+      characterId,
+      record: { v: 1, sx: record.sx, sy: record.sy, n: record.n, d: record.d },
+      updatedAt: new Date(),
+    });
+    list.sort((a, b) => (b.wave || 0) - (a.wave || 0));
+    user.echoGhosts = list.slice(0, 2);
+    user.markModified("echoGhosts");
+    await user.save();
+    res.json({ stored: user.echoGhosts.map((g) => g.wave) });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Ghép trình: trả tối đa 3 ghost của người khác có wave gần nearWave
+app.get("/api/echo-ghosts", optionalAuth, async (req, res) => {
+  const w = Math.max(1, Math.floor(Number(req.query.nearWave) || 1));
+  try {
+    const users = await User.find({ "echoGhosts.0": { $exists: true } })
+      .select("username echoGhosts")
+      .limit(60);
+
+    const me = req.user?.username;
+    const pool = [];
+    users.forEach((u) => {
+      if (u.username === me) return;
+      (u.echoGhosts || []).forEach((g) => {
+        if ((g.wave || 0) >= w - 2 && (g.wave || 0) <= w + 4) {
+          pool.push({
+            username: u.username,
+            wave: g.wave,
+            characterId: g.characterId,
+            record: g.record,
+          });
+        }
+      });
+    });
+
+    pool.sort(() => Math.random() - 0.5);
+    res.json(pool.slice(0, 3));
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Thách đấu: tải ghost tốt nhất của đúng 1 người theo username
+app.get("/api/echo-ghost/by-name/:username", async (req, res) => {
+  try {
+    const u = await User.findOne({
+      username: String(req.params.username || "").slice(0, 60),
+    }).select("username echoGhosts");
+    const best = (u?.echoGhosts || [])[0];
+    if (!best) {
+      return res.status(404).json({ message: "Người chơi này chưa có Bóng Ma" });
+    }
+    res.json({
+      username: u.username,
+      wave: best.wave,
+      characterId: best.characterId,
+      record: best.record,
+    });
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }

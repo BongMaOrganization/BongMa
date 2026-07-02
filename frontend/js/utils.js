@@ -119,6 +119,51 @@ export async function fetchEchoLeaderboard() {
   }
 }
 
+// Upload record Bóng Ma sau khi chết (fire & forget)
+export async function uploadEchoGhost(payload) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/echo-ghost`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (error) {
+    console.warn("Echo ghost upload failed, offline mode:", error);
+    return null;
+  }
+}
+
+// Ghép trình: ghost người chơi khác quanh wave của mình
+export async function fetchRemoteGhosts(nearWave) {
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/api/echo-ghosts?nearWave=${Math.floor(nearWave) || 1}`,
+      { headers: authHeaders() },
+    );
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (error) {
+    console.warn("Remote ghosts fetch failed:", error);
+    return null;
+  }
+}
+
+// Thách đấu theo username
+export async function fetchGhostByName(username) {
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/api/echo-ghost/by-name/${encodeURIComponent(username)}`,
+    );
+    if (!res.ok) return null;
+    return await res.json();
+  } catch (error) {
+    console.warn("Ghost by name fetch failed:", error);
+    return null;
+  }
+}
+
 export async function loadGameFromServer() {
   try {
     const res = await fetch(`${API_BASE_URL}/api/load`, {

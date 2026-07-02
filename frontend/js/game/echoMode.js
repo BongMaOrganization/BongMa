@@ -18,7 +18,11 @@ import {
   dist,
   submitEchoScore,
   fetchEchoLeaderboard,
+  uploadEchoGhost,
+  fetchRemoteGhosts,
+  fetchGhostByName,
 } from "../utils.js";
+import { encodeRecord, decodeRecord } from "./echoCodec.js";
 import { persistState, isAuthenticated } from "../auth.js";
 import { initSkills } from "./skills.js";
 import { initMapTheme } from "./mapTheme.js";
@@ -42,6 +46,8 @@ export const ECHO = {
   INTERMISSION: 4 * FPS,
   GRAVE_PICKUP_RADIUS: 45,
   GHOST_SPAWN_PROTECT: 3 * FPS, // mới hiện hình: mờ + không gây chạm
+  REMOTE_UNLOCK_WAVE: 3, // gate: bestWave ≥ 3 mới gặp ghost người khác
+  MAX_REMOTE: 3,
 };
 
 const ECHO_DATA_KEY = "BongMa_Echo_V1";
@@ -63,18 +69,30 @@ export function loadEchoData() {
   if (!echoData || !Array.isArray(echoData.runs)) {
     echoData = { runs: [], bestWave: 0, bestTimeFrames: 0 };
   }
+  // Giải nén record (decodeRecord tự nhận cả định dạng cũ chưa nén); hỏng → bỏ
+  echoData.runs = echoData.runs
+    .map((r) => ({ ...r, record: decodeRecord(r.record) }))
+    .filter((r) => Array.isArray(r.record) && r.record.length > 0);
   return echoData;
+}
+
+// Nén record trước khi ghi — runtime giữ mảng thô, chỉ storage/network dùng bản nén
+function serializeEchoData() {
+  return JSON.stringify({
+    ...echoData,
+    runs: echoData.runs.map((r) => ({ ...r, record: encodeRecord(r.record) })),
+  });
 }
 
 function saveEchoData() {
   try {
-    localStorage.setItem(ECHO_DATA_KEY, JSON.stringify(echoData));
+    localStorage.setItem(ECHO_DATA_KEY, serializeEchoData());
   } catch {
     // localStorage đầy → bỏ dần run cũ nhất (giữ Nemesis nhờ pruneRuns đã sort)
     while (echoData.runs.length > 1) {
       echoData.runs.shift();
       try {
-        localStorage.setItem(ECHO_DATA_KEY, JSON.stringify(echoData));
+        localStorage.setItem(ECHO_DATA_KEY, serializeEchoData());
         return;
       } catch {
         /* thử tiếp */
@@ -199,11 +217,26 @@ export function startEchoRun(gameLoopFn) {
     pendingSpawns: [], // hàng chờ spawn nhỏ giọt trong wave
     spawnTick: 0,
     lastGhostLabel: "",
+    runToken: Math.random(), // chống spawn ghost remote vào nhầm run (fetch về trễ)
   };
   state.echoGraves = [];
   state._echoGameOverHandled = false;
 
-  spawnEchoGhosts(data.runs);
+  // === GATE remote ghost ===
+  // Run đầu đời phải sạch (học luật), run 2 phải là "gặp chính mình".
+  // Người khác chỉ xâm nhập khi: có ≥1 run của mình VÀ bestWave ≥ 3.
+  // Nhập username thách đấu = chủ động → bỏ qua gate.
+  const rivalName =
+    document.getElementById("echo-rival-input")?.value.trim() || null;
+  const remoteUnlocked =
+    data.runs.length >= 1 && (data.bestWave || 0) >= ECHO.REMOTE_UNLOCK_WAVE;
+  const remoteActive = remoteUnlocked || !!rivalName;
+
+  // Remote bật → nhường slot: mình giữ Nemesis + 2 run gần nhất, còn lại cho người lạ
+  spawnEchoGhosts(data.runs, remoteActive ? 3 : ECHO.MAX_RUNS);
+  if (remoteActive) {
+    fetchAndSpawnRemoteGhosts(data, rivalName, state.echo.runToken);
+  }
 
   UI.bossUi.style.display = "none";
   updateHealthUI();
@@ -223,9 +256,20 @@ export function startEchoRun(gameLoopFn) {
   changeState("PLAYING", gameLoopFn);
 }
 
-function spawnEchoGhosts(runs) {
+function spawnEchoGhosts(runs, limitOwn = ECHO.MAX_RUNS) {
   const nemesis = getNemesisRun(runs);
-  runs.forEach((run) => {
+
+  // Giới hạn slot của mình: luôn giữ Nemesis, còn lại lấy run mới nhất
+  let chosen = runs;
+  if (runs.length > limitOwn) {
+    const rest = runs
+      .filter((r) => r !== nemesis)
+      .sort((a, b) => (b.date || 0) - (a.date || 0))
+      .slice(0, Math.max(0, limitOwn - (nemesis ? 1 : 0)));
+    chosen = nemesis ? [nemesis, ...rest] : rest;
+  }
+
+  chosen.forEach((run) => {
     if (!run.record || run.record.length < ECHO.MIN_RECORD_FRAMES) return;
     const isNemesis = run === nemesis && (run.wave || 0) >= 2;
     const baseHp = Math.min(30, 6 + (run.wave || 0) * 2);
@@ -249,6 +293,88 @@ function spawnEchoGhosts(runs) {
       historyPath: [],
     });
   });
+}
+
+// ---------------------------------------------------------------------------
+// REMOTE GHOSTS — run thật của người chơi khác.
+// Fetch async KHÔNG chặn vào trận: về muộn thì ghost "xâm nhập" giữa chừng
+// (có spawnProtect); fail/offline → run vẫn chạy với ghost của mình.
+// ---------------------------------------------------------------------------
+
+async function fetchAndSpawnRemoteGhosts(data, rivalName, runToken) {
+  const found = [];
+
+  if (rivalName) {
+    const g = await fetchGhostByName(rivalName);
+    if (g) found.push({ ...g, isRival: true });
+  }
+
+  const need = ECHO.MAX_REMOTE - found.length;
+  if (need > 0) {
+    const list = await fetchRemoteGhosts(
+      Math.max(ECHO.REMOTE_UNLOCK_WAVE, data.bestWave || 0),
+    );
+    if (Array.isArray(list)) list.slice(0, need).forEach((g) => found.push(g));
+  }
+
+  // Fetch về trễ sau khi run đã kết thúc / sang run khác → bỏ
+  if (
+    state.gameMode !== "echo" ||
+    !state.echo ||
+    state.echo.runToken !== runToken
+  ) {
+    return;
+  }
+
+  let spawned = 0;
+  found.forEach((g) => {
+    if (spawnRemoteGhost(g)) spawned++;
+  });
+
+  if (spawned > 0) {
+    state.storyToast = {
+      title: "🌐 XÂM NHẬP",
+      text: `${spawned} Bóng Ma từ người chơi khác đã xâm nhập arena — replay run thật của họ. Diệt để nhận tiền thưởng săn.`,
+      timer: 320,
+    };
+  } else if (rivalName) {
+    state.storyToast = {
+      title: "⚔ THÁCH ĐẤU",
+      text: `Không tìm thấy Bóng Ma của "${rivalName}" — họ chưa có run nào đạt Wave 3.`,
+      timer: 300,
+    };
+  }
+}
+
+function spawnRemoteGhost(g) {
+  const record = decodeRecord(g.record);
+  if (!record || record.length < ECHO.MIN_RECORD_FRAMES) return false;
+
+  const wave = g.wave || ECHO.REMOTE_UNLOCK_WAVE;
+  const hp = Math.min(30, 6 + wave * 2);
+  // Bounty PHẲNG theo wave — không phải % tiền của chủ ghost (chặn farm người giàu)
+  const bounty = Math.round((20 + wave * 2) * (g.isRival ? 1.5 : 1));
+
+  state.ghosts.push({
+    isEchoGhost: true,
+    isRemote: true,
+    isRival: !!g.isRival,
+    name: String(g.username || "???").slice(0, 16),
+    record,
+    graveCoins: bounty,
+    timer: 0,
+    lastIdx: -1,
+    speedRate: 1,
+    x: record[0][0],
+    y: record[0][1],
+    radius: 13,
+    hp,
+    maxHp: hp,
+    isStunned: 0,
+    spawnProtect: ECHO.GHOST_SPAWN_PROTECT,
+    historyPath: [],
+  });
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -606,6 +732,15 @@ export function handleEchoGameOver(gameLoopFn) {
       coins: coinsEarned,
       characterId: state.selectedCharacter,
     });
+    // Chia sẻ record cho matchmaking (server chỉ giữ 2 run wave cao nhất/user)
+    if (newGhostCreated && eco.wave >= ECHO.REMOTE_UNLOCK_WAVE) {
+      uploadEchoGhost({
+        wave: eco.wave,
+        timeFrames: eco.timeFrames,
+        characterId: state.selectedCharacter,
+        record: encodeRecord(rec),
+      });
+    }
   }
 
   showEchoGameOverScreen(gameLoopFn, {
@@ -687,12 +822,24 @@ export function openEchoMenu(gameLoopFn) {
   const stats = document.getElementById("echo-menu-stats");
   if (stats) {
     const nemesis = getNemesisRun(data.runs);
+
+    // Note cơ chế remote ghost — đổi theo tiến trình người chơi
+    let remoteLine;
+    if (data.runs.length === 0) {
+      remoteLine = `<span style="color:#8899aa">👻 Run đầu tiên của bạn sẽ trở thành Bóng Ma đầu tiên trong arena.</span>`;
+    } else if ((data.bestWave || 0) < ECHO.REMOTE_UNLOCK_WAVE) {
+      remoteLine = `<span style="color:#8899aa">🔒 Đạt <b style="color:#ffaa44">Wave ${ECHO.REMOTE_UNLOCK_WAVE}</b> để Bóng Ma của NGƯỜI CHƠI KHÁC bắt đầu xâm nhập arena của bạn.</span>`;
+    } else {
+      remoteLine = `<span style="color:#ffaa44">🌐 Bóng Ma người chơi khác: ĐANG MỞ — tối đa ${ECHO.MAX_REMOTE} run thật từ người lạ cùng trình độ.</span>`;
+    }
+
     stats.innerHTML =
       `Kỷ lục: <b style="color:#b870ff">Wave ${data.bestWave || 0}</b> — <b style="color:#00ffcc">${formatFrames(data.bestTimeFrames)}</b>` +
       `<br>Bóng Ma đang chờ: <b>${data.runs.length}</b>` +
       (nemesis && (nemesis.wave || 0) >= 2
         ? `<br><span style="color:#ffd700">👑 Nemesis: Bóng Ma Wave ${nemesis.wave} đang trấn giữ arena</span>`
-        : "");
+        : "") +
+      `<br><br>${remoteLine}`;
   }
 
   const start = document.getElementById("btn-echo-start");

@@ -24,6 +24,12 @@ const UserSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: null, // { wave, timeFrames, coins, characterId, score, achievedAt }
     },
+    // Record Bóng Ma chia sẻ cho người chơi khác (giữ 2 run wave cao nhất)
+    // [{ wave, timeFrames, characterId, record: {v,sx,sy,n,d}, updatedAt }]
+    echoGhosts: {
+      type: mongoose.Schema.Types.Mixed,
+      default: [],
+    },
   },
   { timestamps: true },
 );

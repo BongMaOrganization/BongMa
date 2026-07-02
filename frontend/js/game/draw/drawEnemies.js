@@ -39,7 +39,16 @@ function drawEchoGraves(ctx) {
 function drawEchoGhost(ctx, g, minimalDraw) {
   const materializing = (g.spawnProtect || 0) > 0;
   const alpha = materializing ? 0.3 : g.isStunned > 0 ? 0.5 : 0.85;
-  const color = g.isNemesis ? "#ffd700" : g.isReEcho ? "#ff5599" : "#00ffcc";
+  // Ưu tiên màu: Nemesis vàng > Rival cam đậm > Remote cam > Tái Chiếu hồng > mình cyan
+  const color = g.isNemesis
+    ? "#ffd700"
+    : g.isRival
+      ? "#ff6600"
+      : g.isRemote
+        ? "#ffaa44"
+        : g.isReEcho
+          ? "#ff5599"
+          : "#00ffcc";
 
   // Vệt di chuyển — dấu vết vòng lặp
   if (!minimalDraw && g.historyPath && g.historyPath.length > 1) {
@@ -64,7 +73,13 @@ function drawEchoGhost(ctx, g, minimalDraw) {
   }
   ctx.beginPath();
   ctx.arc(g.x, g.y, g.radius, 0, Math.PI * 2);
-  ctx.fillStyle = g.isNemesis ? "#2a2440" : g.isReEcho ? "#401824" : "#0a3d38";
+  ctx.fillStyle = g.isNemesis
+    ? "#2a2440"
+    : g.isRemote
+      ? "#3a2410"
+      : g.isReEcho
+        ? "#401824"
+        : "#0a3d38";
   ctx.fill();
   ctx.strokeStyle = color;
   ctx.lineWidth = 2;
@@ -85,12 +100,18 @@ function drawEchoGhost(ctx, g, minimalDraw) {
     );
   }
 
-  if (g.isNemesis) {
+  // Nhãn: Nemesis + ghost người khác phải phân biệt được với "mình-quá-khứ"
+  if (g.isNemesis || g.isRemote) {
     ctx.save();
     ctx.font = "bold 13px monospace";
     ctx.textAlign = "center";
-    ctx.fillStyle = "#ffd700";
-    ctx.fillText(`👑 ${g.name || "NEMESIS"}`, g.x, g.y - g.radius - 18);
+    ctx.fillStyle = color;
+    const label = g.isNemesis
+      ? `👑 ${g.name || "NEMESIS"}`
+      : g.isRival
+        ? `⚔ ${g.name}`
+        : `🌐 ${g.name}`;
+    ctx.fillText(label, g.x, g.y - g.radius - 18);
     ctx.restore();
   }
 }
