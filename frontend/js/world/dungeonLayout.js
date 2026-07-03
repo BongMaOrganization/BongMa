@@ -544,10 +544,16 @@ export function resolveDoorGates(entity, radius) {
 
   let blocked = false;
   const entityRoom = getCurrentRoom(entity.x, entity.y);
+  if (entityRoom) entity._lastRoomId = entityRoom.id;
+  // Ở vùng NGƯỠNG CỬA (~WALL_THICK+8 px sát rìa) getCurrentRoom() trả null. Trước
+  // đây null = bỏ qua chặn → player đi bộ/lướt xuyên cổng khóa. Dùng phòng vừa
+  // đứng (_lastRoomId) để vẫn seal. Vào phòng từ phòng đã-clear vẫn được vì lúc đó
+  // _lastRoomId = phòng cũ (≠ phòng khóa) nên không bị đẩy ngược.
+  const effRoomId = entityRoom ? entityRoom.id : entity._lastRoomId;
 
   for (const room of state.dungeon.rooms) {
     if (!roomRequiresClear(room) || isRoomExitAllowed(room)) continue;
-    if (entityRoom?.id !== room.id) continue;
+    if (effRoomId !== room.id) continue;
     for (const gate of getDoorGateRects(room)) {
       const prevX = entity.x;
       const prevY = entity.y;
