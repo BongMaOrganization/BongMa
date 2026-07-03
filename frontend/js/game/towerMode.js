@@ -13,7 +13,9 @@ import { persistState } from "../auth.js";
 import { initSkills } from "./skills.js";
 import { initMapTheme } from "./mapTheme.js";
 import { spawnBullet } from "../entities/helpers.js";
-import { addExperience } from "./combat.js";
+import { addExperience, popDamage } from "./combat.js";
+import { CHARACTERS } from "../characters/data.js";
+import { loadEchoData } from "./echoMode.js";
 
 // ============================================================================
 // TOWER MODE — "CÔNG THÀNH" (lane-push PvE kiểu MOBA)
@@ -30,6 +32,11 @@ import { addExperience } from "./combat.js";
 export const TOWER = {
   LANE_Y: 1500,
   LANE_HALF: 90, // nửa bề rộng lane (vẽ nền)
+  // Đấu trường giới hạn (corridor) — player/lính bị nhốt trong khung này
+  ARENA_X0: 250,
+  ARENA_X1: 2750,
+  ARENA_Y0: 1150,
+  ARENA_Y1: 1850,
   ALLY_SPAWN_X: 430,
   WAVE_INTERVAL: 22 * FPS,
   FIRST_WAVE_DELAY: 4 * FPS,
@@ -48,10 +55,23 @@ export const TOWER = {
   PASSIVE_XP: 2, // XP thụ động mỗi giây (chuẩn MOBA)
   RESPAWN_BASE_S: 3, // chờ hồi sinh = base + số lần chết (giây)
   RESPAWN_MAX_S: 10,
+  // Đồng minh AI (từ gacha) + champion địch
+  HERO_COUNT: 2,
+  HERO_RANGE: 320,
+  HERO_FIRE_INTERVAL: 40,
+  HERO_HP: 26,
+  HERO_RESPAWN_S: 12,
+  CHAMPION_EVERY: 5, // mỗi 5 wave 1 champion địch
 };
 
 const COLOR_ALLY = "#00ffcc";
 const COLOR_ENEMY = "#ff4455";
+const RARITY_COLORS = {
+  common: "#4ade80",
+  rare: "#60a5fa",
+  legendary: "#c084fc",
+  mythical: "#ff0088",
+};
 
 // ---------------------------------------------------------------------------
 // KHỞI TẠO RUN
@@ -77,6 +97,11 @@ function makeStructure(team, kind, x, order) {
 export function startTowerRun(gameLoopFn) {
   ensureCharacterData();
   const saved = JSON.parse(localStorage.getItem(GHOST_DATA_KEY) || "{}");
+
+  // Vào thẳng tower (không qua campaign) vẫn cần danh sách nhân vật đã sở hữu
+  // để chọn đồng minh AI — nạp từ save nếu state chưa có.
+  state.ownedCharacters = saved.ownedCharacters || state.ownedCharacters;
+  state.selectedCharacter = saved.selectedCharacter || state.selectedCharacter;
 
   state.gameMode = "tower";
   state.isMultiplayer = false;
@@ -141,6 +166,7 @@ export function startTowerRun(gameLoopFn) {
   state.satelliteDrone = null;
   state.activePlayerBuffs = [];
   state.godMode = { active: false, timer: 0 };
+  state.damageNumbers = [];
   state.currentRunRecord = [];
   state.frameCount = 0;
   state.scoreTime = 0;
@@ -169,6 +195,9 @@ export function startTowerRun(gameLoopFn) {
     immuneMsgCd: 0,
     result: null, // "victory" | "defeat"
     _endHandled: false,
+    allyHeroes: [], // đồng minh AI từ ownedCharacters
+    echoNames: loadEchoNamePool(), // tên champion địch (lấy từ Bóng Ma nếu có)
+    champCount: 0,
     // Thứ tự công phá: ngoài cùng trước (chống backdoor)
     structures: [
       // Bên TA — lính địch phá theo order 0→2
@@ -182,6 +211,8 @@ export function startTowerRun(gameLoopFn) {
     ],
   };
 
+  spawnAllyHeroes(state.tower);
+
   UI.bossUi.style.display = "none";
   updateHealthUI();
   updateXPUI();
@@ -191,8 +222,8 @@ export function startTowerRun(gameLoopFn) {
 
   state.storyToast = {
     title: "🏰 CÔNG THÀNH",
-    text: "Đẩy lane cùng lính đồng minh, phá 2 trụ rồi công phá NHÀ CHÍNH địch. Trụ miễn sát thương kỹ năng — chỉ đạn thường mới phá được. Gục ngã sẽ hồi sinh tại nhà chính, nhưng thời gian chờ tăng dần!",
-    timer: 480,
+    text: "Đẩy lane cùng lính + đồng minh, phá 2 trụ rồi công phá NHÀ CHÍNH địch. Trụ miễn sát thương kỹ năng — chỉ đạn thường mới phá. Gục ngã sẽ hồi sinh tại nhà chính (chờ tăng dần).",
+    timer: 300, // ~5s tự biến mất
   };
 
   changeState("PLAYING", gameLoopFn);
@@ -201,6 +232,89 @@ export function startTowerRun(gameLoopFn) {
 function exitTowerMode() {
   state.gameMode = "campaign";
   state.tower = null;
+}
+
+// Nhốt thực thể trong corridor — gọi từ update.js cho player (sau khi di chuyển)
+export function constrainToTowerArena(e, radius = 0) {
+  e.x = Math.max(TOWER.ARENA_X0 + radius, Math.min(TOWER.ARENA_X1 - radius, e.x));
+  e.y = Math.max(TOWER.ARENA_Y0 + radius, Math.min(TOWER.ARENA_Y1 - radius, e.y));
+}
+
+// ---------------------------------------------------------------------------
+// ĐỒNG MINH AI (từ gacha) + CHAMPION ĐỊCH (phase 2)
+// ---------------------------------------------------------------------------
+
+function loadEchoNamePool() {
+  // Tên champion địch mang "chất" Bóng Ma: lấy nhân vật của các run Vòng Lặp.
+  try {
+    const runs = loadEchoData()?.runs || [];
+    const names = runs
+      .map((r) => CHARACTERS.find((c) => c.id === r.characterId)?.name)
+      .filter(Boolean);
+    if (names.length) return names;
+  } catch {
+    /* offline / chưa có echo */
+  }
+  return ["Kẻ Xâm Lược", "Sát Thủ Vô Danh", "Bóng Tối", "Kẻ Phản Bội"];
+}
+
+function spawnAllyHeroes(t) {
+  const owned = (state.ownedCharacters || []).filter(
+    (id) => id !== state.selectedCharacter,
+  );
+  // Ưu tiên nhân vật đã sở hữu (lý do roll gacha); thiếu thì lấp bằng speedster.
+  const pool = owned.length ? owned : ["speedster"];
+  for (let i = 0; i < TOWER.HERO_COUNT; i++) {
+    const id = pool[i % pool.length];
+    const ch = CHARACTERS.find((c) => c.id === id);
+    t.allyHeroes.push({
+      characterId: id,
+      name: ch?.name || "Đồng Minh",
+      color: RARITY_COLORS[ch?.rarity] || COLOR_ALLY,
+      x: 340,
+      y: TOWER.LANE_Y + (i === 0 ? -60 : 60),
+      laneOff: i === 0 ? -60 : 60,
+      radius: 15,
+      hp: TOWER.HERO_HP,
+      maxHp: TOWER.HERO_HP,
+      fireCd: 0,
+      respawnTimer: 0,
+      hitFlash: 0,
+    });
+  }
+}
+
+// Mọi mục tiêu phe TA mà lính/trụ địch có thể đánh (lính + hero còn sống)
+function livingHeroes(t) {
+  return t.allyHeroes.filter((h) => h.respawnTimer <= 0 && h.hp > 0);
+}
+
+function spawnEnemyChampion(t) {
+  t.champCount++;
+  const name = t.echoNames[(t.champCount - 1) % t.echoNames.length];
+  const sc = minionScale(t.wave);
+  state.ghosts.push({
+    isTowerMinion: true,
+    isTowerChampion: true,
+    isSubBoss: true, // dùng AI đuổi + bắn có sẵn (update.js nhánh 3)
+    isEchoEnemy: true, // chết theo HP, không stun-chết
+    championName: name,
+    x: 2640,
+    y: TOWER.LANE_Y,
+    laneOff: 0,
+    radius: 20,
+    hp: Math.round(45 * sc),
+    maxHp: Math.round(45 * sc),
+    speed: 1.0,
+    speedRate: 1,
+    isStunned: 0,
+    historyPath: [],
+    color: "#ff4400",
+    minionDmg: 3,
+    bounty: 40,
+    xpValue: 60,
+  });
+  setBanner(t, `⚔ CHAMPION ĐỊCH: ${name.toUpperCase()}`, COLOR_ENEMY);
 }
 
 // ---------------------------------------------------------------------------
@@ -374,25 +488,29 @@ export function updateTowerMode(player, changeStateFn) {
     t.wave++;
     t.waveTimer = TOWER.WAVE_INTERVAL;
     spawnWave(t);
+    if (t.wave % TOWER.CHAMPION_EVERY === 0) spawnEnemyChampion(t);
+    else setBanner(t, `WAVE ${t.wave}`, "#ffd700");
     UI.level.innerText = `Wave: ${t.wave}`;
-    setBanner(t, `WAVE ${t.wave}`, "#ffd700");
     playSound("fragment");
   }
 
   const enemyMinions = state.ghosts.filter(
     (g) => g.isTowerMinion && (g.hp || 0) > 0,
   );
+  const heroes = livingHeroes(t);
+  const allyGround = [...t.allyMinions, ...heroes]; // mọi mục tiêu mặt đất phe ta
   const allyObj = currentObjective("ally"); // lính địch công cái này
-  const enemyObj = currentObjective("enemy"); // mình + lính đồng minh công cái này
+  const enemyObj = currentObjective("enemy"); // mình + đồng minh công cái này
 
   // --- LÍNH ĐỊCH: chọn mục tiêu (horde branch của update.js lo di chuyển/chạm) ---
   for (const g of enemyMinions) {
+    if (g.isTowerChampion) continue; // champion dùng AI isSubBoss (đuổi player)
     if (g.atkCd > 0) g.atkCd--;
 
-    // 1) Lính đồng minh gần nhất trong tầm aggro
+    // 1) Lính/đồng minh gần nhất trong tầm aggro
     let target = null;
     let bestD = TOWER.AGGRO_MINION;
-    for (const m of t.allyMinions) {
+    for (const m of allyGround) {
       const d = dist(g.x, g.y, m.x, m.y);
       if (d < bestD) {
         bestD = d;
@@ -502,11 +620,17 @@ export function updateTowerMode(player, changeStateFn) {
       const a = Math.atan2(moveY - m.y, moveX - m.x);
       m.x += Math.cos(a) * m.speed;
       m.y += Math.sin(a) * m.speed;
-      m.x = Math.max(20, Math.min(state.world.width - 20, m.x));
-      m.y = Math.max(20, Math.min(state.world.height - 20, m.y));
+      constrainToTowerArena(m, m.radius);
     }
   }
   if (t.result) return;
+
+  // --- ĐỒNG MINH AI (hero): đuổi + bắn + đẩy lane ---
+  updateAllyHeroes(t, enemyMinions, enemyObj, changeStateFn);
+  if (t.result) return;
+
+  // Nhốt lính địch trong corridor (an toàn — chúng vốn bám lane)
+  for (const g of enemyMinions) constrainToTowerArena(g, g.radius);
 
   // --- TRỤ: bắt mục tiêu + bắn ---
   for (const s of t.structures) {
@@ -536,11 +660,11 @@ export function updateTowerMode(player, changeStateFn) {
         smallExplosion(target.x, target.y, "rgba(0,255,204,0.6)", 12);
       }
     } else {
-      // Trụ ĐỊCH: ưu tiên lính đồng minh (trừ trực tiếp), không có thì bắn
+      // Trụ ĐỊCH: ưu tiên lính/đồng minh (trừ trực tiếp), không có thì bắn
       // ĐẠN về phía player (né được — công bằng khi dive trụ)
       let target = null;
       let bestD = s.range;
-      for (const m of t.allyMinions) {
+      for (const m of allyGround) {
         if (m.hp <= 0) continue;
         const d = dist(s.x, s.y, m.x, m.y);
         if (d < bestD) {
@@ -551,6 +675,7 @@ export function updateTowerMode(player, changeStateFn) {
       if (target) {
         s.fireCd = TOWER.TOWER_FIRE_INTERVAL;
         target.hp -= TOWER.TOWER_DMG_MINION;
+        if (target.color) target.hitFlash = 6; // hero
         pushBeam(t, s.x, s.y - s.radius, target.x, target.y, COLOR_ENEMY);
         smallExplosion(target.x, target.y, "rgba(255,68,85,0.6)", 12);
       } else if (
@@ -593,6 +718,8 @@ export function updateTowerMode(player, changeStateFn) {
       } else {
         const dmg = Math.min(TOWER.STRUCT_DMG_CAP, b.damage || 1);
         s.hp -= dmg;
+        s.hitFlash = 6; // nhấp nháy trắng phản hồi trúng đòn
+        popDamage(s, b.x, b.y - s.radius, dmg, false);
         smallExplosion(b.x, b.y, "rgba(255,200,80,0.7)", 10);
         if (s.hp <= 0) structureDestroyed(t, s, changeStateFn);
       }
@@ -602,11 +729,12 @@ export function updateTowerMode(player, changeStateFn) {
     if (t.result) return;
   }
 
-  // --- VỆT BẮN của trụ ---
+  // --- VỆT BẮN của trụ + nhấp nháy trúng đòn ---
   for (let i = t.beams.length - 1; i >= 0; i--) {
     t.beams[i].life--;
     if (t.beams[i].life <= 0) t.beams.splice(i, 1);
   }
+  for (const s of t.structures) if (s.hitFlash > 0) s.hitFlash--;
 
   // --- HUD (ghi DOM tiết kiệm) ---
   if (t.timeFrames % FPS === 0) {
@@ -625,6 +753,72 @@ function formatFrames(frames) {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 }
 
+// Đồng minh AI: bắn ĐẠN player (nên tự động gây sát thương lính/công trình địch
+// qua combat.js + structure loop) và đẩy lane. Chết → hồi sinh sau HERO_RESPAWN_S.
+function updateAllyHeroes(t, enemyMinions, enemyObj) {
+  for (const h of t.allyHeroes) {
+    if (h.hitFlash > 0) h.hitFlash--;
+
+    if (h.respawnTimer > 0) {
+      h.respawnTimer--;
+      if (h.respawnTimer === 0) {
+        h.hp = h.maxHp;
+        h.x = 340;
+        h.y = TOWER.LANE_Y + h.laneOff;
+      }
+      continue;
+    }
+    if (h.hp <= 0) {
+      smallExplosion(h.x, h.y, "rgba(0,255,204,0.7)", 40);
+      h.respawnTimer = TOWER.HERO_RESPAWN_S * FPS;
+      continue;
+    }
+    if (h.fireCd > 0) h.fireCd--;
+
+    // Mục tiêu: lính địch gần nhất trong tầm, không có thì công trình mục tiêu
+    let target = null;
+    let bestD = TOWER.HERO_RANGE;
+    for (const g of enemyMinions) {
+      if ((g.hp || 0) <= 0) continue;
+      const d = dist(h.x, h.y, g.x, g.y);
+      if (d < bestD) {
+        bestD = d;
+        target = g;
+      }
+    }
+
+    let tx = null;
+    let ty = null;
+    let inRange = false;
+    if (target) {
+      tx = target.x;
+      ty = target.y;
+      inRange = bestD < TOWER.HERO_RANGE * 0.85;
+    } else if (enemyObj) {
+      tx = enemyObj.x;
+      ty = enemyObj.y;
+      inRange = dist(h.x, h.y, tx, ty) < enemyObj.radius + TOWER.HERO_RANGE * 0.7;
+    }
+
+    if (tx !== null) {
+      if (inRange) {
+        if (h.fireCd <= 0) {
+          h.fireCd = TOWER.HERO_FIRE_INTERVAL;
+          spawnBullet(h.x, h.y, tx, ty, true);
+        }
+      } else {
+        const a = Math.atan2(ty - h.y, tx - h.x);
+        h.x += Math.cos(a) * 1.35;
+        h.y += Math.sin(a) * 1.35;
+      }
+    } else {
+      // Không có mục tiêu → tiến về phía địch để giữ áp lực lane
+      h.x += 0.8;
+    }
+    constrainToTowerArena(h, h.radius);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // DRAW — world-space (lane, công trình, lính đồng minh) + screen-space HUD
 // ---------------------------------------------------------------------------
@@ -633,18 +827,52 @@ export function drawTowerWorld(ctx) {
   const t = state.tower;
   if (!t) return;
 
-  // Lane nền + vạch giữa
-  const x0 = 260;
-  const x1 = 2740;
+  const ax0 = TOWER.ARENA_X0;
+  const ax1 = TOWER.ARENA_X1;
+  const ay0 = TOWER.ARENA_Y0;
+  const ay1 = TOWER.ARENA_Y1;
+
+  // Nền corridor riêng của chế độ (map riêng, không dùng theme lửa)
+  ctx.save();
+  const grad = ctx.createLinearGradient(0, ay0, 0, ay1);
+  grad.addColorStop(0, "#0b1220");
+  grad.addColorStop(0.5, "#0e1728");
+  grad.addColorStop(1, "#0b1220");
+  ctx.fillStyle = grad;
+  ctx.fillRect(ax0, ay0, ax1 - ax0, ay1 - ay0);
+
+  // Lưới mờ cho cảm giác chiến trường
+  ctx.strokeStyle = "rgba(90,120,170,0.06)";
+  ctx.lineWidth = 1;
+  for (let gx = ax0; gx <= ax1; gx += 120) {
+    ctx.beginPath();
+    ctx.moveTo(gx, ay0);
+    ctx.lineTo(gx, ay1);
+    ctx.stroke();
+  }
+  for (let gy = ay0; gy <= ay1; gy += 120) {
+    ctx.beginPath();
+    ctx.moveTo(ax0, gy);
+    ctx.lineTo(ax1, gy);
+    ctx.stroke();
+  }
+
+  // Tường biên corridor (giới hạn di chuyển)
+  ctx.strokeStyle = "rgba(120,160,220,0.5)";
+  ctx.lineWidth = 4;
+  ctx.strokeRect(ax0, ay0, ax1 - ax0, ay1 - ay0);
+  ctx.restore();
+
+  // Lane trung tâm + vạch giữa
   ctx.save();
   ctx.fillStyle = "rgba(120,140,180,0.08)";
-  ctx.fillRect(x0, TOWER.LANE_Y - TOWER.LANE_HALF, x1 - x0, TOWER.LANE_HALF * 2);
+  ctx.fillRect(ax0, TOWER.LANE_Y - TOWER.LANE_HALF, ax1 - ax0, TOWER.LANE_HALF * 2);
   ctx.strokeStyle = "rgba(160,180,220,0.18)";
   ctx.lineWidth = 2;
   ctx.setLineDash([18, 14]);
   ctx.beginPath();
-  ctx.moveTo(x0, TOWER.LANE_Y);
-  ctx.lineTo(x1, TOWER.LANE_Y);
+  ctx.moveTo(ax0, TOWER.LANE_Y);
+  ctx.lineTo(ax1, TOWER.LANE_Y);
   ctx.stroke();
   ctx.setLineDash([]);
   ctx.restore();
@@ -680,10 +908,11 @@ export function drawTowerWorld(ctx) {
       ctx.stroke();
     }
 
-    // Thân công trình
+    // Thân công trình (nhấp nháy trắng khi vừa trúng đạn)
     ctx.shadowBlur = s.kind === "nexus" ? 22 : 14;
     ctx.shadowColor = color;
-    ctx.fillStyle = s.team === "ally" ? "#0a2d2a" : "#33101a";
+    ctx.fillStyle =
+      s.hitFlash > 0 ? "#ffffff" : s.team === "ally" ? "#0a2d2a" : "#33101a";
     ctx.beginPath();
     ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
     ctx.fill();
@@ -746,6 +975,38 @@ export function drawTowerMinions(ctx) {
   const t = state.tower;
   if (!t) return;
 
+  // Đồng minh AI (hero) — vòng tròn to, màu theo độ hiếm, có tên
+  for (const h of t.allyHeroes) {
+    if (h.respawnTimer > 0) continue;
+    ctx.save();
+    ctx.shadowBlur = 12;
+    ctx.shadowColor = h.color;
+    ctx.beginPath();
+    ctx.arc(h.x, h.y, h.radius, 0, Math.PI * 2);
+    ctx.fillStyle = h.hitFlash > 0 ? "#ffffff" : "#0a2d2a";
+    ctx.fill();
+    ctx.strokeStyle = h.color;
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.font = "bold 11px monospace";
+    ctx.textAlign = "center";
+    ctx.fillStyle = h.color;
+    ctx.fillText(`🤝 ${h.name}`, h.x, h.y - h.radius - 16);
+    // Thanh máu
+    const w = h.radius * 2.4;
+    ctx.fillStyle = "rgba(0,0,0,0.6)";
+    ctx.fillRect(h.x - w / 2, h.y - h.radius - 10, w, 4);
+    ctx.fillStyle = h.color;
+    ctx.fillRect(
+      h.x - w / 2,
+      h.y - h.radius - 10,
+      w * Math.max(0, Math.min(1, h.hp / h.maxHp)),
+      4,
+    );
+    ctx.restore();
+  }
+
   // Lính đồng minh (mảng riêng — drawEnemies không vẽ)
   for (const m of t.allyMinions) {
     ctx.save();
@@ -795,6 +1056,14 @@ export function drawTowerMinions(ctx) {
       ctx.fillText("💀", g.x, g.y + 4);
       ctx.restore();
     }
+    if (g.isTowerChampion) {
+      ctx.save();
+      ctx.font = "bold 12px monospace";
+      ctx.textAlign = "center";
+      ctx.fillStyle = "#ff8844";
+      ctx.fillText(`⚔ ${g.championName}`, g.x, g.y - g.radius - 16);
+      ctx.restore();
+    }
   }
 }
 
@@ -802,38 +1071,60 @@ export function drawTowerHud(ctx, canvas) {
   const t = state.tower;
   if (!t) return;
 
-  // 2 thanh máu nhà chính — top giữa màn hình
+  // 2 thanh máu nhà chính — panel gọn dưới tiêu đề trang (tránh đè chữ H1)
   const allyNexus = t.structures.find((s) => s.team === "ally" && s.kind === "nexus");
   const enemyNexus = t.structures.find((s) => s.team === "enemy" && s.kind === "nexus");
-  const barW = 210;
+  const barW = 190;
+  const barH = 13;
   const cx = canvas.width / 2;
-  const y = 14;
+  const gap = 74; // khoảng trống giữa 2 bar (chừa chỗ cho phần tử ở giữa)
+  const y = 52;
+  const panelW = barW * 2 + gap + 40;
+
+  // Backdrop cho dễ đọc trên nền chiến trường
+  ctx.save();
+  ctx.fillStyle = "rgba(6,10,20,0.72)";
+  ctx.strokeStyle = "rgba(120,160,220,0.35)";
+  ctx.lineWidth = 1;
+  const px = cx - panelW / 2;
+  if (ctx.roundRect) {
+    ctx.beginPath();
+    ctx.roundRect(px, y - 8, panelW, barH + 30, 8);
+    ctx.fill();
+    ctx.stroke();
+  } else {
+    ctx.fillRect(px, y - 8, panelW, barH + 30);
+  }
+  ctx.restore();
 
   const drawBar = (x, s, color, align) => {
     if (!s) return;
     const ratio = Math.max(0, Math.min(1, s.hp / s.maxHp));
     ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.fillRect(x, y, barW, 12);
+    ctx.fillRect(x, y, barW, barH);
     ctx.fillStyle = color;
     ctx.fillRect(
       align === "right" ? x + barW * (1 - ratio) : x,
       y,
       barW * ratio,
-      12,
+      barH,
     );
-    ctx.strokeStyle = "rgba(255,255,255,0.25)";
+    ctx.strokeStyle = "rgba(255,255,255,0.3)";
     ctx.lineWidth = 1;
-    ctx.strokeRect(x, y, barW, 12);
+    ctx.strokeRect(x, y, barW, barH);
   };
-  drawBar(cx - barW - 30, allyNexus, COLOR_ALLY, "right");
-  drawBar(cx + 30, enemyNexus, COLOR_ENEMY, "left");
+  drawBar(cx - gap / 2 - barW, allyNexus, COLOR_ALLY, "right");
+  drawBar(cx + gap / 2, enemyNexus, COLOR_ENEMY, "left");
   ctx.save();
-  ctx.font = "bold 13px Orbitron, monospace";
+  ctx.font = "bold 12px Orbitron, monospace";
   ctx.textAlign = "center";
   ctx.fillStyle = COLOR_ALLY;
-  ctx.fillText("🏰 TA", cx - barW - 55, y + 11);
+  ctx.fillText("🏰 TA", cx - gap / 2 - barW / 2, y + barH + 13);
   ctx.fillStyle = COLOR_ENEMY;
-  ctx.fillText("ĐỊCH 🏰", cx + barW + 60, y + 11);
+  ctx.fillText("ĐỊCH 🏰", cx + gap / 2 + barW / 2, y + barH + 13);
+  ctx.fillStyle = "#8899aa";
+  ctx.font = "11px monospace";
+  ctx.fillText("VS", cx, y + barH - 1);
   ctx.restore();
 
   // Đếm ngược hồi sinh

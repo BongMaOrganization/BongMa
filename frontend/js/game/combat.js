@@ -47,6 +47,40 @@ function setStyleIfChanged(el, prop, value) {
   if (el.style[prop] !== value) el.style[prop] = value;
 }
 
+// ===== SỐ SÁT THƯƠNG BAY LÊN =====
+// Gộp theo mục tiêu: đạn bắn dồn vào cùng một quái sẽ CỘNG dồn vào một con số
+// (phình to) thay vì đẻ ra hàng chục số chồng lên nhau → gọn + đọc được.
+export function popDamage(target, x, y, dmg, crit = false) {
+  if (!state.damageNumbers) state.damageNumbers = [];
+  const now = state.frameCount || 0;
+  let dn = target && target._dmgNum;
+  if (dn && dn._expire > now && state.damageNumbers.includes(dn)) {
+    dn.value += dmg;
+    dn.life = dn.maxLife;
+    dn.x = x;
+    dn.y = y;
+    dn.pop = 1;
+    dn.crit = dn.crit || crit;
+    dn._expire = now + 20;
+  } else {
+    dn = {
+      x,
+      y,
+      vy: -0.7,
+      value: dmg,
+      life: 42,
+      maxLife: 42,
+      crit,
+      pop: 1,
+      _expire: now + 20,
+    };
+    state.damageNumbers.push(dn);
+    if (target) target._dmgNum = dn;
+    // Trần cứng để không phình vô hạn khi bắn dày
+    if (state.damageNumbers.length > 70) state.damageNumbers.shift();
+  }
+}
+
 function updateBossHpBars(boss) {
   if (!boss?.maxHp) return;
   const hpPercent = Math.max(0, (boss.hp / boss.maxHp) * 100);
@@ -513,6 +547,7 @@ export function updateBullets(
           }
 
           // 🪨 earth = default
+          popDamage(boss, b.x, b.y, finalDmg, b.element === "fire" || finalDmg >= 3);
           // --- Send damage via socket if non-host in MP ---
           if (state.isMultiplayer && !state.isHost) {
             import("../multiplayer/sync.js").then(({ sendDamageToHost }) => {
@@ -618,6 +653,8 @@ export function updateBullets(
           }
 
           e.hp -= finalDmg;
+          e.hitFlash = 6;
+          popDamage(e, b.x, b.y, finalDmg, b.element === "fire" || finalDmg >= 2);
           spawnHitImpact(b.x, b.y, "rgba(255,120,80,0.85)", finalDmg >= 2);
 
           // 💀 chết → spawn zone
@@ -790,6 +827,8 @@ export function updateBullets(
 
             if (finalDmg > 0) {
               g.hp = (g.hp || 1) - finalDmg;
+              g.hitFlash = 6;
+              popDamage(g, b.x, b.y, finalDmg, b.element === "fire" || finalDmg >= 2);
               spawnHitImpact(b.x, b.y, "rgba(255,120,80,0.85)", finalDmg >= 2);
             }
           }

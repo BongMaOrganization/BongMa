@@ -65,7 +65,11 @@ import {
 } from "../multiplayer/mpFlow.js";
 import { enforceBulletBudget, enforceVfxBudget } from "./vfxBudget.js";
 import { updateEchoWaves, onEchoGhostDeath } from "./echoMode.js";
-import { updateTowerMode, handleTowerPlayerDown } from "./towerMode.js";
+import {
+  updateTowerMode,
+  handleTowerPlayerDown,
+  constrainToTowerArena,
+} from "./towerMode.js";
 
 function moveGhostInDungeon(g, dx, dy) {
   const radius = g.radius || 12;
@@ -403,6 +407,11 @@ export function update(ctx, canvas, changeStateFn) {
     Math.min(state.world.height - player.radius, player.y),
   );
 
+  // Tower mode: nhốt player trong corridor (giới hạn di chuyển)
+  if (state.gameMode === "tower" && state.tower) {
+    constrainToTowerArena(player, player.radius);
+  }
+
   resolveDungeonCollision(player, player.radius);
   resolveDoorGates(player, player.radius);
   updateDungeonRoomState(player);
@@ -628,6 +637,7 @@ export function update(ctx, canvas, changeStateFn) {
   for (let i = state.ghosts.length - 1; i >= 0; i--) {
     let g = state.ghosts[i];
     if (!g) continue;
+    if (g.hitFlash > 0) g.hitFlash--;
 
     // Dọn quái của Zone đã xong
     if (g.parentZoneId) {
@@ -1268,6 +1278,7 @@ export function update(ctx, canvas, changeStateFn) {
   updateSatelliteDrone();
   updateGodMode();
   updateFloatingTexts();
+  updateDamageNumbers();
 
   // Tick Status: Screen Shake, Burn (Thực thi damage ở đây), delayed tasks
   if (state.screenShake?.timer > 0) state.screenShake.timer--;
@@ -1355,6 +1366,19 @@ function updateFloatingTexts() {
     t.life--;
     if (t.life < 20) t.opacity -= 0.05;
     if (t.life <= 0) state.floatingTexts.splice(i, 1);
+  }
+}
+
+function updateDamageNumbers() {
+  const arr = state.damageNumbers;
+  if (!arr || arr.length === 0) return;
+  for (let i = arr.length - 1; i >= 0; i--) {
+    const d = arr[i];
+    d.y += d.vy;
+    d.vy *= 0.9; // giảm dần độ vọt lên
+    if (d.pop > 0) d.pop *= 0.8; // hiệu ứng phình rồi co
+    d.life--;
+    if (d.life <= 0) arr.splice(i, 1);
   }
 }
 

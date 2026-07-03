@@ -250,7 +250,10 @@ export function drawEnemies(ctx) {
     ctx.beginPath();
     ctx.arc(g.x, g.y, g.radius, 0, Math.PI * 2);
 
-    if (char === "mage" && buffs.r > 0) {
+    if (g.hitFlash > 0) {
+      ctx.globalAlpha = 1.0;
+      ctx.fillStyle = "#ffffff";
+    } else if (char === "mage" && buffs.r > 0) {
       ctx.fillStyle = "#00aaff";
     } else {
       ctx.globalAlpha = g.isStunned > 0 ? 0.4 : 1.0;
@@ -288,6 +291,12 @@ export function drawEnemies(ctx) {
       return;
     }
 
+    // Giảm hitFlash 1 lần/frame sim (draw chạy theo render fps → dùng frame guard)
+    if (e.hitFlash > 0 && e._flashFc !== state.frameCount) {
+      e.hitFlash--;
+      e._flashFc = state.frameCount;
+    }
+
     if (!minimalDraw) {
       ctx.shadowBlur = 15;
       ctx.shadowColor = state.elementColors[e.element];
@@ -295,7 +304,7 @@ export function drawEnemies(ctx) {
 
     ctx.beginPath();
     ctx.arc(e.x, e.y, e.radius, 0, Math.PI * 2);
-    ctx.fillStyle = state.elementColors[e.element];
+    ctx.fillStyle = e.hitFlash > 0 ? "#ffffff" : state.elementColors[e.element];
     ctx.fill();
 
     ctx.strokeStyle = "#000";

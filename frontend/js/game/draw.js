@@ -97,16 +97,20 @@ export function draw(ctx, canvas) {
   ctx.translate(-state.camera.x, -state.camera.y);
 
   // --- Background ---
-  drawThemedBackground(ctx);
-  drawDungeon(ctx);
+  // Tower mode có map riêng: bỏ theme lửa + dungeon, vẽ corridor trong drawTowerWorld
+  const towerMode = state.gameMode === "tower" && state.tower;
+  if (!towerMode) {
+    drawThemedBackground(ctx);
+    drawDungeon(ctx);
+  }
   drawBossArenaVisual(ctx);
   drawPermanentScars(ctx);
 
+  // --- Tower mode: nền corridor + lane + công trình (dưới thực thể) ---
+  if (towerMode) drawTowerWorld(ctx);
+
   // --- World objects (crates, puzzles, portals, swarm zones, items, floating texts) ---
   drawWorldObjects(ctx);
-
-  // --- Tower mode: lane + công trình (dưới thực thể) ---
-  if (state.gameMode === "tower" && state.tower) drawTowerWorld(ctx);
 
   // --- Satellite & God Mode (above world, below shake) ---
   // These are now included in drawCharacterVFX

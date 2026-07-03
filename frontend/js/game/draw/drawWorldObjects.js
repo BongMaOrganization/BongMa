@@ -447,6 +447,33 @@ export function drawFloatingTexts(ctx) {
   });
 }
 
+function fmtDmg(v) {
+  const r = Math.round(v * 10) / 10;
+  return Number.isInteger(r) ? String(r) : r.toFixed(1);
+}
+
+// Số sát thương bay lên — crit (fire / đòn nặng) tô vàng + to hơn, có phình.
+export function drawDamageNumbers(ctx) {
+  const arr = state.damageNumbers;
+  if (!arr || arr.length === 0) return;
+  ctx.save();
+  ctx.textAlign = "center";
+  for (const d of arr) {
+    const alpha = Math.max(0, Math.min(1, d.life / 14));
+    const scale = 1 + (d.pop || 0) * 0.6;
+    const size = (d.crit ? 22 : 15) * scale;
+    ctx.globalAlpha = alpha;
+    ctx.font = `bold ${size}px Orbitron, Arial, sans-serif`;
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(0,0,0,0.75)";
+    ctx.fillStyle = d.crit ? "#ffd23f" : "#ffffff";
+    const txt = (d.crit ? "" : "") + fmtDmg(d.value);
+    ctx.strokeText(txt, d.x, d.y);
+    ctx.fillText(txt, d.x, d.y);
+  }
+  ctx.restore();
+}
+
 // ===== MAIN ENTRY (non-boss objects) =====
 export function drawWorldObjects(ctx) {
   drawSwarmZones(ctx);
@@ -458,4 +485,5 @@ export function drawWorldObjects(ctx) {
     drawStagePortal(ctx);
   }
   drawFloatingTexts(ctx);
+  drawDamageNumbers(ctx);
 }

@@ -4,8 +4,8 @@
     {
       "name": "bongma-frontend",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8100", "--directory", "frontend"],
-      "port": 8100
+      "runtimeArgs": ["-m", "http.server", "8123", "--directory", "frontend"],
+      "port": 8123
     }
   ]
 }

@@ -100,6 +100,7 @@ export const state = {
   isScoutQ: false,
 
   floatingTexts: [], // Mảng chứa các đoạn chữ bay (XP, Gold, v.v.)
+  damageNumbers: [], // Số sát thương bay lên khi trúng đòn (gộp theo mục tiêu)
 
   // ===== Elemental Combat System =====
   hazards: [], // { x, y, radius, type, life, damage, color }

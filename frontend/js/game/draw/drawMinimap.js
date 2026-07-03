@@ -8,13 +8,15 @@ export function drawMinimap(ctx, canvas) {
   const mmX = canvas.width - mmSize - padding;
   const mmY = padding + 60;
 
+  const tower = state.gameMode === "tower" && state.tower;
+
   ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
   ctx.strokeStyle = "#444";
   ctx.lineWidth = 2;
   ctx.fillRect(mmX, mmY, mmSize, mmSize);
   ctx.strokeRect(mmX, mmY, mmSize, mmSize);
 
-  drawDungeonMinimap(ctx, mmX, mmY, mmSize);
+  if (!tower) drawDungeonMinimap(ctx, mmX, mmY, mmSize);
 
   const scaleX = mmSize / state.world.width;
   const scaleY = mmSize / state.world.height;
@@ -83,6 +85,14 @@ export function drawMinimap(ctx, canvas) {
       ctx.arc(mmX + m.x * scaleX, mmY + m.y * scaleY, 1.5, 0, Math.PI * 2);
       ctx.fill();
     });
+    // Đồng minh AI (hero) — chấm to hơn, màu theo độ hiếm
+    state.tower.allyHeroes.forEach((h) => {
+      if (h.respawnTimer > 0) return;
+      ctx.fillStyle = h.color;
+      ctx.beginPath();
+      ctx.arc(mmX + h.x * scaleX, mmY + h.y * scaleY, 3, 0, Math.PI * 2);
+      ctx.fill();
+    });
   }
 
   // 2. Boss
@@ -107,7 +117,7 @@ export function drawMinimap(ctx, canvas) {
   }
 
   // 3.5. Swarm zones
-  if (!state.isBossLevel && !state.bossArenaMode)
+  if (!state.isBossLevel && !state.bossArenaMode && !tower)
     state.swarmZones.forEach((sz) => {
       if (sz.isCompleted) return;
       const color = state.frameCount % 40 < 20 ? "#ffaa00" : "#aa5500";
@@ -136,7 +146,7 @@ export function drawMinimap(ctx, canvas) {
   );
 
   // 5. Crates
-  if (!state.isBossLevel && !state.bossArenaMode && state.crates) {
+  if (!state.isBossLevel && !state.bossArenaMode && !tower && state.crates) {
     state.crates.forEach((c) => {
       const x = mmX + c.x * scaleX;
       const y = mmY + c.y * scaleY;
@@ -148,7 +158,7 @@ export function drawMinimap(ctx, canvas) {
   }
 
   // 6. Capture points
-  if (!state.isBossLevel && !state.bossArenaMode && state.capturePoints) {
+  if (!state.isBossLevel && !state.bossArenaMode && !tower && state.capturePoints) {
     state.capturePoints.forEach((cp) => {
       if (cp.state === "completed") return;
       const x = mmX + cp.x * scaleX;
@@ -183,7 +193,7 @@ export function drawMinimap(ctx, canvas) {
   }
 
   // 7. Puzzle markers
-  if (!state.isBossLevel && !state.bossArenaMode) {
+  if (!state.isBossLevel && !state.bossArenaMode && !tower) {
     const markers = getPuzzleMinimapMarkers();
     markers.forEach((m) => {
       const mx = mmX + m.x * scaleX;
