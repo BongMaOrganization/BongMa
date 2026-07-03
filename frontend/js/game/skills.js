@@ -42,6 +42,44 @@ const SKILL_ICON_RULES = [
   [/gia tốc|quá tải|tăng lực|hưng phấn|gia cường|tăng tốc|chuyển hệ/i, "⚡"],
 ];
 
+// Icon riêng cho từng chiêu Q/E/R của MỖI nhân vật. Ưu tiên hơn suy-đoán-keyword
+// (SKILL_ICON_RULES) → tránh 3 ô trùng icon / các nhân vật nhìn giống hệt nhau.
+// Char mới không cần thêm ở đây: sẽ tự rơi về keyword-rule rồi generic.
+const CHARACTER_SKILL_ICONS = {
+  speedster:    { q: "⚡", e: "🔫", r: "🌩️" },
+  ghost:        { q: "👻", e: "💨", r: "🕳️" },
+  warden:       { q: "🛡️", e: "🔄", r: "🏰" },
+  engineer:     { q: "🔫", e: "⚙️", r: "🏰" },
+  druid:        { q: "🌿", e: "💚", r: "🌳" },
+  brawler:      { q: "👊", e: "💪", r: "💥" },
+  medic:        { q: "💚", e: "💨", r: "🚑" },
+  tank:         { q: "🔧", e: "🛡️", r: "🧹" },
+  mage:         { q: "🔥", e: "🩸", r: "❄️" },
+  assassin:     { q: "💨", e: "🎯", r: "🗡️" },
+  oracle:       { q: "👁️", e: "💨", r: "🔮" },
+  hunter:       { q: "🪤", e: "🧲", r: "🎯" },
+  frost:        { q: "❄️", e: "🧊", r: "🌨️" },
+  gunner:       { q: "🔫", e: "💣", r: "💥" },
+  knight:       { q: "🐎", e: "🛡️", r: "😤" },
+  sharpshooter: { q: "🏹", e: "🌧️", r: "🎯" },
+  berserker:    { q: "🩸", e: "🧛", r: "⚔️" },
+  summoner:     { q: "👻", e: "🩸", r: "👹" },
+  sniper:       { q: "🔭", e: "🎯", r: "💥" },
+  spirit:       { q: "👻", e: "🌀", r: "⚡" },
+  timekeeper:   { q: "💨", e: "⏳", r: "🔫" },
+  void:         { q: "🕳️", e: "🌀", r: "🔆" },
+  storm:        { q: "⚡", e: "💨", r: "🌩️" },
+  reaper:       { q: "🗡️", e: "👻", r: "⚖️" },
+  alchemist:    { q: "🧪", e: "⚗️", r: "🔄" },
+  scout:        { q: "🗡️", e: "🪝", r: "⚡" },
+  phoenix:      { q: "🔥", e: "💥", r: "♻️" },
+  necromancer:  { q: "💀", e: "🩸", r: "🌋" },
+  painter:      { q: "🖌️", e: "🎨", r: "🖼️" },
+  destroyer:    { q: "🔆", e: "🌀", r: "☄️" },
+  creator:      { q: "🗼", e: "😇", r: "🌟" },
+  elementalist: { q: "🔄", e: "🔮", r: "💥" },
+};
+
 function getCharData(charId) {
   return CHARACTERS.find((c) => c.id === charId) || CHARACTERS[0];
 }
@@ -53,7 +91,11 @@ function matchIconRule(text) {
   return null;
 }
 
-function getSkillIcon(skill, key) {
+function getSkillIcon(skill, key, charId) {
+  // 1. Icon riêng của nhân vật (chính xác nhất) → hết cảnh Q/E/R trùng nhau.
+  const explicit = CHARACTER_SKILL_ICONS[charId]?.[key];
+  if (explicit) return explicit;
+  // 2. Suy đoán theo keyword (char chưa map).
   const name = skill?.name || "";
   // Bỏ phần "(Hồi: 8s ...)" trong desc để keyword không bị nhiễu.
   const desc = (skill?.desc || "").replace(/\([^)]*\)/g, "");
@@ -117,7 +159,7 @@ export function refreshSkillIcons() {
   ["q", "e", "r"].forEach((key, idx) => {
     const iconEl = document.getElementById(`icon-${key}`);
     if (iconEl) {
-      iconEl.textContent = getSkillIcon(char.skills?.[idx], key);
+      iconEl.textContent = getSkillIcon(char.skills?.[idx], key, char.id);
       iconEl.style.textShadow = `0 0 8px ${color}`;
     }
   });
