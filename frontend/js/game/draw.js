@@ -47,6 +47,7 @@ import { drawBossCutscene } from "./bossCutscene.js";
 import {
   drawBossArenaVisual,
 } from "../world/bossArenaVisual.js";
+import { drawTutorialOverlay } from "./tutorial.js";
 import { drawRemotePlayers, drawRemoteBullets, drawReviveZones, drawMpPlayersHUD } from "./draw/drawRemotePlayers.js";
 import { shouldSkipCharacterVfxFrame, getPerfLoadLevel } from "./vfxBudget.js";
 import { beginFrameQuality, getRenderScale } from "./graphics.js";
@@ -235,11 +236,13 @@ export function draw(ctx, canvas) {
     !state.isBossLevel &&
     !state.bossArenaMode &&
     state.gameMode !== "echo" &&
-    state.gameMode !== "tower"
+    state.gameMode !== "tower" &&
+    state.gameMode !== "tutorial"
   )
     drawStageConditionsHUD(ctx, canvas);
   if (state.gameMode === "echo") drawEchoBanner(ctx, canvas);
   if (state.gameMode === "tower" && state.tower) drawTowerHud(ctx, canvas);
+  if (state.gameMode === "tutorial") drawTutorialOverlay(ctx, canvas);
 
   // --- Player burn vignette ---
   if (state.playerStatus.burnTimer > 0) {

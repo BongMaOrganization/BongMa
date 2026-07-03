@@ -27,6 +27,7 @@ import { setupMenuButtons } from "./characters/select.js";
 import { evolve } from "./game/evolutions.js";
 import { handleSkillsUpdate } from "./game/skills.js";
 import { updateBossUI } from "./ui.js";
+import { startTutorialRun } from "./game/tutorial.js";
 import { FPS } from "./config.js";
 
 // === MULTIPLAYER imports ===
@@ -255,6 +256,13 @@ const towerBtn = document.getElementById("btn-tower-mode");
 if (towerBtn) {
   towerBtn.onclick = () => openTowerMenu(gameLoop);
 }
+const tutorialBtn = document.getElementById("btn-tutorial");
+if (tutorialBtn) {
+  tutorialBtn.onclick = () => {
+    document.getElementById("screen-main").classList.add("hidden");
+    document.getElementById("screen-tutorial").classList.remove("hidden");
+  };
+}
 // Arena back button
 const arenaBack = document.getElementById("btn-arena-back");
 if (arenaBack) {
@@ -279,6 +287,21 @@ if (mapBack) {
 }
 
 // Chờ 1 chút để Auth init xử lý. Nếu có token sẽ tự hiện menu, nếu không sẽ hiện Login.
+const tutorialBack = document.getElementById("btn-tutorial-back");
+if (tutorialBack) {
+  tutorialBack.onclick = () => {
+    document.getElementById("screen-tutorial").classList.add("hidden");
+    document.getElementById("screen-main").classList.remove("hidden");
+  };
+}
+const tutorialStart = document.getElementById("btn-tutorial-start");
+if (tutorialStart) {
+  tutorialStart.onclick = () => {
+    document.getElementById("screen-tutorial").classList.add("hidden");
+    startTutorialRun(changeStateBound);
+  };
+}
+
 if (isAuthenticated()) {
   changeStateBound("MENU");
 } else {
