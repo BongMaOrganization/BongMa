@@ -50,6 +50,7 @@ export const ECHO = {
   GHOST_SPAWN_PROTECT: 3 * FPS, // mới hiện hình: mờ + không gây chạm
   REMOTE_UNLOCK_WAVE: 3, // gate: bestWave ≥ 3 mới gặp ghost người khác
   MAX_REMOTE: 3,
+  SOLO_REWARD_MULT: 0.8, // tắt Bóng Ma người khác → thưởng vàng ×0.8
 };
 
 const ECHO_DATA_KEY = "BongMa_Echo_V1";
@@ -224,6 +225,7 @@ export function startEchoRun(gameLoopFn) {
     bannerTimer: 0,
     mod: null, // mod áp cho wave hiện tại
     modNext: null, // mod chọn từ thẻ, áp cho wave kế
+    rewardMult: 1, // <1 khi tắt Bóng Ma người khác
   };
   state.echoChoicePause = false;
   state.echoGraves = [];
@@ -231,15 +233,22 @@ export function startEchoRun(gameLoopFn) {
 
   // === GATE remote ghost ===
   // Run đầu đời phải sạch (học luật), run 2 phải là "gặp chính mình".
-  // Người khác chỉ xâm nhập khi: có ≥1 run của mình VÀ bestWave ≥ 3.
-  // Nhập username thách đấu = chủ động → bỏ qua gate.
+  // Người khác chỉ xâm nhập khi: BẬT toggle VÀ có ≥1 run của mình VÀ bestWave ≥ 3.
+  // Nhập username thách đấu = chủ động → bỏ qua gate (nhưng vẫn tôn trọng toggle).
   const rivalName =
     document.getElementById("echo-rival-input")?.value.trim() || null;
+  const remoteEnabled = data.remoteEnabled !== false; // mặc định BẬT
   const remoteUnlocked =
-    data.runs.length >= 1 && (data.bestWave || 0) >= ECHO.REMOTE_UNLOCK_WAVE;
-  const remoteActive = remoteUnlocked || !!rivalName;
+    remoteEnabled &&
+    data.runs.length >= 1 &&
+    (data.bestWave || 0) >= ECHO.REMOTE_UNLOCK_WAVE;
+  const remoteActive = remoteEnabled && (remoteUnlocked || !!rivalName);
 
-  // Remote bật → nhường slot: mình giữ Nemesis + 2 run gần nhất, còn lại cho người lạ
+  // Tắt Bóng Ma người khác → thưởng vàng giảm (khuyến khích bật)
+  state.echo.rewardMult = remoteActive ? 1 : ECHO.SOLO_REWARD_MULT;
+
+  // Remote bật → nhường slot: mình giữ Nemesis + 2 run gần nhất, còn lại cho người lạ.
+  // Remote tắt → giữ nguyên tối đa 5 (Nemesis + 4 run gần nhất).
   spawnEchoGhosts(data.runs, remoteActive ? 3 : ECHO.MAX_RUNS);
   if (remoteActive) {
     fetchAndSpawnRemoteGhosts(data, rivalName, state.echo.runToken);
@@ -427,8 +436,10 @@ export function updateEchoWaves(player, changeStateFn) {
       playSound("fragment");
     }
   } else if (alive === 0 && eco.pendingSpawns.length === 0 && !state.boss) {
-    // Wave sạch → thưởng vàng (nhân theo mod đã chọn) + mở thẻ lựa chọn
-    const bonus = Math.round((15 + eco.wave * 6) * (eco.mod?.gold || 1));
+    // Wave sạch → thưởng vàng (nhân theo mod chọn × hệ số solo) + mở thẻ lựa chọn
+    const bonus = Math.round(
+      (15 + eco.wave * 6) * (eco.mod?.gold || 1) * (eco.rewardMult || 1),
+    );
     state.player.coins = (state.player.coins || 0) + bonus;
     state.floatingTexts.push({
       x: player.x,
@@ -590,7 +601,7 @@ function spawnEchoBoss(wave) {
 export function handleEchoBossKilled() {
   const eco = state.echo;
   const wave = eco?.wave || 10;
-  const bounty = 50 + wave * 5;
+  const bounty = Math.round((50 + wave * 5) * (eco?.rewardMult || 1));
   state.player.coins = (state.player.coins || 0) + bounty;
   state.floatingTexts.push({
     x: state.player.x,
@@ -1054,9 +1065,11 @@ export function openEchoMenu(gameLoopFn) {
   if (stats) {
     const nemesis = getNemesisRun(data.runs);
 
-    // Note cơ chế remote ghost — đổi theo tiến trình người chơi
+    // Note cơ chế remote ghost — đổi theo tiến trình + toggle
     let remoteLine;
-    if (data.runs.length === 0) {
+    if (data.remoteEnabled === false) {
+      remoteLine = `<span style="color:#ff8866">🚫 Bóng Ma người chơi khác: ĐÃ TẮT — chỉ Bóng Ma của bạn · thưởng vàng ×${ECHO.SOLO_REWARD_MULT}.</span>`;
+    } else if (data.runs.length === 0) {
       remoteLine = `<span style="color:#8899aa">👻 Run đầu tiên của bạn sẽ trở thành Bóng Ma đầu tiên trong arena.</span>`;
     } else if ((data.bestWave || 0) < ECHO.REMOTE_UNLOCK_WAVE) {
       remoteLine = `<span style="color:#8899aa">🔒 Đạt <b style="color:#ffaa44">Wave ${ECHO.REMOTE_UNLOCK_WAVE}</b> để Bóng Ma của NGƯỜI CHƠI KHÁC bắt đầu xâm nhập arena của bạn.</span>`;
@@ -1097,6 +1110,37 @@ export function openEchoMenu(gameLoopFn) {
         .join("");
     }
   }
+
+  // Toggle Bóng Ma người chơi khác (mặc định BẬT; tắt → thưởng ×SOLO_REWARD_MULT)
+  const renderRemoteToggle = () => {
+    const on = data.remoteEnabled !== false;
+    const btn = document.getElementById("btn-echo-remote-toggle");
+    const hint = document.getElementById("echo-remote-hint");
+    if (btn) {
+      btn.textContent = on ? "BẬT" : "TẮT";
+      btn.style.color = on ? "#00ffcc" : "#ff8866";
+      btn.style.borderColor = on
+        ? "rgba(0,255,204,0.5)"
+        : "rgba(255,136,102,0.5)";
+    }
+    if (hint) {
+      // Breakdown slot để người chơi hiểu số Bóng Ma từ đâu ra
+      const ownWhenOn = ECHO.MAX_RUNS - ECHO.MAX_REMOTE; // 3 slot mình khi bật remote
+      hint.innerHTML = on
+        ? `Tối đa <b style="color:#cfd6e6">${ECHO.MAX_RUNS}</b> Bóng Ma: 👑 Nemesis + ${ownWhenOn - 1} run gần nhất + tối đa <b style="color:#ffaa44">${ECHO.MAX_REMOTE}</b> người lạ cùng trình · <b style="color:#00ffcc">100% thưởng</b>`
+        : `Tối đa <b style="color:#cfd6e6">${ECHO.MAX_RUNS}</b> Bóng Ma: 👑 Nemesis + ${ECHO.MAX_RUNS - 1} run gần nhất của BẠN · thưởng <b style="color:#ff8866">×${ECHO.SOLO_REWARD_MULT}</b> — bật để nhận đủ`;
+    }
+  };
+  renderRemoteToggle();
+
+  const toggleBtn = document.getElementById("btn-echo-remote-toggle");
+  if (toggleBtn)
+    toggleBtn.onclick = () => {
+      data.remoteEnabled = data.remoteEnabled === false; // đảo
+      saveEchoData();
+      renderRemoteToggle();
+      playSound("button");
+    };
 
   const start = document.getElementById("btn-echo-start");
   if (start)

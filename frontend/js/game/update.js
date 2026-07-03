@@ -691,14 +691,18 @@ export function update(ctx, canvas, changeStateFn) {
         }
       } else {
         addExperience(g.isEchoElite ? 20 : g.isHorde ? 2 : 4, changeStateFn);
+        // Echo: bounty quái/elite chịu hệ số solo (tắt Bóng Ma người khác → ít vàng hơn)
+        const rMult = state.gameMode === "echo" ? state.echo?.rewardMult || 1 : 1;
+        const coinGain = Math.round(
+          (g.bounty || (g.isHorde ? 1 : 3)) * rMult,
+        );
         if (g.x > 0)
-          state.player.coins =
-            (state.player.coins || 0) + (g.bounty || (g.isHorde ? 1 : 3));
+          state.player.coins = (state.player.coins || 0) + coinGain;
         if (g.bounty) {
           state.floatingTexts.push({
             x: g.x,
             y: g.y - 30,
-            text: `💰 +${g.bounty}`,
+            text: `💰 +${coinGain}`,
             color: "#ffd700",
             size: 20,
             life: 100,
