@@ -55,6 +55,7 @@ const ELEMENT_COLORS = {
  */
 function buildFakeState(rp) {
   const color = CHARACTER_COLORS[rp.characterId] || "#00ffcc";
+  const buffs = rp.buffs || { q: 0, e: 0, r: 0 };
   return {
     player: {
       x: rp.x,
@@ -79,7 +80,7 @@ function buildFakeState(rp) {
     playerStatus: { slowTimer: 0, stunTimer: 0, burnTimer: 0 },
     element: "fire",
     elementColors: ELEMENT_COLORS,
-    activeBuffs: { q: 0, e: 0, r: 0 },
+    activeBuffs: buffs,
     // Character-specific state — empty defaults
     particles: state.particles || [],
     speedsterBursts: [],
@@ -107,9 +108,9 @@ export function drawRemotePlayers(ctx) {
     ctx.save();
     if (isDead) ctx.globalAlpha = 0.3;
 
-    // --- Vẽ thân player bằng đúng hàm animation ---
+    // --- Vẽ thân player bằng đúng hàm animation (kèm buff đã sync -> hiện aura) ---
     const fakeState = buildFakeState(rp);
-    drawPlayerByCharId(ctx, rp.characterId, fakeState, emptyBuffs, false);
+    drawPlayerByCharId(ctx, rp.characterId, fakeState, fakeState.activeBuffs, false);
 
     // --- Overlay dấu X khi chết ---
     if (isDead) {
@@ -164,14 +165,15 @@ export function drawRemoteBullets(ctx) {
   if (!state.isMultiplayer || !state.remoteBullets || !state.remoteBullets.length) return;
 
   const now = performance.now();
-  const STALE_MS = 200;
+  const STALE_MS = 320; // sống qua 1 snapshot bị rớt (gửi 60ms/lần)
 
   for (let i = state.remoteBullets.length - 1; i >= 0; i--) {
     const b = state.remoteBullets[i];
 
-    // Di chuyển bullet theo vận tốc giữa các snapshot
-    b.x += (b.vx || 0) * 0.5;
-    b.y += (b.vy || 0) * 0.5;
+    // Di chuyển bullet theo đúng vận tốc thật (trước nhân 0.5 -> đạn tụt lại nửa
+    // tốc, cụm gần người bắn, đồng đội tưởng "không thấy đạn").
+    b.x += b.vx || 0;
+    b.y += b.vy || 0;
     b.life = (b.life || 30) - 1;
 
     if (b.life <= 0 || (now - b._born) > STALE_MS) {

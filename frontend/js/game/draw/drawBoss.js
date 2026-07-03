@@ -410,6 +410,25 @@ export function drawBoss(ctx) {
     _drawDefaultBoss(ctx, boss, color, fc, isRage);
   }
 
+  // Nhấp nháy trắng khi trúng đạn (combat.js set boss.hitFlashFrame)
+  const sinceHit = fc - (boss.hitFlashFrame ?? -999);
+  if (sinceHit >= 0 && sinceHit < 8) {
+    const k = 1 - sinceHit / 8;
+    ctx.globalCompositeOperation = "lighter";
+    // Lõi sáng
+    ctx.beginPath();
+    ctx.arc(0, 0, boss.radius * 1.05, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,255,255,${k * 0.72})`;
+    ctx.fill();
+    // Vành sáng bung ra (đọc rõ đòn trúng)
+    ctx.lineWidth = 3 + (1 - k) * 6;
+    ctx.strokeStyle = `rgba(255,240,180,${k * 0.6})`;
+    ctx.beginPath();
+    ctx.arc(0, 0, boss.radius * (1.05 + (1 - k) * 0.3), 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalCompositeOperation = "source-over";
+  }
+
   ctx.restore();
 }
 

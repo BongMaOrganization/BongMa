@@ -105,6 +105,24 @@ export function drawCapturePoints(ctx) {
     if (cp.state === "completed") return;
 
     ctx.save();
+
+    if (cp.state === "locked") {
+      ctx.strokeStyle = "rgba(120,120,120,0.5)";
+      ctx.lineWidth = 3;
+      ctx.setLineDash([10, 8]);
+      ctx.beginPath();
+      ctx.arc(cp.x, cp.y, 80, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = "#888";
+      ctx.font = "bold 20px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(`🔒 CP ${cp.order}`, cp.x, cp.y + 6);
+      ctx.font = "13px Arial";
+      ctx.fillText("Chiếm CP trước đó", cp.x, cp.y + 28);
+      ctx.restore();
+      return;
+    }
+
     const pulse = Math.sin(state.frameCount * 0.1) * 10;
     const progressRatio = cp.progress / cp.totalProgress;
 
@@ -293,7 +311,9 @@ export function drawCapturePoints(ctx) {
     ctx.font = "bold 18px Arial";
     ctx.textAlign = "center";
     const label =
-      cp.state === "guarding" ? "🛡️ DIỆT THỦ VỆ" : "⚡ ĐANG CHIẾM ĐỨNG...";
+      cp.state === "guarding"
+        ? `🛡️ CP ${cp.order || ""} — DIỆT THỦ VỆ`
+        : `⚡ CP ${cp.order || ""} — CHIẾM ĐÓNG...`;
     ctx.fillText(label, cp.x, cp.y - 145);
 
     ctx.restore();
@@ -427,6 +447,33 @@ export function drawFloatingTexts(ctx) {
   });
 }
 
+function fmtDmg(v) {
+  const r = Math.round(v * 10) / 10;
+  return Number.isInteger(r) ? String(r) : r.toFixed(1);
+}
+
+// Số sát thương bay lên — crit (fire / đòn nặng) tô vàng + to hơn, có phình.
+export function drawDamageNumbers(ctx) {
+  const arr = state.damageNumbers;
+  if (!arr || arr.length === 0) return;
+  ctx.save();
+  ctx.textAlign = "center";
+  for (const d of arr) {
+    const alpha = Math.max(0, Math.min(1, d.life / 14));
+    const scale = 1 + (d.pop || 0) * 0.3;
+    const size = (d.crit ? 16 : 11) * scale;
+    ctx.globalAlpha = alpha;
+    ctx.font = `bold ${size}px Orbitron, Arial, sans-serif`;
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = "rgba(0,0,0,0.75)";
+    ctx.fillStyle = d.crit ? "#ffd23f" : "#ffffff";
+    const txt = (d.crit ? "" : "") + fmtDmg(d.value);
+    ctx.strokeText(txt, d.x, d.y);
+    ctx.fillText(txt, d.x, d.y);
+  }
+  ctx.restore();
+}
+
 // ===== MAIN ENTRY (non-boss objects) =====
 export function drawWorldObjects(ctx) {
   drawSwarmZones(ctx);
@@ -438,4 +485,5 @@ export function drawWorldObjects(ctx) {
     drawStagePortal(ctx);
   }
   drawFloatingTexts(ctx);
+  drawDamageNumbers(ctx);
 }

@@ -586,7 +586,7 @@ export const scout = {
     }
 
     if (key === "r") {
-      state.activeBuffs.r = 10 * FPS;
+      state.activeBuffs.r = 7 * FPS;
       state.screenShake = { timer: 18, intensity: 5.5 };
       pushScoutBurst(state, "r", player.x, player.y, 315, 52, aim);
       pushScoutEcho(state, player.x, player.y, player.radius * 3.8, 20);
@@ -654,8 +654,8 @@ export const scout = {
     }
 
     if (buffs.r > 0) {
-      state.playerSpeedMultiplier = (state.playerSpeedMultiplier || 1) * 2.2;
-      state.playerFireRateMultiplier = (state.playerFireRateMultiplier || 1) * 0.25;
+      state.playerSpeedMultiplier = (state.playerSpeedMultiplier || 1) * 1.6;
+      state.playerFireRateMultiplier = (state.playerFireRateMultiplier || 1) * 0.55;
 
       if (fc % 3 === 0) {
         pushScoutEcho(

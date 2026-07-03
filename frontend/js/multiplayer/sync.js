@@ -36,7 +36,7 @@ export function setupGameListeners(socket) {
   socket.off("remote_bullets");
 
   // Nhận vị trí/state remote players
-  socket.on("remote_player_update", ({ id, x, y, hp, maxHp, isDead }) => {
+  socket.on("remote_player_update", ({ id, x, y, hp, maxHp, isDead, buffs }) => {
     updatePlayerInRoom(id, { x, y, hp, maxHp, isDead });
 
     const idx = state.remotePlayers.findIndex((p) => p.id === id);
@@ -46,6 +46,7 @@ export function setupGameListeners(socket) {
       state.remotePlayers[idx].hp = hp;
       state.remotePlayers[idx].maxHp = maxHp;
       state.remotePlayers[idx].isDead = isDead;
+      if (buffs) state.remotePlayers[idx].buffs = buffs;
 
       // Tạo revive zone nếu player vừa chết
       if (isDead && !state.remotePlayers[idx].wasDeadLastFrame) {
@@ -132,9 +133,11 @@ export function setupGameListeners(socket) {
     // Xóa revive zone
     state.reviveZones = state.reviveZones.filter((z) => z.deadPlayerId !== deadPlayerId);
 
-    // Nếu là bản thân → hồi sinh local player
+    // Nếu là bản thân → hồi sinh local player.
+    // onLocalPlayerRevived định nghĩa NGAY trong file này, gọi thẳng.
+    // (Trước import từ mpFlow.js — file đó không export → undefined → crash.)
     if (deadPlayerId === mpState.playerId) {
-      import("./mpFlow.js").then(({ onLocalPlayerRevived }) => onLocalPlayerRevived());
+      onLocalPlayerRevived();
       return;
     }
 
@@ -246,12 +249,15 @@ export function startPlayerSync(roomCode) {
 
   playerSyncInterval = setInterval(() => {
     if (!state.player) return;
+    const ab = state.activeBuffs || {};
     emitPlayerUpdate(roomCode, {
       x: state.player.x,
       y: state.player.y,
       hp: state.player.hp,
       maxHp: state.player.maxHp,
       isDead: state.player.isDead || false,
+      // Sync buff để đồng đội thấy aura chiêu (q/e/r) của nhau.
+      buffs: { q: ab.q || 0, e: ab.e || 0, r: ab.r || 0 },
     });
   }, 1000 / 30);
 }
@@ -264,7 +270,7 @@ export function startBulletSync(roomCode) {
     if (!socket || !state.bullets) return;
     const playerBullets = state.bullets
       .filter((b) => b.isPlayer)
-      .slice(0, 30)
+      .slice(0, 40)
       .map((b) => ({
         x: b.x, y: b.y,
         vx: b.vx, vy: b.vy,
@@ -310,8 +316,14 @@ export function updateReviveZones(roomCode) {
       emitReviveUpdate(roomCode, zone.deadPlayerId, zone.progress);
 
       if (zone.progress >= 100) {
-        emitPlayerRevived(roomCode, zone.deadPlayerId);
-        state.reviveZones = state.reviveZones.filter((z) => z !== zone);
+        // Re-emit định kỳ tới khi server xác nhận (remote_player_revived sẽ
+        // xoá zone). Tránh mất 1 gói khiến người chết không hồi sinh dù thanh
+        // tiến độ đã đầy.
+        zone._reviveEmitCd = (zone._reviveEmitCd || 0) - 1;
+        if (zone._reviveEmitCd <= 0) {
+          emitPlayerRevived(roomCode, zone.deadPlayerId);
+          zone._reviveEmitCd = 20; // ~3 lần/giây @60fps cho tới khi xác nhận
+        }
       }
     } else {
       // Ra ngoài → reset progress từ từ

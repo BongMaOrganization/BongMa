@@ -15,20 +15,26 @@ import {
   openBossArena,
   handleBossArenaReward,
 } from "./game/flow.js";
+import { skipBossCutscene } from "./game/bossCutscene.js";
+import { openEchoMenu, handleEchoBossKilled } from "./game/echoMode.js";
+import { openTowerMenu } from "./game/towerMode.js";
 import { update } from "./game/update.js";
 import { draw } from "./game/draw.js";
+import { initGraphics, needsAutoDetect, sampleAutoDetect } from "./game/graphics.js";
+import { setupSettingsUI } from "./settings.js";
 import { openShop } from "./characters/shop.js";
 import { setupMenuButtons } from "./characters/select.js";
 import { evolve } from "./game/evolutions.js";
 import { handleSkillsUpdate } from "./game/skills.js";
 import { updateBossUI } from "./ui.js";
+import { startTutorialRun } from "./game/tutorial.js";
 import { FPS } from "./config.js";
 
 // === MULTIPLAYER imports ===
-import { connectSocket, disconnectSocket } from "./multiplayer/socket.js";
+import { connectSocket, disconnectSocket, getSocket } from "./multiplayer/socket.js";
 import { createRoom, joinRoom, mpState, resetMpState, openLobby, setLobbyUICallback } from "./multiplayer/room.js";
 import { startMultiplayerBossArena, handleMultiplayerBossKill } from "./multiplayer/mpFlow.js";
-import { stopAllSync } from "./multiplayer/sync.js";
+import { stopAllSync, sendDamageToHost } from "./multiplayer/sync.js";
 import { BOSS_TYPES } from "./entities/bosses/boss_manager.js";
 import { CHARACTERS } from "./characters/data.js";
 
@@ -36,6 +42,9 @@ import { CHARACTERS } from "./characters/data.js";
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 const FRAME_INTERVAL_MS = 1000 / FPS;
+// Số bước update tối đa được "bù" trong 1 frame render. Chống spiral of death
+// khi máy quá yếu / tab chạy nền: thà game chậm tạm thời còn hơn treo cứng.
+const MAX_CATCHUP_STEPS = 5;
 
 function scheduleNextFrame(frameStartedAt) {
   if (state.gameState !== "PLAYING") return;
@@ -67,21 +76,43 @@ function nextStageBound() {
 function gameLoop(timestamp = performance.now()) {
   if (state.gameState !== "PLAYING") return;
 
-  if (!state.lastLoopTimestamp) {
-    state.lastLoopTimestamp = timestamp - FRAME_INTERVAL_MS;
-  }
-
-  const elapsed = timestamp - state.lastLoopTimestamp;
-  if (elapsed < FRAME_INTERVAL_MS) {
-    scheduleNextFrame(timestamp);
-    return;
-  }
-
+  if (!state.lastLoopTimestamp) state.lastLoopTimestamp = timestamp;
+  let elapsed = timestamp - state.lastLoopTimestamp;
   state.lastLoopTimestamp = timestamp;
+  // Clamp khoảng trống lớn (chuyển tab, lag spike) để không dồn hàng trăm bước.
+  if (elapsed > 250) elapsed = 250;
 
-  handleSkillsUpdate(canvas, changeStateBound);
+  // === FIXED-TIMESTEP ACCUMULATOR ===
+  // Mô phỏng (update) LUÔN chạy 60 bước/giây, tách rời tốc độ render. Khi vẽ
+  // nặng làm FPS tụt, ta chạy bù nhiều update/frame để tốc độ game (và vị trí
+  // gửi cho đồng đội) giữ nguyên — hết hiện tượng "nhân vật đi chậm".
+  state._accumulator = (state._accumulator || 0) + elapsed;
 
-  const result = update(ctx, canvas, changeStateBound);
+  let steps = 0;
+  let result = null;
+  while (state._accumulator >= FRAME_INTERVAL_MS && steps < MAX_CATCHUP_STEPS) {
+    // MP non-host: boss.hp do host làm chủ (sync ghi đè cục bộ). Đo lượng máu
+    // boss giảm do skill/hazard/dash trong bước này rồi gửi host — nếu không
+    // skill non-host không gây dame (đạn đã tự gửi qua combat.js, không đụng
+    // boss.hp cục bộ nên không đếm trùng).
+    const bossHpBefore =
+      state.isMultiplayer && !state.isHost && state.boss ? state.boss.hp : null;
+    handleSkillsUpdate(canvas, changeStateBound);
+    result = update(ctx, canvas, changeStateBound);
+    if (bossHpBefore != null && state.boss) {
+      const localDmg = bossHpBefore - state.boss.hp;
+      if (localDmg > 0) sendDamageToHost(state.mpRoomCode, localDmg);
+    }
+    state._accumulator -= FRAME_INTERVAL_MS;
+    steps++;
+    if (result === "BOSS_KILLED" || result === "STAGE_CLEAR") {
+      state._accumulator = 0;
+      break;
+    }
+  }
+  // Quá tải không bù kịp → bỏ phần dư, tránh dồn hàng (spiral of death).
+  if (steps >= MAX_CATCHUP_STEPS) state._accumulator = 0;
+
   updateBossUI();
 
   if (result === "BOSS_KILLED" || result === "STAGE_CLEAR") {
@@ -94,16 +125,80 @@ function gameLoop(timestamp = performance.now()) {
       handleBossArenaReward(gameLoop);
       return;
     }
+    // Echo boss wave: thưởng rồi CHƠI TIẾP (không nextStage). Wave-clear branch
+    // của updateEchoWaves sẽ tự mở thẻ lựa chọn ở frame kế.
+    if (result === "BOSS_KILLED" && state.gameMode === "echo") {
+      handleEchoBossKilled();
+      if (state.gameState === "PLAYING") {
+        renderAndSample();
+        state.loopId = requestAnimationFrame(gameLoop);
+      }
+      return;
+    }
     nextStageBound();
     return;
   }
 
   if (state.gameState === "PLAYING") {
-    draw(ctx, canvas);
-    scheduleNextFrame(timestamp);
+    // FPS cap render (tách khỏi sim). 0 = không giới hạn (theo nhịp màn hình).
+    const cap = state.settings?.fpsCap || 0;
+    if (cap > 0) {
+      const minInterval = 1000 / cap - 1;
+      if (timestamp - (state._lastDrawAt || 0) >= minInterval) {
+        renderAndSample();
+        state._lastDrawAt = timestamp;
+      }
+    } else {
+      renderAndSample();
+    }
+    state.loopId = requestAnimationFrame(gameLoop);
   }
 }
 
+// Vẽ 1 frame; lần đầu (chưa có lựa chọn đồ họa) đo thời gian vẽ để auto-detect
+// mức phù hợp với máy.
+function renderAndSample() {
+  if (!needsAutoDetect()) {
+    draw(ctx, canvas);
+  } else {
+    const t0 = performance.now();
+    draw(ctx, canvas);
+    const drawMs = performance.now() - t0;
+    const picked = sampleAutoDetect(1000 / Math.max(drawMs, 0.1));
+    if (picked) {
+      const sel = document.getElementById("setting-graphics");
+      if (sel) sel.value = picked;
+    }
+  }
+  trackFps(performance.now());
+}
+
+// === FPS COUNTER (đo nhịp render thực tế) ===
+let _fpsLast = 0;
+let _fpsEma = 60;
+let _fpsDomAt = 0;
+function trackFps(now) {
+  if (_fpsLast) {
+    const dt = now - _fpsLast;
+    if (dt > 0) _fpsEma = _fpsEma * 0.9 + (1000 / dt) * 0.1;
+  }
+  _fpsLast = now;
+
+  const el = document.getElementById("fps-counter");
+  if (!el) return;
+  if (state.settings?.showFps) {
+    if (now - _fpsDomAt > 250) {
+      _fpsDomAt = now;
+      el.style.display = "block";
+      el.textContent = Math.round(_fpsEma) + " FPS";
+    }
+  } else if (el.style.display !== "none") {
+    el.style.display = "none";
+  }
+}
+
+initGraphics(); // gắn hook shadowBlur + nạp preset đã lưu TRƯỚC khi vẽ frame đầu
+setupSettingsUI();
 setupInput(canvas);
 setupMenuButtons(openShop, changeStateBound);
 // Kiểm tra đăng nhập TRƯỚC KHI hiện menu
@@ -151,12 +246,36 @@ if (arenaBtn) {
     }
   };
 }
+// Echo Mode (Vòng Lặp) — chơi được cả offline; điểm chỉ nộp khi đã đăng nhập
+const echoBtn = document.getElementById("btn-echo-mode");
+if (echoBtn) {
+  echoBtn.onclick = () => openEchoMenu(gameLoop);
+}
+// Tower Mode (Công Thành) — PvE đẩy lane, chơi được offline
+const towerBtn = document.getElementById("btn-tower-mode");
+if (towerBtn) {
+  towerBtn.onclick = () => openTowerMenu(gameLoop);
+}
+const tutorialBtn = document.getElementById("btn-tutorial");
+if (tutorialBtn) {
+  tutorialBtn.onclick = () => {
+    document.getElementById("screen-main").classList.add("hidden");
+    document.getElementById("screen-tutorial").classList.remove("hidden");
+  };
+}
 // Arena back button
 const arenaBack = document.getElementById("btn-arena-back");
 if (arenaBack) {
   arenaBack.onclick = () => {
     document.getElementById("screen-boss-arena").classList.add("hidden");
     document.getElementById("screen-main").classList.remove("hidden");
+  };
+}
+const skipCutsceneBtn = document.getElementById("btn-skip-cutscene");
+if (skipCutsceneBtn) {
+  skipCutsceneBtn.onclick = (e) => {
+    e.stopPropagation();
+    skipBossCutscene();
   };
 }
 const mapBack = document.getElementById("btn-map-back");
@@ -168,6 +287,21 @@ if (mapBack) {
 }
 
 // Chờ 1 chút để Auth init xử lý. Nếu có token sẽ tự hiện menu, nếu không sẽ hiện Login.
+const tutorialBack = document.getElementById("btn-tutorial-back");
+if (tutorialBack) {
+  tutorialBack.onclick = () => {
+    document.getElementById("screen-tutorial").classList.add("hidden");
+    document.getElementById("screen-main").classList.remove("hidden");
+  };
+}
+const tutorialStart = document.getElementById("btn-tutorial-start");
+if (tutorialStart) {
+  tutorialStart.onclick = () => {
+    document.getElementById("screen-tutorial").classList.add("hidden");
+    startTutorialRun(changeStateBound);
+  };
+}
+
 if (isAuthenticated()) {
   changeStateBound("MENU");
 } else {
@@ -413,6 +547,38 @@ function buildCharacterSelectGrid(socket) {
     grid.appendChild(card);
   });
 }
+
+// Cả đội ngã xuống → về lại phòng chờ MP để chơi lại (thay vì văng ra menu solo).
+// mpFlow đã gọi changeState("GAME_OVER") để dừng loop sạch; ở đây chỉ đổi màn hình.
+window.addEventListener("mp:allDead", () => {
+  const socket = getSocket();
+  if (!socket || !socket.connected) return; // mất kết nối → giữ màn GAME_OVER
+  UI.bossUi.style.display = "none";
+  document.getElementById("screen-main").classList.add("hidden");
+  _lobbySocket = socket;
+  openLobby(socket);
+  if (mpState.isHost) buildBossSelectGrid();
+  buildCharacterSelectGrid(socket);
+  refreshLobbyUI();
+  setupGameStartListener(socket);
+});
+
+// Thắng boss MP → quay về phòng chờ (nút trên màn Victory), không reload.
+window.addEventListener("mp:returnLobby", () => {
+  const socket = getSocket();
+  if (!socket || !socket.connected) {
+    window.location.reload(); // mất kết nối → đành reload về menu
+    return;
+  }
+  UI.bossUi.style.display = "none";
+  document.getElementById("screen-main").classList.add("hidden");
+  _lobbySocket = socket;
+  openLobby(socket);
+  if (mpState.isHost) buildBossSelectGrid();
+  buildCharacterSelectGrid(socket);
+  refreshLobbyUI();
+  setupGameStartListener(socket);
+});
 
 function setupGameStartListener(socket) {
   socket.off("game_start");

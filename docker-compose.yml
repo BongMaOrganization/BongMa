@@ -4,8 +4,11 @@ services:
     image: ${DOCKERHUB_USER}/bongma-backend:latest
     ports:
       - "3005:3000"
-    env_file:        
-      - .env     
+    env_file:
+      - .env
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     restart: always
 
   bongma-client:

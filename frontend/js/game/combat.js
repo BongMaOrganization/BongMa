@@ -6,6 +6,7 @@ import { playSound } from "./audio.js";
 import { spawnSatelliteDrone } from "../world/element.js";
 import { spawnBullet, spawnHazard } from "../entities/helpers.js";
 import { spawnElementalZone } from "../game/elementalZone.js";
+import { bulletHitsDungeonWall } from "../world/dungeonLayout.js";
 
 function withinRadiusSq(x1, y1, x2, y2, radius) {
   const dx = x1 - x2;
@@ -13,9 +14,71 @@ function withinRadiusSq(x1, y1, x2, y2, radius) {
   return dx * dx + dy * dy < radius * radius;
 }
 
+// Hiệu ứng nổ nhỏ khi đạn trúng địch (ring + vài hạt văng ra).
+// Hạt bị giới hạn bởi VFX budget nên không gây lag dù bắn dày.
+function spawnHitImpact(x, y, color = "#ffffff", big = false) {
+  if (!state.explosions) state.explosions = [];
+  state.explosions.push({
+    x,
+    y,
+    radius: big ? 24 : 12,
+    life: big ? 13 : 9,
+    color,
+  });
+  if (!state.particles) state.particles = [];
+  const n = big ? 6 : 3;
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const sp = 1.4 + Math.random() * 2.6;
+    state.particles.push({
+      x,
+      y,
+      vx: Math.cos(a) * sp,
+      vy: Math.sin(a) * sp,
+      life: 10 + Math.random() * 10,
+      color: Math.random() > 0.5 ? color : "#ffffff",
+      size: 1.5 + Math.random() * 2,
+    });
+  }
+}
+
 function setStyleIfChanged(el, prop, value) {
   if (!el) return;
   if (el.style[prop] !== value) el.style[prop] = value;
+}
+
+// ===== SỐ SÁT THƯƠNG BAY LÊN =====
+// Gộp theo mục tiêu: đạn bắn dồn vào cùng một quái sẽ CỘNG dồn vào một con số
+// (phình to) thay vì đẻ ra hàng chục số chồng lên nhau → gọn + đọc được.
+export function popDamage(target, x, y, dmg, crit = false) {
+  if (!state.damageNumbers) state.damageNumbers = [];
+  const now = state.frameCount || 0;
+  let dn = target && target._dmgNum;
+  if (dn && dn._expire > now && state.damageNumbers.includes(dn)) {
+    dn.value += dmg;
+    dn.life = dn.maxLife;
+    dn.x = x;
+    dn.y = y;
+    dn.pop = 1;
+    dn.crit = dn.crit || crit;
+    dn._expire = now + 20;
+  } else {
+    dn = {
+      x,
+      y,
+      vy: -0.7,
+      value: dmg,
+      life: 42,
+      maxLife: 42,
+      crit,
+      pop: 1,
+      _expire: now + 20,
+    };
+    state.damageNumbers.push(dn);
+    if (target) target._dmgNum = dn;
+    // Trần cứng để không phình vô hạn khi bắn dày
+    if (state.damageNumbers.length > 70) state.damageNumbers.shift();
+  }
 }
 
 function updateBossHpBars(boss) {
@@ -207,6 +270,8 @@ export function playerTakeDamage(ctx, canvas, changeStateFn, amount = 1) {
       import("../multiplayer/mpFlow.js").then(({ onMultiplayerPlayerDead }) => {
         onMultiplayerPlayerDead();
       });
+    } else if (state.gameMode === "tower") {
+      // Công Thành: check tập trung trong update.js sẽ hồi sinh tại nhà chính
     } else {
       changeStateFn("GAME_OVER");
     }
@@ -305,10 +370,18 @@ export function updateBullets(
   for (let i = bullets.length - 1; i >= 0; i--) {
     let b = bullets[i];
     let isSpiritE = player.characterId === "spirit" && buffs.e > 0;
+    let hitWall = false;
 
     if (!b.isMeteor && !isBulletNearSimulationArea(b, player)) {
+      const prevX = b.x;
+      const prevY = b.y;
       b.x += b.vx || 0;
       b.y += b.vy || 0;
+      if (bulletHitsDungeonWall(b, prevX, prevY)) {
+        b.x = prevX;
+        b.y = prevY;
+        b.life = 0;
+      }
       b.life -= b.isPlayer ? 3 : 4;
       if (b.life <= 0) bullets.splice(i, 1);
       continue;
@@ -387,8 +460,18 @@ export function updateBullets(
         });
       }
 
+      const prevX = b.x;
+      const prevY = b.y;
       b.x += b.vx * speedMult;
       b.y += b.vy * speedMult;
+
+      if (bulletHitsDungeonWall(b, prevX, prevY)) {
+        hitWall = true;
+        b.x = prevX;
+        b.y = prevY;
+        b.vx *= -1;
+        b.vy *= -1;
+      }
 
       if (!b.isPlayer && speedMult < 1) {
         b.life -= speedMult;
@@ -396,8 +479,6 @@ export function updateBullets(
         b.life--;
       }
     }
-
-    let hitWall = false;
 
     if (!b.isMeteor) {
       if (b.x < b.radius) {
@@ -439,6 +520,9 @@ export function updateBullets(
       if (boss && withinRadiusSq(b.x, b.y, boss.x, boss.y, boss.radius + b.radius)) {
         if (!b.hitList.includes("boss")) {
           b.hitList.push("boss");
+          // Boss nhấp nháy trắng + nổ nhỏ khi trúng đạn (drawBoss đọc hitFlashFrame)
+          boss.hitFlashFrame = state.frameCount;
+          spawnHitImpact(b.x, b.y, "rgba(255,90,90,0.9)", true);
           let finalDmg = b.damage || 1;
           // 🔥 ELEMENT EFFECT (CHÈN Ở ĐÂY)
           if (b.element === "fire") {
@@ -463,6 +547,7 @@ export function updateBullets(
           }
 
           // 🪨 earth = default
+          popDamage(boss, b.x, b.y, finalDmg, b.element === "fire" || finalDmg >= 3);
           // --- Send damage via socket if non-host in MP ---
           if (state.isMultiplayer && !state.isHost) {
             import("../multiplayer/sync.js").then(({ sendDamageToHost }) => {
@@ -546,6 +631,7 @@ export function updateBullets(
         let e = state.elementalEnemies[j];
 
         if (b.hitList.includes(e)) continue;
+        if (e.burrowed) continue; // đất đang lặn → đạn xuyên qua
 
         if (withinRadiusSq(b.x, b.y, e.x, e.y, e.radius + b.radius)) {
           b.hitList.push(e);
@@ -567,6 +653,9 @@ export function updateBullets(
           }
 
           e.hp -= finalDmg;
+          e.hitFlash = 6;
+          popDamage(e, b.x, b.y, finalDmg, b.element === "fire" || finalDmg >= 2);
+          spawnHitImpact(b.x, b.y, "rgba(255,120,80,0.85)", finalDmg >= 2);
 
           // 💀 chết → spawn zone
           if (e.hp <= 0) {
@@ -609,7 +698,9 @@ export function updateBullets(
         if (b.hitList.includes(g)) continue;
 
         if (
-          (g.isStunned <= 0 || g.parentZoneId) && // SỬA: Quái bầy không được hưởng "miễn nhiễm" khi bị stun
+          // Quái bầy + MiniBoss/SubBoss (thủ vệ) KHÔNG được "miễn nhiễm" khi stun:
+          // stun-vỡ-khiên (180f) là cửa sổ trừng phạt, phải trúng đạn — không phải 3s bất tử.
+          (g.isStunned <= 0 || g.parentZoneId || g.isMiniBoss || g.isSubBoss) &&
           g.x > 0 &&
           withinRadiusSq(b.x, b.y, g.x, g.y, g.radius + b.radius)
         ) {
@@ -682,12 +773,17 @@ export function updateBullets(
               finalDmg *= 1.5;
             }
 
-            if (b.element === "ice") {
-              g.isStunned = Math.max(g.isStunned, 20);
-            }
+            // MiniBoss/SubBoss (thủ vệ): KHÔNG cho sét/băng refresh stun mỗi viên.
+            // Trước đây stun 40/20 + cổng miễn-sát-thương (dòng ~700) khiến thủ vệ
+            // chỉ ăn 1 hit / stun window → freeze + "bắn không vào máu" với build sét.
+            if (!g.isMiniBoss && !g.isSubBoss) {
+              if (b.element === "ice") {
+                g.isStunned = Math.max(g.isStunned, 20);
+              }
 
-            if (b.element === "lightning") {
-              g.isStunned = Math.max(g.isStunned, 40);
+              if (b.element === "lightning") {
+                g.isStunned = Math.max(g.isStunned, 40);
+              }
             }
 
             if (b.element === "wind") {
@@ -708,6 +804,16 @@ export function updateBullets(
               finalDmg *= 2;
             }
 
+            // Ngoài vùng gác (leashInvuln) → miễn nhiễm poke từ xa (deflect). Chống
+            // farm + chống "cạn máu không chết". Vào hẳn trong vùng mới đánh được.
+            if ((g.isMiniBoss || g.isSubBoss) && g.leashInvuln) {
+              finalDmg = 0;
+              spawnHitImpact(b.x, b.y, "rgba(150,200,255,0.85)", false);
+            } else if (g.isMiniBoss || g.isSubBoss) {
+              // Đánh dấu thời điểm trúng đòn → chặn leash regen khi đang bị bắn
+              g.lastHitFrame = state.frameCount;
+            }
+
             if (g.isMiniBoss && g.shieldActive && (g.shield || 0) > 0) {
               // CƠ CHẾ GIÁP BOSS: Giảm trừ vào giáp trước
               g.shield -= finalDmg;
@@ -719,16 +825,25 @@ export function updateBullets(
               finalDmg = 0; // Không trừ HP khi còn giáp
             }
 
-            if (!g.isMiniBoss && !g.isSubBoss) {
+            if (
+              !g.isMiniBoss &&
+              !g.isSubBoss &&
+              !g.isEchoGhost &&
+              !g.isEchoEnemy &&
+              !g.isTowerMinion
+            ) {
               g.isStunned = finalDmg >= 2 ? 600 : 300;
-            } else if (!g.isMiniBoss) {
-              // SubBoss thông thường bị khựng nhẹ
+            } else if (g.isEchoGhost || g.isEchoEnemy || !g.isMiniBoss) {
+              // SubBoss/Bóng Ma/quái wave Echo chỉ khựng nhẹ — chết theo HP, không stun-chết
               g.isStunned = Math.max(g.isStunned || 0, 20);
             }
             // MiniBoss: không stun per-hit sau khi khiên vỡ (chỉ stun lúc khiên vỡ - xử lý bên trên)
 
             if (finalDmg > 0) {
               g.hp = (g.hp || 1) - finalDmg;
+              g.hitFlash = 6;
+              popDamage(g, b.x, b.y, finalDmg, b.element === "fire" || finalDmg >= 2);
+              spawnHitImpact(b.x, b.y, "rgba(255,120,80,0.85)", finalDmg >= 2);
             }
           }
           hitGhost = true;

@@ -171,13 +171,18 @@ export function updateMultiplayer(changeStateFn) {
 function checkAllPlayersDead(changeStateFn) {
   if (!state.player.isDead) return; // Bản thân chưa chết
 
-  // Kiểm tra xem còn ai sống không
+  // Tất cả đã chết → không còn ai sống để hồi sinh → Game Over.
+  // (Trước đây còn điều kiện reviveZones.length === 0, nhưng người chết LUÔN
+  //  để lại revive zone của chính mình nên điều kiện đó không bao giờ đúng
+  //  → game treo, boss vẫn chạy mà người chơi không làm gì được.)
   const anyAlive = state.remotePlayers.some((p) => !p.isDead);
-  if (!anyAlive && state.reviveZones.length === 0) {
-    // Tất cả đã chết hoặc zone đã hết → Game Over
+  if (!anyAlive) {
     stopAllSync();
     state.isMultiplayer = false;
-    changeStateFn("GAME_OVER");
+    changeStateFn("GAME_OVER"); // dừng game loop sạch sẽ
+    // Đưa cả đội về phòng chờ MP để chơi lại (main.js xử lý) thay vì
+    // văng ra menu solo. Nếu mất kết nối, giữ nguyên màn GAME_OVER.
+    window.dispatchEvent(new CustomEvent("mp:allDead"));
   }
 }
 
@@ -189,6 +194,7 @@ function checkAllPlayersDead(changeStateFn) {
  * Gọi thay cho changeState("GAME_OVER") khi HP <= 0 trong MP
  */
 export function onMultiplayerPlayerDead() {
+  if (state.player.isDead) return; // đã xử lý chết rồi → tránh spawn zone/text trùng
   state.player.isDead = true;
   state.player.hp = 0;
   state.player.gracePeriod = 9999; // Không nhận thêm damage

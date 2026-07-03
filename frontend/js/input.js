@@ -3,12 +3,12 @@ import { state } from "./state.js";
 export function setupInput(canvas) {
   window.addEventListener("keydown", (e) => {
     if (e.code === "Space") e.preventDefault();
-    state.keys[e.key.toLowerCase()] = true;
+    if (e.key) state.keys[e.key.toLowerCase()] = true; // form control có thể bắn event thiếu e.key
     if (e.code === "Space") state.keys["space"] = true;
   });
 
   window.addEventListener("keyup", (e) => {
-    state.keys[e.key.toLowerCase()] = false;
+    if (e.key) state.keys[e.key.toLowerCase()] = false;
     if (e.code === "Space") state.keys["space"] = false;
   });
 

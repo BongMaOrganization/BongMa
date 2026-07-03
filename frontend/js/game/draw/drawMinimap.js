@@ -1,5 +1,6 @@
 import { state } from "../../state.js";
 import { getPuzzleMinimapMarkers } from "../puzzle_manager.js";
+import { drawDungeonMinimap } from "../../world/dungeonLayout.js";
 
 export function drawMinimap(ctx, canvas) {
   const mmSize = 220;
@@ -7,11 +8,15 @@ export function drawMinimap(ctx, canvas) {
   const mmX = canvas.width - mmSize - padding;
   const mmY = padding + 60;
 
+  const tower = state.gameMode === "tower" && state.tower;
+
   ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
   ctx.strokeStyle = "#444";
   ctx.lineWidth = 2;
   ctx.fillRect(mmX, mmY, mmSize, mmSize);
   ctx.strokeRect(mmX, mmY, mmSize, mmSize);
+
+  if (!tower) drawDungeonMinimap(ctx, mmX, mmY, mmSize);
 
   const scaleX = mmSize / state.world.width;
   const scaleY = mmSize / state.world.height;
@@ -26,8 +31,69 @@ export function drawMinimap(ctx, canvas) {
     ctx.fill();
   };
 
-  // 1. Enemies
-  state.ghosts.forEach((g) => drawDot(g, "#ff4444", 2));
+  // 1. Enemies (echo: Bóng Ma tô màu riêng để phân biệt trên minimap)
+  state.ghosts.forEach((g) => {
+    let color = "#ff4444";
+    if (g.isEchoGhost) {
+      color = g.isNemesis
+        ? "#ffd700"
+        : g.isRival
+          ? "#ff6600"
+          : g.isRemote
+            ? "#ffaa44"
+            : g.isReEcho
+              ? "#ff5599"
+              : "#00ffcc";
+    }
+    drawDot(g, color, g.isNemesis ? 3 : 2);
+  });
+
+  // 1.5. Echo graves (mộ bia — chấm vàng)
+  if (state.gameMode === "echo" && state.echoGraves) {
+    state.echoGraves.forEach((gr) => {
+      const x = mmX + gr.x * scaleX;
+      const y = mmY + gr.y * scaleY;
+      ctx.fillStyle = "#ffd700";
+      ctx.beginPath();
+      ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+
+  // 1.7. Tower mode (Công Thành): công trình + lính đồng minh
+  if (state.gameMode === "tower" && state.tower) {
+    state.tower.structures.forEach((s) => {
+      const x = mmX + s.x * scaleX;
+      const y = mmY + s.y * scaleY;
+      const color = !s.alive
+        ? "#555"
+        : s.team === "ally"
+          ? "#00ffcc"
+          : "#ff4455";
+      const size = s.kind === "nexus" ? 5 : 3.5;
+      ctx.fillStyle = color;
+      ctx.fillRect(x - size, y - size, size * 2, size * 2);
+      if (s.kind === "nexus" && s.alive) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x - size - 2, y - size - 2, (size + 2) * 2, (size + 2) * 2);
+      }
+    });
+    state.tower.allyMinions.forEach((m) => {
+      ctx.fillStyle = "#00ffcc";
+      ctx.beginPath();
+      ctx.arc(mmX + m.x * scaleX, mmY + m.y * scaleY, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    // Đồng minh AI (hero) — chấm to hơn, màu theo độ hiếm
+    state.tower.allyHeroes.forEach((h) => {
+      if (h.respawnTimer > 0) return;
+      ctx.fillStyle = h.color;
+      ctx.beginPath();
+      ctx.arc(mmX + h.x * scaleX, mmY + h.y * scaleY, 3, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
 
   // 2. Boss
   if (state.boss && state.boss.hp > 0) {
@@ -51,7 +117,7 @@ export function drawMinimap(ctx, canvas) {
   }
 
   // 3.5. Swarm zones
-  if (!state.isBossLevel && !state.bossArenaMode)
+  if (!state.isBossLevel && !state.bossArenaMode && !tower)
     state.swarmZones.forEach((sz) => {
       if (sz.isCompleted) return;
       const color = state.frameCount % 40 < 20 ? "#ffaa00" : "#aa5500";
@@ -80,7 +146,7 @@ export function drawMinimap(ctx, canvas) {
   );
 
   // 5. Crates
-  if (!state.isBossLevel && !state.bossArenaMode && state.crates) {
+  if (!state.isBossLevel && !state.bossArenaMode && !tower && state.crates) {
     state.crates.forEach((c) => {
       const x = mmX + c.x * scaleX;
       const y = mmY + c.y * scaleY;
@@ -92,7 +158,7 @@ export function drawMinimap(ctx, canvas) {
   }
 
   // 6. Capture points
-  if (!state.isBossLevel && !state.bossArenaMode && state.capturePoints) {
+  if (!state.isBossLevel && !state.bossArenaMode && !tower && state.capturePoints) {
     state.capturePoints.forEach((cp) => {
       if (cp.state === "completed") return;
       const x = mmX + cp.x * scaleX;
@@ -127,91 +193,18 @@ export function drawMinimap(ctx, canvas) {
   }
 
   // 7. Puzzle markers
-  if (!state.isBossLevel && !state.bossArenaMode) {
+  if (!state.isBossLevel && !state.bossArenaMode && !tower) {
     const markers = getPuzzleMinimapMarkers();
     markers.forEach((m) => {
       const mx = mmX + m.x * scaleX;
       const my = mmY + m.y * scaleY;
-
-      if (m.type === "clue") {
-        ctx.fillStyle = "rgba(0,0,0,0.7)";
-        ctx.fillRect(mx - 6, my - 9, 12, 18);
-
-        ctx.fillStyle = m.revealed ? "#FFD700" : "#aaaaaa";
-        ctx.fillRect(mx - 4, my - 7, 8, 14);
-
-        ctx.fillStyle = m.revealed ? "#000" : "#fff";
-        ctx.font = "bold 8px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(m.revealed ? "!" : "?", mx, my + 3.5);
-      }
-
-      if (m.type === "rune") {
-        const isPending = m.state === "pending";
-
-        const fillColor = isPending
-          ? "#ff9900"
-          : m.isNext
-            ? "#ffff00"
-            : "#cc44ff";
-
-        ctx.beginPath();
-        ctx.arc(mx, my, 8, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(0,0,0,0.7)";
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.arc(mx, my, 6, 0, Math.PI * 2);
-        ctx.fillStyle = fillColor;
-        ctx.fill();
-
-        ctx.strokeStyle = "#fff";
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        ctx.fillStyle = "#000";
-        ctx.font = "bold 8px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(m.symbol, mx, my + 3);
-      }
-
-      if (m.type === "domino") {
-        ctx.beginPath();
-        ctx.arc(mx, my, 5, 0, Math.PI * 2);
-        ctx.fillStyle = m.isNext ? "#ffff00" : "#888";
-        ctx.fill();
-        ctx.strokeStyle = "#000";
-        ctx.stroke();
-      }
-
-      if (m.type === "melody") {
-        ctx.beginPath();
-        ctx.arc(mx, my, 5, 0, Math.PI * 2);
-        ctx.fillStyle = "#00ccff";
-        ctx.fill();
-        ctx.fillStyle = "#000";
-        ctx.font = "bold 7px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("♪", mx, my + 2);
-      }
-
-      if (m.type === "torch") {
-        ctx.beginPath();
-        ctx.arc(mx, my, 5, 0, Math.PI * 2);
-        ctx.fillStyle = "#ff8800";
-        ctx.fill();
-        ctx.fillStyle = "#000";
-        ctx.font = "bold 7px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText("🔥", mx, my + 2);
-      }
-
-      if (m.type === "source") {
-        ctx.fillStyle = m.color;
-        ctx.beginPath();
-        ctx.arc(mx, my, 3, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      ctx.beginPath();
+      ctx.arc(mx, my, 4, 0, Math.PI * 2);
+      ctx.fillStyle = m.color || "#cc44ff";
+      ctx.fill();
+      ctx.strokeStyle = "rgba(0,0,0,0.6)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
     });
   }
 

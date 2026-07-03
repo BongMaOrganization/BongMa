@@ -1,12 +1,15 @@
 export const state = {
   gameState: "MENU",
+  // Chế độ đang chơi: "campaign" | "bossArena" | "echo" (Vòng Lặp) | "tower" (Công Thành)
+  gameMode: "campaign",
+  tutorial: null,
   frameCount: 0,
   scoreTime: 0,
   currentLevel: 1,
   maxFramesToSurvive: 0,
   isBossLevel: false,
 
-  world: { width: 5000, height: 5000 },
+  world: { width: 3000, height: 3000 },
   camera: { x: 0, y: 0, width: 1536, height: 864 },
 
   player: null,
@@ -78,8 +81,6 @@ export const state = {
   explosions: [],
   druidOrbs: [],
   phantoms: [],
-  painterTrails: [],
-  painterZones: [],
   painterBomb: null,
   painterExplosions: [],
   hunterTraps: [],
@@ -100,6 +101,7 @@ export const state = {
   isScoutQ: false,
 
   floatingTexts: [], // Mảng chứa các đoạn chữ bay (XP, Gold, v.v.)
+  damageNumbers: [], // Số sát thương bay lên khi trúng đòn (gộp theo mục tiêu)
 
   // ===== Elemental Combat System =====
   hazards: [], // { x, y, radius, type, life, damage, color }
@@ -127,6 +129,24 @@ export const state = {
     timer: 0,
     damage: 0,
   },
+  // ===== Map Identity System (cơ chế đặc thù theo nguyên tố map) =====
+  // Khởi tạo lại mỗi màn ở mapMechanics.initMapMechanic()
+  mapMechanic: {
+    theme: null,
+    element: null, // hệ quái bị khoá theo map
+    meter: 0, // heat/cold/charge tuỳ map
+    meterMax: 240,
+    eventTimer: 300, // đếm ngược tới field-event kế (chỉ chạy khi globalHazard rảnh)
+    eruptTimer: 360, // đếm ngược tới đợt telegraph/strike kế
+    objectiveProgress: 0, // số đợt sự kiện đã sống sót
+    objectiveTarget: 3,
+    lastX: 0,
+    lastY: 0,
+    inertiaX: 0, // băng: quán tính trượt
+    inertiaY: 0,
+    windAngle: 0, // gió: hướng đẩy hiện tại
+    strikes: [], // {x,y,radius,fuse,dmg,stun} — đòn AoE có telegraph
+  },
   cinematicEffects: {
     fogAlpha: 0, // Ice blizzard overlay
     distortion: 0, // Earth tremor ripple
@@ -137,6 +157,8 @@ export const state = {
   },
 
   phaseTransitionTimer: 0,
+  bossCutscene: null,
+  bossArenaVisual: null,
 
   bossSpecial: {
     name: "",
@@ -200,6 +222,7 @@ export const state = {
     { id: "earth", unlocked: false },
     { id: "wind", unlocked: false },
     { id: "thunder", unlocked: false },
+    { id: "omni", unlocked: false },
   ],
   selectedMap: "fire",
   currentMapTheme: "fire",
@@ -207,6 +230,21 @@ export const state = {
   pendingBossType: null,      // boss sẽ spawn sau
   elementalZones: [], // zone của quái (KHÔNG liên quan boss)
   elementalEnemies: [], // quái có yếu tố (để render hiệu ứng)
+  dungeon: null,
+  healStations: [],
+  dungeonUpgradePedestals: [],
+  storySigns: [],
+  storyLog: [],
+  storyToast: null,
+
+  // ===== Echo Mode (Vòng Lặp) =====
+  // Runtime của chế độ Vòng Lặp — khởi tạo tại echoMode.initEchoRunState()
+  echo: null, // { wave, waveTimer, timeFrames, coinsAtStart, kills, ... }
+  echoGraves: [], // [{ x, y, coins, pulse }] — mộ bia rơi từ Bóng Ma
+
+  // ===== Tower Mode (Công Thành) =====
+  // Runtime chế độ đánh trụ — khởi tạo tại towerMode.startTowerRun()
+  tower: null, // { wave, structures, allyMinions, beams, result, ... }
 
   // ===== Multiplayer State =====
   isMultiplayer: false,

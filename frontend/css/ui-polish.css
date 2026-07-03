@@ -1,0 +1,436 @@
+/* ============================================================
+   UI POLISH — Asynchronous Echoes
+   Layer on top of style.css
+   ============================================================ */
+
+@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&display=swap");
+
+:root {
+  --font-display: "Orbitron", "Segoe UI", sans-serif;
+  --font-ui: "Rajdhani", "Segoe UI", sans-serif;
+  --accent: #00ffcc;
+  --accent-soft: rgba(0, 255, 204, 0.15);
+  --danger: #ff4466;
+  --gold: #ffd080;
+  --panel-bg: rgba(8, 10, 18, 0.94);
+  --glass: rgba(12, 14, 24, 0.72);
+  --hud-border: rgba(255, 255, 255, 0.08);
+}
+
+body {
+  font-family: var(--font-ui);
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(0, 255, 204, 0.06), transparent 50%),
+    radial-gradient(ellipse 60% 50% at 80% 90%, rgba(255, 68, 100, 0.05), transparent 50%),
+    linear-gradient(160deg, #06060a 0%, #0d0d14 40%, #080810 100%);
+}
+
+h1 {
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.35em;
+  opacity: 0.55;
+  top: 8px;
+}
+
+#game-container {
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(0, 255, 204, 0.12),
+    0 0 40px rgba(0, 255, 204, 0.08),
+    0 24px 80px rgba(0, 0, 0, 0.85);
+}
+
+canvas {
+  border: none;
+  border-radius: 2px;
+}
+
+/* ---- In-game HUD ---- */
+#level-display,
+#timer,
+#ghost-count,
+#coins-count,
+#dash-cooldown {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: var(--glass);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--hud-border);
+  border-radius: 6px;
+  padding: 6px 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+#level-display {
+  color: var(--accent);
+  text-shadow: 0 0 12px rgba(0, 255, 204, 0.4);
+  font-size: 15px;
+}
+
+#timer {
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: #fff;
+  min-width: 100px;
+  text-align: center;
+}
+
+#ghost-count {
+  color: #ff8888;
+  bottom: 52px;
+}
+
+#coins-count {
+  bottom: 52px;
+  color: var(--gold);
+}
+
+#dash-cooldown {
+  color: var(--accent);
+  font-size: 14px;
+}
+
+#xp-wrapper {
+  bottom: 52px;
+  width: 200px;
+}
+
+#xp-bar-bg {
+  height: 10px;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--hud-border);
+  border-radius: 5px;
+}
+
+#xp-bar-fill {
+  background: linear-gradient(90deg, #00ffcc, #0088ff, #aa66ff);
+  box-shadow: 0 0 8px rgba(0, 255, 204, 0.5);
+}
+
+#health-bar {
+  bottom: 88px;
+  padding: 6px 10px;
+  background: var(--glass);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--hud-border);
+  border-radius: 8px;
+  gap: 4px;
+}
+
+.heart {
+  width: 22px;
+  height: 22px;
+  filter: drop-shadow(0 0 4px rgba(255, 40, 40, 0.6));
+  transition: transform 0.15s;
+}
+
+.heart:not(.empty):hover {
+  transform: scale(1.08);
+}
+
+#skills-ui {
+  gap: 10px;
+  padding: 8px 14px;
+  background: var(--glass);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--hud-border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.skill-slot {
+  width: 54px;
+  height: 54px;
+  border-radius: 10px;
+  background: linear-gradient(145deg, #1a1a28, #0e0e16);
+  border: 2px solid #3a3a50;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+
+.skill-slot.ready {
+  border-color: var(--accent);
+  box-shadow: 0 0 14px rgba(0, 255, 204, 0.35), inset 0 0 12px rgba(0, 255, 204, 0.08);
+}
+
+.skill-slot.active {
+  border-color: #ff66ff;
+  box-shadow: 0 0 18px rgba(255, 100, 255, 0.5);
+  transform: scale(1.06);
+}
+
+.skill-key {
+  font-family: var(--font-display);
+  font-size: 18px;
+}
+
+/* ---- Boss HP bar ---- */
+#boss-ui {
+  width: min(560px, 92vw);
+  filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.6));
+}
+
+#boss-name-container {
+  font-family: var(--font-display);
+  font-size: 20px;
+  padding: 4px 0 8px;
+}
+
+#boss-icon {
+  font-size: 28px;
+  filter: drop-shadow(0 0 8px var(--boss-name-shadow, red));
+}
+
+#boss-hp-bg {
+  height: 22px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.65);
+}
+
+#boss-ui.phase-transition {
+  animation: bossPhasePulse 0.35s ease-out;
+}
+
+@keyframes bossPhasePulse {
+  0% { transform: translateX(-50%) scale(1); }
+  40% { transform: translateX(-50%) scale(1.04); filter: brightness(1.4); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
+/* ---- Overlays & panels ---- */
+.overlay {
+  background: rgba(2, 4, 10, 0.88);
+  backdrop-filter: blur(12px) saturate(1.2);
+  animation: overlayFadeIn 0.35s ease-out;
+}
+
+@keyframes overlayFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.panel {
+  font-family: var(--font-ui);
+  background: var(--panel-bg);
+  border: 1px solid rgba(0, 255, 204, 0.15);
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset,
+    0 24px 64px rgba(0, 0, 0, 0.7),
+    0 0 40px rgba(0, 255, 204, 0.04);
+  position: relative;
+  max-height: calc(100% - 48px);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.panel::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  opacity: 0.6;
+}
+
+.panel-header-block {
+  margin-bottom: 24px;
+}
+
+.panel-header-block .title-main {
+  font-family: var(--font-display);
+  letter-spacing: 0.12em;
+}
+
+.panel-header-block .desc {
+  font-size: 16px;
+  color: #aab;
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+h2.title-main {
+  font-family: var(--font-display);
+  letter-spacing: 0.1em;
+}
+
+.main-menu-panel {
+  border-color: rgba(0, 255, 204, 0.25);
+  padding: 36px 32px;
+}
+
+.glitch-text {
+  font-family: var(--font-display);
+  font-size: 32px;
+}
+
+.menu-btn-epic .btn-text {
+  font-family: var(--font-display);
+  font-size: 17px;
+  letter-spacing: 0.08em;
+}
+
+.menu-btn-utility {
+  font-family: var(--font-ui);
+  letter-spacing: 0.05em;
+}
+
+/* Boss Arena */
+.boss-arena-panel {
+  max-width: 960px !important;
+}
+
+.boss-arena-section-title {
+  width: 100%;
+  flex-basis: 100%;
+  text-align: left;
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.25em;
+  color: #667;
+  margin: 8px 0 4px;
+  padding-left: 8px;
+  border-left: 3px solid var(--accent);
+}
+
+.boss-arena-card {
+  width: 175px !important;
+  padding: 16px 12px !important;
+  border-width: 2px !important;
+}
+
+.boss-arena-card .premium-card-title {
+  font-family: var(--font-display);
+  font-size: 15px !important;
+  letter-spacing: 0.06em;
+}
+
+.boss-arena-card:hover {
+  transform: translateY(-8px) scale(1.04);
+}
+
+.boss-arena-fight-hint {
+  margin-top: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  color: var(--theme-color, #ff4444);
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.boss-arena-card:hover .boss-arena-fight-hint {
+  opacity: 1;
+}
+
+/* Map cards */
+.map-select-card .premium-card-title {
+  font-family: var(--font-display);
+}
+
+.map-select-card.selected {
+  box-shadow: 0 0 30px var(--map-glow, rgba(0, 255, 204, 0.4));
+}
+
+#screen-map-select .panel {
+  max-height: calc(100% - 40px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#screen-map-select .panel-header-block {
+  flex-shrink: 0;
+}
+
+#screen-map-select #map-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  padding-right: 8px;
+  margin-bottom: 8px;
+}
+
+#screen-map-select #map-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+#screen-map-select #map-list::-webkit-scrollbar-thumb {
+  background: rgba(0, 255, 204, 0.35);
+  border-radius: 4px;
+}
+
+#screen-map-select #btn-map-back {
+  flex-shrink: 0;
+}
+
+/* Cards upgrade/shop */
+.card {
+  border-radius: 10px;
+  background: linear-gradient(160deg, #1e1e28, #14141c);
+  border-color: #444;
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+  box-shadow: 0 8px 24px rgba(0, 255, 204, 0.15);
+}
+
+.card.gold {
+  border-color: #ffd700;
+  background: linear-gradient(160deg, #2a2410, #1a1808);
+}
+
+/* Fragment toast */
+.fragment-toast {
+  font-family: var(--font-display);
+  border-radius: 8px;
+  letter-spacing: 0.08em;
+}
+
+/* Cutscene skip */
+.boss-cutscene-skip {
+  bottom: 28px;
+  right: 28px;
+}
+
+#btn-skip-cutscene {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  padding: 12px 22px;
+  border-radius: 8px;
+  text-transform: uppercase;
+}
+
+/* Arena victory */
+#screen-arena-victory .panel {
+  border-color: rgba(255, 215, 0, 0.3);
+}
+
+#screen-arena-victory .title-main {
+  animation: victoryPulse 2s ease-in-out infinite;
+}
+
+@keyframes victoryPulse {
+  0%, 100% { text-shadow: 0 0 20px rgba(0, 255, 204, 0.5); }
+  50% { text-shadow: 0 0 40px rgba(255, 215, 0, 0.8); }
+}
+
+/* Auth */
+.auth-input {
+  font-family: var(--font-ui);
+  border-radius: 8px;
+}
+
+button {
+  font-family: var(--font-ui);
+  letter-spacing: 0.04em;
+}

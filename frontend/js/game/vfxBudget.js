@@ -1,3 +1,5 @@
+import { getGraphicsPreset } from "./graphics.js";
+
 export const VFX_BUDGET = {
   MAX_PARTICLES: 48,
   PARTICLES_PER_DRAW_PASS: 1,
@@ -128,10 +130,11 @@ const GAMEPLAY_EFFECT_KEYS = new Set([
 ]);
 
 function getLightweightLimit(key, max) {
-  if (GAMEPLAY_EFFECT_KEYS.has(key)) return max;
+  if (GAMEPLAY_EFFECT_KEYS.has(key)) return max; // hiệu ứng gameplay: không cắt
   if (key === "floatingTexts") return Math.min(max, 18);
   if (key === "explosions") return Math.min(max, 10);
-  return Math.max(6, Math.floor(max * 0.55));
+  const scale = getGraphicsPreset().particleScale || 1; // mức đồ họa thấp = ít hạt hơn
+  return Math.max(4, Math.floor(max * 0.55 * scale));
 }
 
 export function enforceVfxBudget(state) {
@@ -252,6 +255,16 @@ export function isPerformanceMode(state) {
   const particles = state.particles?.length || 0;
   const managed = getManagedVfxCount(state);
   return bullets > 14 || particles > 18 || managed > 48;
+}
+
+// Mức tải khung hình: 0 bình thường, 1 nặng, 2 cực nặng. Dùng cho auto-downgrade.
+export function getPerfLoadLevel(state) {
+  const bullets = state.bullets?.length || 0;
+  const particles = state.particles?.length || 0;
+  const managed = getManagedVfxCount(state);
+  if (bullets > 40 || particles > 42 || managed > 110) return 2;
+  if (bullets > 14 || particles > 18 || managed > 48) return 1;
+  return 0;
 }
 
 export function shouldUseMinimalEnemyDraw(state) {

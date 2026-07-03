@@ -13,7 +13,19 @@
       "Bash(node _cleanup_draw.js)",
       "Bash(python3 -)",
       "Bash(find \"e:\\\\Users\\\\Admin\\\\Documents\\\\GitHub\\\\BongMa\\\\frontend\\\\js\\\\\" -type f -name \"*.js\" | head -30)",
-      "Bash(grep -n \"^    {$\\\\|id:\" /e/Users/Admin/Documents/GitHub/BongMa/frontend/js/characters/data.js)"
+      "Bash(grep -n \"^    {$\\\\|id:\" /e/Users/Admin/Documents/GitHub/BongMa/frontend/js/characters/data.js)",
+      "Bash(cat)",
+      "Bash(node /tmp/hooktest.mjs)",
+      "Bash(rm -f /tmp/hooktest.mjs)",
+      "Bash(curl -s -m 20 \"https://bongma.storyoftri.xyz/index.html\")",
+      "Bash(echo \"--- exit: $? \\(empty grep = not found\\) ---\")",
+      "Bash(curl -s -m 20 -I \"https://bongma.storyoftri.xyz/index.html\")",
+      "Bash(cp game/draw/drawBullets.js /tmp/c.mjs)",
+      "Bash(node --check /tmp/c.mjs)",
+      "Bash(rm -f /tmp/c.mjs)",
+      "Bash(cp input.js /tmp/c.mjs)",
+      "Bash(cp game/skills.js /tmp/c.mjs)",
+      "mcp__Claude_Preview__preview_start"
     ]
   }
 }

@@ -1,6 +1,9 @@
 import { state } from "../state.js";
 import { FPS } from "../config.js";
 import { dist } from "../utils.js";
+import { spawnMiniBoss } from "../entities/miniBosses.js";
+
+export { spawnMiniBoss };
 
 export function spawnCrate() {
     const maxCrates = 10;
@@ -119,36 +122,8 @@ export function spawnCapturePoint() {
         });
 
         // Spawn Mini-Boss hơi lệch ra một chút để không bị đè lên Trụ
-        spawnMiniBoss(x + 100, y + 100, id + "_boss");
+        spawnMiniBoss(x + 100, y + 100, id + "_boss", null, 1);
     }
-}
-
-export function spawnMiniBoss(x, y, id) {
-    // Mini boss là một con ma cực kỳ trâu bò và to lớn
-    const hp = 1000 + state.currentLevel * 100;
-    state.ghosts.push({
-        id: id,
-        isMiniBoss: true,
-        isSubBoss: true, // Thêm flag này để thừa hưởng AI và chống 1-hit
-        x,
-        y,
-        radius: 60, // To hơn nữa
-        hp: hp,
-        maxHp: hp,
-        shield: Math.floor(hp * 0.2), // Giáp bằng 20% HP
-        maxShield: Math.floor(hp * 0.2),
-        shieldActive: true,
-        speed: 1.1, // Chậm hơn một chút để lỳ lợm hơn
-        speedRate: 1.0, // Thêm speedRate mặc định để không bị lỗi NaN khi update
-        color: "#ff0055", // Màu đặc trưng
-        lastHazardDamageTime: 0,
-        burnTimer: 0,
-        isStunned: 0,
-        behavior: "guard",
-        originalX: x,
-        originalY: y,
-        historyPath: []
-    });
 }
 
 export function spawnCrystal(x, y, rewardType) {

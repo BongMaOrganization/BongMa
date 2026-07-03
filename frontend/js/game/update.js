@@ -11,10 +11,34 @@ import { updateActiveCharacter } from "../characters/characterRegistry.js";
 import { updatePuzzle } from "../game/puzzle_manager.js";
 import { updateElementalZones } from "../game/elementalZone.js";
 import {
+  updateMapMechanic,
+  applyMapEnemyModifier,
+  isMapObjectiveDone,
+  isInActiveCapture,
+} from "../game/mapMechanics.js";
+import {
   updateElementalEnemies,
-  spawnElementalEnemy,
-  ELEMENTS,
+  spawnElementalEnemyInRoom,
 } from "../entities/elementalEnemies.js";
+import {
+  resolveDungeonCollision,
+  resolveDoorGates,
+  moveEntityWithDungeonGates,
+  updateDungeonRoomState,
+  getCurrentRoom,
+  getRoomById,
+  getSafeSpawnPointInRoom,
+  moveWithDungeonCollision,
+  constrainToRoomBounds,
+  countElementalsInRoom,
+  getBossGateRoom,
+  getMapElement,
+  getBossGatePortalPosition,
+  isDungeonCampaignBoss,
+  updateHealStations,
+  updateUpgradePedestals,
+} from "../world/dungeonLayout.js";
+import { updateStorySigns } from "../world/storyLore.js";
 import {
   updateBullets,
   playerTakeDamage,
@@ -22,12 +46,47 @@ import {
   addExperience,
 } from "./combat.js";
 import { updateBoss } from "../entities/bosses/boss_manager.js";
-import { startBossFight } from "./flow.js";
+import { beginBossEncounter } from "./flow.js";
+import {
+  updateBossCutscene,
+  isBossCutsceneActive,
+} from "./bossCutscene.js";
+import {
+  updateBossArenaVisual,
+  constrainToBossArena,
+} from "../world/bossArenaVisual.js";
 import { spawnBullet } from "../entities/helpers.js";
-import { spawnCrate, spawnCrystal } from "../world/element.js";
+import { spawnCrate, spawnCrystal, spawnMiniBoss } from "../world/element.js";
+import { updateMiniBossCombat } from "../entities/miniBosses.js";
 import { ATTACK_MODES, SPECIAL_SKILLS } from "../entities/bosses/patterns.js";
-import { updateMultiplayer } from "../multiplayer/mpFlow.js";
+import {
+  updateMultiplayer,
+  onMultiplayerPlayerDead,
+} from "../multiplayer/mpFlow.js";
 import { enforceBulletBudget, enforceVfxBudget } from "./vfxBudget.js";
+import {
+  updateEchoWaves,
+  onEchoGhostDeath,
+  constrainToEchoArena,
+} from "./echoMode.js";
+import {
+  updateTowerMode,
+  handleTowerPlayerDown,
+  constrainToTowerArena,
+} from "./towerMode.js";
+import { registerTutorialEnemyKill, updateTutorial } from "./tutorial.js";
+
+function moveGhostInDungeon(g, dx, dy) {
+  const radius = g.radius || 12;
+  if (state.dungeon && !state.isBossLevel && !state.bossArenaMode) {
+    moveWithDungeonCollision(g, dx, dy, radius);
+    const home = g.roomId ? getRoomById(g.roomId) : getCurrentRoom(g.x, g.y);
+    if (home) constrainToRoomBounds(g, home, radius);
+  } else {
+    g.x += dx;
+    g.y += dy;
+  }
+}
 
 function applyPlayerShotCompression(
   startIndex,
@@ -74,22 +133,88 @@ export function update(ctx, canvas, changeStateFn) {
   const { player, boss, keys, mouse, activeBuffs } = state;
   const buffs = activeBuffs || { q: 0, e: 0, r: 0 };
 
+  // === ECHO: đang mở thẻ lựa chọn giữa wave → đóng băng mô phỏng ===
+  if (state.echoChoicePause) return null;
+
   // === MULTIPLAYER: update revive zones, check all dead ===
   updateMultiplayer(changeStateFn);
 
-  // === MULTIPLAYER: Skip normal update if local player is dead (wait for revive) ===
+  // === MULTIPLAYER: Đã hy sinh → chế độ xem (spectator), chờ hồi sinh ===
   if (state.isMultiplayer && state.player?.isDead) {
-    // Still update boss (host) so others see the fight
+    // Camera bám đồng đội còn sống (hoặc xác mình) để theo dõi trận đấu.
+    const watch = state.remotePlayers.find((p) => !p.isDead) || state.player;
+    state.camera.width = canvas.width;
+    state.camera.height = canvas.height;
+    state.camera.x = Math.max(
+      0,
+      Math.min(watch.x - canvas.width / 2, state.world.width - canvas.width),
+    );
+    state.camera.y = Math.max(
+      0,
+      Math.min(watch.y - canvas.height / 2, state.world.height - canvas.height),
+    );
+
+    // Host vẫn chạy logic boss; mọi người advance đạn để render mượt (hết đứng/giật).
     if (state.isHost && boss && !boss.entityPhase) updateBoss(boss);
+    updateBullets(ctx, canvas, changeStateFn, false);
     return null;
   }
 
+  // === Chết do mất máu TRỰC TIẾP (elemental zone / hazard tick trừ player.hp
+  // thẳng, KHÔNG qua playerTakeDamage) — death không tự kích hoạt. Check tập
+  // trung mỗi frame để HP về 0 là luôn chết (hết bug HP=0 vẫn điều khiển được). ===
+  if (player && player.hp <= 0 && !player.isDead) {
+    if (state.isMultiplayer) {
+      onMultiplayerPlayerDead();
+    } else if (state.gameMode === "tower" && state.tower && !state.tower.result) {
+      // Công Thành: gục ngã → hồi sinh tại nhà chính, KHÔNG game over
+      handleTowerPlayerDown();
+    } else {
+      changeStateFn("GAME_OVER");
+    }
+    return null;
+  }
+
+  if (isBossCutsceneActive()) {
+    updateBossCutscene();
+    updateBossArenaVisual();
+    if (player && canvas) {
+      state.camera.width = canvas.width;
+      state.camera.height = canvas.height;
+      state.camera.x = Math.max(
+        0,
+        Math.min(player.x - canvas.width / 2, state.world.width - canvas.width),
+      );
+      state.camera.y = Math.max(
+        0,
+        Math.min(player.y - canvas.height / 2, state.world.height - canvas.height),
+      );
+    }
+    state.frameCount++;
+    return null;
+  }
+
+  if (state.isBossLevel || state.bossArenaVisual) {
+    updateBossArenaVisual();
+  }
+
   updateElementalZones(state.player);
+  updateMapMechanic(state.player, ctx, canvas, changeStateFn);
+  // Chế độ Vòng Lặp: waves + mộ bia + HUD
+  if (state.gameMode === "echo" && state.echo) {
+    updateEchoWaves(player, changeStateFn);
+  }
+  // Chế độ Công Thành: waves + lính 2 phe + trụ + HUD
+  if (state.gameMode === "tower" && state.tower) {
+    updateTowerMode(player, changeStateFn);
+  }
   updateElementalEnemies(state.player);
+  updateHealStations();
+  updateUpgradePedestals();
   // --- 1. Quản lý Camera & Boundaries ---
   state.camera.width = canvas.width;
   state.camera.height = canvas.height;
-  if (player && player.hp > 0) {
+  if (player && !player.isDead) {
     state.camera.x = player.x - canvas.width / 2;
     state.camera.y = player.y - canvas.height / 2;
     state.camera.x = Math.max(
@@ -119,6 +244,11 @@ export function update(ctx, canvas, changeStateFn) {
   }
   if (state.playerStatus.slowTimer > 0) {
     state.playerStatus.slowTimer--;
+  }
+  // Burn là DoT có hạn (~0.5s sau lần chạm lửa cuối) — trước đây quên trừ
+  // nên cháy vĩnh viễn = đốt hết máu. Trừ dần như slow/stun.
+  if (state.playerStatus.burnTimer > 0) {
+    state.playerStatus.burnTimer--;
   }
   state.playerFireRateMultiplier = 1;
   state.playerMultiShotModifier = player.multiShot || 1;
@@ -177,8 +307,7 @@ export function update(ctx, canvas, changeStateFn) {
       (currentMultiShot * FPS) / PLAYER_MAX_PROJECTILES_PER_SECOND,
     );
     shotDamageMultiplier = optimizedFireRate / Math.max(1, currentFireRate);
-    shotRadiusMultiplier =
-      1 + Math.min(0.35, (shotDamageMultiplier - 1) * 0.1);
+    shotRadiusMultiplier = 1 + Math.min(0.35, (shotDamageMultiplier - 1) * 0.1);
     currentFireRate = optimizedFireRate;
   }
 
@@ -198,7 +327,10 @@ export function update(ctx, canvas, changeStateFn) {
     setTextIfChanged(UI.dash, "Lướt: SẴN SÀNG");
     setStyleIfChanged(UI.dash, "color", "#00ffcc");
   } else {
-    setTextIfChanged(UI.dash, `Lướt: ${(player.dashCooldownTimer / 60).toFixed(1)}s`);
+    setTextIfChanged(
+      UI.dash,
+      `Lướt: ${(player.dashCooldownTimer / 60).toFixed(1)}s`,
+    );
     setStyleIfChanged(UI.dash, "color", "#888");
   }
 
@@ -235,14 +367,26 @@ export function update(ctx, canvas, changeStateFn) {
   }
 
   if (player.dashTimeLeft > 0) {
-    player.x += player.dashDx * (currentSpeed * PLAYER_DASH_SPEED_MULTIPLIER);
-    player.y += player.dashDy * (currentSpeed * PLAYER_DASH_SPEED_MULTIPLIER);
+    const mdx = player.dashDx * (currentSpeed * PLAYER_DASH_SPEED_MULTIPLIER);
+    const mdy = player.dashDy * (currentSpeed * PLAYER_DASH_SPEED_MULTIPLIER);
+    if (state.dungeon && !state.isBossLevel && !state.bossArenaMode) {
+      moveEntityWithDungeonGates(player, mdx, mdy, player.radius);
+    } else {
+      player.x += mdx;
+      player.y += mdy;
+    }
     if (player.dashEffect) player.dashEffect();
     player.dashTimeLeft--;
     player.isInvincible = player.dashTimeLeft > 2;
   } else {
-    player.x += dx * currentSpeed;
-    player.y += dy * currentSpeed;
+    const mdx = dx * currentSpeed;
+    const mdy = dy * currentSpeed;
+    if (state.dungeon && !state.isBossLevel && !state.bossArenaMode) {
+      moveEntityWithDungeonGates(player, mdx, mdy, player.radius);
+    } else {
+      player.x += mdx;
+      player.y += mdy;
+    }
     player.isInvincible = false;
   }
 
@@ -267,6 +411,25 @@ export function update(ctx, canvas, changeStateFn) {
     player.radius,
     Math.min(state.world.height - player.radius, player.y),
   );
+
+  // Tower mode: nhốt player trong corridor (giới hạn di chuyển)
+  if (state.gameMode === "tower" && state.tower) {
+    constrainToTowerArena(player, player.radius);
+  }
+  // Echo mode: nhốt player trong vòng arena "Vực Thời Gian"
+  if (state.gameMode === "echo" && state.echo) {
+    constrainToEchoArena(player, player.radius);
+  }
+
+  resolveDungeonCollision(player, player.radius);
+  resolveDoorGates(player, player.radius);
+  updateDungeonRoomState(player);
+  updateStorySigns(player);
+
+  if (state.isBossLevel || state.bossArenaVisual) {
+    constrainToBossArena(player, player.radius);
+    if (boss) constrainToBossArena(boss, boss.radius || 45);
+  }
 
   // --- 5. Bắn Súng (Dùng chung) ---
   let shotThisFrame = false;
@@ -377,6 +540,12 @@ export function update(ctx, canvas, changeStateFn) {
     if (!state.isMultiplayer || state.isHost) {
       updateBoss(boss);
     }
+    if (isDungeonCampaignBoss()) {
+      resolveDungeonCollision(boss, boss.radius || 45);
+      const bossRoom = getBossGateRoom();
+      if (bossRoom) constrainToRoomBounds(boss, bossRoom, boss.radius || 45);
+      constrainToBossArena(boss, boss.radius || 45);
+    }
   }
 
   // XỬ LÝ BOSS CHẾT (Dành cho MỌI LOẠI BOSS)
@@ -443,19 +612,22 @@ export function update(ctx, canvas, changeStateFn) {
         sz.requiredKills - sz.currentKills - currentZoneGhosts;
       if (remainingToSpawn > 0 && currentZoneGhosts < 10) {
         const spawnBatch = Math.min(5, remainingToSpawn);
+        const swarmRoom = getRoomById(sz.roomId);
         for (let j = 0; j < spawnBatch; j++) {
-          const angle = Math.random() * Math.PI * 2;
-          const r = Math.random() * (sz.radius - 50);
+          const pt = swarmRoom
+            ? getSafeSpawnPointInRoom(swarmRoom, 100)
+            : null;
           state.ghosts.push({
             record: [],
             speedRate: 1,
             timer: 0,
-            x: sz.x + Math.cos(angle) * r,
-            y: sz.y + Math.sin(angle) * r,
+            x: pt?.x ?? sz.x,
+            y: pt?.y ?? sz.y,
             radius: 15,
             hp: 1 + Math.floor(state.currentLevel / 3),
             isDummy: true,
             parentZoneId: sz.id,
+            roomId: sz.roomId,
             historyPath: [],
             isStunned: 0,
             lastShot: state.frameCount + Math.random() * 60,
@@ -474,6 +646,7 @@ export function update(ctx, canvas, changeStateFn) {
   for (let i = state.ghosts.length - 1; i >= 0; i--) {
     let g = state.ghosts[i];
     if (!g) continue;
+    if (g.hitFlash > 0) g.hitFlash--;
 
     // Dọn quái của Zone đã xong
     if (g.parentZoneId) {
@@ -494,11 +667,29 @@ export function update(ctx, canvas, changeStateFn) {
     }
 
     // Kiểm tra quái chết
+    // Bóng Ma + quái wave Echo không chết vì stun — chỉ chết khi cạn HP
     const hasDeadHp =
       g.hp !== undefined && (!Number.isFinite(g.hp) || g.hp <= 0);
     let isHit =
-      hasDeadHp || (!g.isSubBoss && !g.isMiniBoss && g.isStunned > 0);
+      hasDeadHp ||
+      (!g.isSubBoss &&
+        !g.isMiniBoss &&
+        !g.isEchoGhost &&
+        !g.isEchoEnemy &&
+        !g.isTowerMinion &&
+        g.isStunned > 0);
+    if (isHit && g.isEchoGhost) {
+      // Diệt được chính mình → thưởng đậm + rơi mộ bia
+      addExperience(g.isNemesis ? 30 : 10, changeStateFn);
+      state.player.coins = (state.player.coins || 0) + (g.isNemesis ? 15 : 5);
+      onEchoGhostDeath(g, "killed");
+      state.ghosts.splice(i, 1);
+      continue;
+    }
     if (isHit && !g.isRespawning) {
+      if (state.gameMode === "tutorial" && g.tutorialEnemy) {
+        registerTutorialEnemyKill();
+      }
       if (g.parentZoneId) {
         const zone = state.swarmZones.find((sz) => sz.id === g.parentZoneId);
         if (zone && !zone.isCompleted) {
@@ -530,9 +721,28 @@ export function update(ctx, canvas, changeStateFn) {
           }
         }
       } else {
-        addExperience(g.isHorde ? 2 : 4, changeStateFn);
+        addExperience(
+          g.xpValue ?? (g.isEchoElite ? 20 : g.isHorde ? 2 : 4),
+          changeStateFn,
+        );
+        // Echo: bounty quái/elite chịu hệ số solo (tắt Bóng Ma người khác → ít vàng hơn)
+        const rMult = state.gameMode === "echo" ? state.echo?.rewardMult || 1 : 1;
+        const coinGain = Math.round(
+          (g.bounty || (g.isHorde ? 1 : 3)) * rMult,
+        );
         if (g.x > 0)
-          state.player.coins = (state.player.coins || 0) + (g.isHorde ? 1 : 3);
+          state.player.coins = (state.player.coins || 0) + coinGain;
+        if (g.bounty) {
+          state.floatingTexts.push({
+            x: g.x,
+            y: g.y - 30,
+            text: `💰 +${coinGain}`,
+            color: "#ffd700",
+            size: 20,
+            life: 100,
+            opacity: 1,
+          });
+        }
       }
 
       if (!state.explosions) state.explosions = [];
@@ -572,9 +782,18 @@ export function update(ctx, canvas, changeStateFn) {
       g.respawnTimer--;
       g.timer++;
       if (g.respawnTimer === Math.floor(0.5 * FPS)) {
-        let spawnAngle = Math.random() * Math.PI * 2;
-        g.x = player.x + Math.cos(spawnAngle) * 400;
-        g.y = player.y + Math.sin(spawnAngle) * 400;
+        const room = getCurrentRoom(player.x, player.y);
+        const pt = room ? getSafeSpawnPointInRoom(room, 120) : null;
+        if (pt) {
+          g.x = pt.x;
+          g.y = pt.y;
+          g.roomId = room.id;
+        } else {
+          const spawnAngle = Math.random() * Math.PI * 2;
+          g.x = player.x + Math.cos(spawnAngle) * 200;
+          g.y = player.y + Math.sin(spawnAngle) * 200;
+          resolveDungeonCollision(g, g.radius || 12);
+        }
         g.historyPath = [{ x: g.x, y: g.y }];
       }
       if (g.respawnTimer < 0.5 * FPS) g.flicker = true;
@@ -588,18 +807,59 @@ export function update(ctx, canvas, changeStateFn) {
 
     // --- AI DI CHUYỂN ---
     if (!state.timeFrozenModifier) {
+      // 0. ECHO REPLAY (Vòng Lặp) — phát lại NGUYÊN BẢN run cũ:
+      // vị trí tuyệt đối từ record + bắn đúng target chuột đã ghi.
+      // Arena cố định nên tọa độ tuyệt đối luôn hợp lệ.
+      if (g.isEchoGhost) {
+        if (g.spawnProtect > 0) g.spawnProtect--;
+        if (g.isStunned > 0) {
+          g.isStunned--; // khựng nhẹ khi trúng đạn → replay tạm dừng
+        } else {
+          const idx = Math.floor(g.timer || 0);
+          if (!g.record || idx >= g.record.length) {
+            // Record kết thúc = khoảnh khắc chết của run cũ → mộ bia
+            onEchoGhostDeath(g, "expired");
+            state.ghosts.splice(i, 1);
+            continue;
+          }
+          const frame = g.record[idx];
+          g.x = frame[0];
+          g.y = frame[1];
+          if (!g.historyPath) g.historyPath = [];
+          g.historyPath.push({ x: g.x, y: g.y });
+          if (g.historyPath.length > 8) g.historyPath.shift();
+
+          // Bắn theo target ĐÃ GHI (không phải vị trí player hiện tại)
+          if (g.lastIdx !== idx && frame.length === 4) {
+            spawnBullet(g.x, g.y, frame[2], frame[3], false, 0, "ghost");
+          }
+          g.lastIdx = idx;
+          // Tái Chiếu replay nhanh hơn (speedRate 1.25)
+          g.timer = (g.timer || 0) + (g.speedRate || 1);
+        }
+        activeGhosts++;
+
+        if (
+          !isInvulnerable &&
+          (g.spawnProtect || 0) <= 0 &&
+          dist(g.x, g.y, player.x, player.y) < player.radius + g.radius - 2
+        )
+          playerTakeDamage(ctx, canvas, changeStateFn);
+      }
       // 1. Swarm Zone AI
-      if (g.parentZoneId) {
+      else if (g.parentZoneId) {
         const angle = Math.atan2(player.y - g.y, player.x - g.x);
         const speed = 0.8 + state.currentLevel * 0.05;
-        g.x += Math.cos(angle) * speed;
-        g.y += Math.sin(angle) * speed;
+        moveGhostInDungeon(g, Math.cos(angle) * speed, Math.sin(angle) * speed);
 
         const zone = state.swarmZones.find((sz) => sz.id === g.parentZoneId);
         if (zone && dist(g.x, g.y, zone.x, zone.y) > zone.radius) {
           const angleBack = Math.atan2(zone.y - g.y, zone.x - g.x);
-          g.x += Math.cos(angleBack) * (speed + 2);
-          g.y += Math.sin(angleBack) * (speed + 2);
+          moveGhostInDungeon(
+            g,
+            Math.cos(angleBack) * (speed + 2),
+            Math.sin(angleBack) * (speed + 2),
+          );
         }
         if (state.frameCount - (g.lastShot || 0) > 90 + Math.random() * 60) {
           spawnBullet(
@@ -632,8 +892,11 @@ export function update(ctx, canvas, changeStateFn) {
         if (g.isStunned > 0) g.isStunned--;
         else {
           let angleToTarget = Math.atan2(ty - g.y, tx - g.x);
-          g.x += Math.cos(angleToTarget) * (g.speed * 1.8 || 2.2);
-          g.y += Math.sin(angleToTarget) * (g.speed * 1.8 || 2.2);
+          moveGhostInDungeon(
+            g,
+            Math.cos(angleToTarget) * (g.speed * 1.8 || 2.2),
+            Math.sin(angleToTarget) * (g.speed * 1.8 || 2.2),
+          );
         }
         activeGhosts++;
         g.timer = (g.timer || 0) + 1;
@@ -650,8 +913,24 @@ export function update(ctx, canvas, changeStateFn) {
       // 3. MiniBoss & Guard AI
       else if (g.isMiniBoss || g.behavior === "guard" || g.isSubBoss) {
         activeGhosts++;
+
+        if (g.isMiniBoss && g.roomId) {
+          const homeRoom = getRoomById(g.roomId);
+          if (homeRoom && !getCurrentRoom(g.x, g.y)) {
+            const pt = getSafeSpawnPointInRoom(homeRoom, 160, g.radius || 60);
+            if (pt) {
+              g.x = pt.x;
+              g.y = pt.y;
+            }
+          }
+        }
+
         if (g.isStunned > 0) g.isStunned--;
         else if (g.isMiniBoss && g.originalX !== undefined) {
+          const homeRoom = g.roomId ? getRoomById(g.roomId) : null;
+          const playerRoom = getCurrentRoom(player.x, player.y);
+          const sameRoom =
+            homeRoom && playerRoom && playerRoom.id === homeRoom.id;
           const dToPlayer = dist(g.x, g.y, player.x, player.y);
           const dPlayerFromHome = dist(
             player.x,
@@ -659,35 +938,84 @@ export function update(ctx, canvas, changeStateFn) {
             g.originalX,
             g.originalY,
           );
-          if (dToPlayer < 600 && dPlayerFromHome < 900) {
+          // ENGAGE = player CÓ TRONG vùng gác. KHÔNG gate bằng dToPlayer nữa —
+          // trước đây dToPlayer<420 cho phép đứng ~450 poke mà thủ vệ không đuổi/bắn.
+          const GUARD_ZONE = 520;
+          const engaged = sameRoom && dPlayerFromHome < GUARD_ZONE;
+          if (engaged) {
+            g.leashInvuln = false;
             let angle = Math.atan2(player.y - g.y, player.x - g.x);
             let moveSpeed = (g.speedRate || 1.0) * (g.speed || 1.1);
-            g.x += Math.cos(angle) * moveSpeed;
-            g.y += Math.sin(angle) * moveSpeed;
-            if (state.frameCount % 60 === 0)
-              spawnBullet(g.x, g.y, player.x, player.y, false, 2, "ghost", 1.5);
+            moveGhostInDungeon(
+              g,
+              Math.cos(angle) * moveSpeed,
+              Math.sin(angle) * moveSpeed,
+            );
+            updateMiniBossCombat(g, player, true);
           } else {
+            // NGOÀI vùng gác → BẤT TỬ (leashInvuln). Chặn farm-từ-xa + chặn
+            // "cạn máu không chết": muốn giết phải vào hẳn trong vùng, không poke được.
+            g.leashInvuln = true;
+            // Poke-back: cùng phòng + còn trong tầm → bắn đạn chậm cảnh cáo, ép player vào.
+            if (sameRoom && dToPlayer < 700 && state.frameCount % 90 === 0) {
+              spawnBullet(g.x, g.y, player.x, player.y, false, 2, g.element || "ghost", 1);
+              const pb = state.bullets[state.bullets.length - 1];
+              if (pb) { pb.vx *= 0.7; pb.vy *= 0.7; }
+            }
             // Rút về nhà — KHÔNG hồi máu trong khi di chuyển
             const dHome = dist(g.x, g.y, g.originalX, g.originalY);
             if (dHome > 15) {
               let angleHome = Math.atan2(g.originalY - g.y, g.originalX - g.x);
-              g.x += Math.cos(angleHome) * 4.5;
-              g.y += Math.sin(angleHome) * 4.5;
+              moveGhostInDungeon(g, Math.cos(angleHome) * 4.5, Math.sin(angleHome) * 4.5);
             } else {
-              // Đã về đến nhà → mới hồi máu/khiên
-              if (g.hp < g.maxHp || (g.shield || 0) < (g.maxShield || 0)) {
-                g.hp = g.maxHp;
-                g.shield = g.maxShield;
-                g.shieldActive = true;
-                g.isStunned = 0;
-              }
+              // Về đến nhà: hồi máu/khiên TỪ TỪ (không full tức thì). Rời zone ngắn chỉ
+              // hồi chút; bỏ đi lâu mới đầy. Đang immune nên không lo bị chip lúc hồi.
+              g.shieldActive = true;
+              g.isStunned = 0;
+              if (g.hp < g.maxHp)
+                g.hp = Math.min(g.maxHp, g.hp + g.maxHp / 300);
+              if ((g.shield || 0) < (g.maxShield || 0))
+                g.shield = Math.min(g.maxShield, (g.shield || 0) + g.maxShield / 240);
+            }
+          }
+        } else if (g.isEchoElite) {
+          // ELITE "Kẻ Nuốt Vòng Lặp": lao nhanh khi gần + bắn vòng đạn định kỳ
+          const angle = Math.atan2(player.y - g.y, player.x - g.x);
+          const d = dist(g.x, g.y, player.x, player.y);
+          let moveSpeed = (g.speedRate || 1) * (g.speed || 1);
+          // Lunge: trong 260px thì tăng tốc gấp đôi để không né dễ
+          if (d < 260) moveSpeed *= 2.2;
+          moveGhostInDungeon(
+            g,
+            Math.cos(angle) * moveSpeed,
+            Math.sin(angle) * moveSpeed,
+          );
+          // Bắn đón đầu mỗi 45 frame
+          if (state.frameCount % 45 === 0)
+            spawnBullet(g.x, g.y, player.x, player.y, false, 2, "ghost", 1.5);
+          // Vòng đạn 10 tia mỗi ~2.5s — ép player di chuyển
+          if (state.frameCount % 150 === 0) {
+            for (let a = 0; a < Math.PI * 2; a += Math.PI / 5) {
+              spawnBullet(
+                g.x,
+                g.y,
+                g.x + Math.cos(a) * 100,
+                g.y + Math.sin(a) * 100,
+                false,
+                1,
+                "ghost",
+                1,
+              );
             }
           }
         } else if (g.isSubBoss || g.isMiniBoss) {
           let angle = Math.atan2(player.y - g.y, player.x - g.x);
           let moveSpeed = (g.speedRate || 1.0) * (g.speed || 1.1);
-          g.x += Math.cos(angle) * moveSpeed;
-          g.y += Math.sin(angle) * moveSpeed;
+          moveGhostInDungeon(
+            g,
+            Math.cos(angle) * moveSpeed,
+            Math.sin(angle) * moveSpeed,
+          );
           if (state.frameCount % 60 === 0)
             spawnBullet(
               g.x,
@@ -711,7 +1039,7 @@ export function update(ctx, canvas, changeStateFn) {
           !isInvulnerable &&
           dist(g.x, g.y, player.x, player.y) < player.radius + g.radius - 2
         )
-          playerTakeDamage(ctx, canvas, changeStateFn);
+          playerTakeDamage(ctx, canvas, changeStateFn, g.isEchoElite ? 2 : 1);
       }
       // 4. Record Dummy AI
       else if (g.record) {
@@ -727,24 +1055,23 @@ export function update(ctx, canvas, changeStateFn) {
               let angleToPlayer = Math.atan2(player.y - g.y, player.x - g.x);
               let chaseSpeed =
                 g.isDummy || g.record.length === 5000 ? 4.5 : 1.5;
-              g.x +=
-                (action2[0] -
-                  action1[0] +
-                  Math.cos(angleToPlayer) * chaseSpeed) *
-                (g.speedRate || 1.0);
-              g.y +=
-                (action2[1] -
-                  action1[1] +
-                  Math.sin(angleToPlayer) * chaseSpeed) *
-                (g.speedRate || 1.0);
+              const rate = g.speedRate || 1.0;
+              moveGhostInDungeon(
+                g,
+                (action2[0] - action1[0] + Math.cos(angleToPlayer) * chaseSpeed) *
+                  rate,
+                (action2[1] - action1[1] + Math.sin(angleToPlayer) * chaseSpeed) *
+                  rate,
+              );
             } else {
               let angleToPlayer = Math.atan2(player.y - g.y, player.x - g.x);
               let chaseSpeed =
                 g.isDummy || g.record.length === 5000 ? 4.5 : 2.5;
-              g.x +=
-                Math.cos(angleToPlayer) * chaseSpeed * (g.speedRate || 1.0);
-              g.y +=
-                Math.sin(angleToPlayer) * chaseSpeed * (g.speedRate || 1.0);
+              moveGhostInDungeon(
+                g,
+                Math.cos(angleToPlayer) * chaseSpeed * (g.speedRate || 1.0),
+                Math.sin(angleToPlayer) * chaseSpeed * (g.speedRate || 1.0),
+              );
             }
 
             if (!g.historyPath) g.historyPath = [];
@@ -778,23 +1105,26 @@ export function update(ctx, canvas, changeStateFn) {
       if (g.x > 0) activeGhosts++;
     }
   }
-// THÊM ĐIỀU KIỆN: Chỉ spawn khi KHÔNG ở level Boss và KHÔNG ở Boss Arena
-  if (!state.isBossLevel && !state.bossArenaMode && state.frameCount % 180 === 0) {
-    const existingElements = new Set(
-      state.elementalEnemies.map((e) => e.element),
-    );
-
-    const missing = ELEMENTS.filter((el) => !existingElements.has(el));
-
-    // nếu thiếu element thì spawn
-    if (missing.length > 0) {
-      const element = missing[Math.floor(Math.random() * missing.length)];
-
-      spawnElementalEnemy(
-        state.player.x + (Math.random() - 0.5) * 800,
-        state.player.y + (Math.random() - 0.5) * 800,
-        element, // 👈 truyền element vào
-      );
+  // Chỉ spawn quái nguyên tố của map hiện tại, trong phòng player đang đứng
+  if (
+    !state.isBossLevel &&
+    !state.bossArenaMode &&
+    state.frameCount % 240 === 0
+  ) {
+    const room = getCurrentRoom(state.player.x, state.player.y);
+    if (
+      room &&
+      room.visited &&
+      room.enemySpawned &&
+      room.type !== "start" &&
+      room.type !== "boss_gate" &&
+      room.type !== "heal" &&
+      room.type !== "upgrade"
+    ) {
+      const cap = room.type === "swarm" ? 8 : 5;
+      if (countElementalsInRoom(room) < cap) {
+        spawnElementalEnemyInRoom(room, getMapElement());
+      }
     }
   }
   // --- 8. MÔI TRƯỜNG & TƯƠNG TÁC (Hazards, Safe Zones, Warnings) ---
@@ -812,6 +1142,16 @@ export function update(ctx, canvas, changeStateFn) {
         }
       }
 
+      // Rock telegraph → nhô lên rồi mới active (gây damage). Trước đây rock
+      // spawn active:false và KHÔNG bao giờ bật → mọi chiêu đất vô hại.
+      // Telegraph scale theo maxLife: đá lăn (life ngắn, đã có warning riêng)
+      // bật nhanh; cọc lớn (life dài) cảnh báo ~0.3s.
+      if (h.type === "rock" && !h.active) {
+        h.telegraph = (h.telegraph || 0) + 1;
+        if (h.telegraph >= Math.min(18, Math.floor((h.maxLife || 60) * 0.4)))
+          h.active = true;
+      }
+
       // Boss gây sát thương & debuff người chơi
       if (h.owner === "boss" && h.active) {
         const d = dist(player.x, player.y, h.x, h.y);
@@ -826,14 +1166,18 @@ export function update(ctx, canvas, changeStateFn) {
             player.x += Math.cos(angle) * 2;
             player.y += Math.sin(angle) * 2;
           }
-          if (!isInvulnerable) {
+          // Đang giữ trụ → miễn hazard lửa (lava đè lên trụ không công bằng)
+          const hazardSafe =
+            (h.type === "fire" || h.type === "fire_ring") &&
+            isInActiveCapture(player.x, player.y);
+          if (!isInvulnerable && !hazardSafe) {
             if (h.type === "fire" || h.type === "fire_ring")
               state.playerStatus.burnTimer = 30;
             if (h.type === "frost") state.playerStatus.slowTimer = 30;
             if (h.type === "static") state.playerStatus.stunTimer = 10;
           }
           if (h.firstEnterTime === 0) h.firstEnterTime = state.frameCount;
-          if (state.frameCount - h.firstEnterTime >= 6) {
+          if (!hazardSafe && state.frameCount - h.firstEnterTime >= 6) {
             if (state.frameCount - (player.lastHazardDamageTime || 0) >= 30) {
               playerTakeDamage(ctx, canvas, changeStateFn, h.damage || 0.5);
               player.lastHazardDamageTime = state.frameCount;
@@ -956,6 +1300,7 @@ export function update(ctx, canvas, changeStateFn) {
   updateSatelliteDrone();
   updateGodMode();
   updateFloatingTexts();
+  updateDamageNumbers();
 
   // Tick Status: Screen Shake, Burn (Thực thi damage ở đây), delayed tasks
   if (state.screenShake?.timer > 0) state.screenShake.timer--;
@@ -979,16 +1324,18 @@ export function update(ctx, canvas, changeStateFn) {
     }
   }
 
-  // Cập nhật UI Text
-  setTextIfChanged(UI.ghosts, state.isBossLevel
-    ? boss?.ghostsActive
-      ? `Quái đợt này: ${activeGhosts}`
-      : `Boss triệu hồi (${Math.ceil(boss?.summonCooldown / FPS || 0)}s)...`
-    : `Quái: ${activeGhosts}`);
-  setTextIfChanged(
-    getCoinsCountEl(),
-    `Tiền: ${state.player?.coins || 0}`,
-  );
+  // Cập nhật UI Text (tower mode tự ghi label riêng trong updateTowerMode)
+  if (state.gameMode !== "tower") {
+    setTextIfChanged(
+      UI.ghosts,
+      state.isBossLevel
+        ? boss?.ghostsActive
+          ? `Quái đợt này: ${activeGhosts}`
+          : `Boss triệu hồi (${Math.ceil(boss?.summonCooldown / FPS || 0)}s)...`
+        : `Quái: ${activeGhosts}`,
+    );
+  }
+  setTextIfChanged(getCoinsCountEl(), `Tiền: ${state.player?.coins || 0}`);
 
   // Kiểm tra qua màn: player bước vào cổng dịch chuyển
   if (!state.isBossLevel && state.stagePortal?.active) {
@@ -996,13 +1343,18 @@ export function update(ctx, canvas, changeStateFn) {
       dist(player.x, player.y, state.stagePortal.x, state.stagePortal.y) <
       state.stagePortal.radius
     ) {
-      startBossFight();
+      beginBossEncounter(state.pendingBossType || state.selectedMap);
     }
   }
 
-  // Timer
+  // Timer (echo/tower mode tự ghi UI.timer theo WAVE trong update riêng)
   state.frameCount++;
-  if (!state.isBossLevel && state.frameCount % FPS === 0) {
+  if (
+    !state.isBossLevel &&
+    state.gameMode !== "echo" &&
+    state.gameMode !== "tower" &&
+    state.frameCount % FPS === 0
+  ) {
     state.scoreTime++;
     let maxMins = Math.floor(state.maxFramesToSurvive / FPS / 60)
       .toString()
@@ -1021,6 +1373,10 @@ export function update(ctx, canvas, changeStateFn) {
     updatePuzzle(ctx);
   }
 
+  if (state.gameMode === "tutorial") {
+    updateTutorial();
+  }
+
   return null;
 }
 
@@ -1036,6 +1392,19 @@ function updateFloatingTexts() {
     t.life--;
     if (t.life < 20) t.opacity -= 0.05;
     if (t.life <= 0) state.floatingTexts.splice(i, 1);
+  }
+}
+
+function updateDamageNumbers() {
+  const arr = state.damageNumbers;
+  if (!arr || arr.length === 0) return;
+  for (let i = arr.length - 1; i >= 0; i--) {
+    const d = arr[i];
+    d.y += d.vy;
+    d.vy *= 0.9; // giảm dần độ vọt lên
+    if (d.pop > 0) d.pop *= 0.8; // hiệu ứng phình rồi co
+    d.life--;
+    if (d.life <= 0) arr.splice(i, 1);
   }
 }
 
@@ -1059,7 +1428,9 @@ function updatePlayerBuffs() {
 }
 
 function updateCrates() {
-  if (state.isBossLevel || !state.crates) return;
+  // Chỉ campaign mới có hòm tiếp tế — echo/tower/bossArena không spawn (trước
+  // đây rò "cục đỏ" vào các mode này vì chỉ chặn isBossLevel).
+  if (state.gameMode !== "campaign" || state.isBossLevel || !state.crates) return;
   if (state.crates.length <= 3 && state.frameCount % 120 === 0) spawnCrate();
 }
 
@@ -1067,6 +1438,31 @@ function updateCapturePoints(ctx, canvas, changeStateFn) {
   if (!state.capturePoints) return;
   state.capturePoints.forEach((cp) => {
     if (cp.state === "completed") return;
+
+    if (cp.state === "locked") {
+      const prev = state.capturePoints.find((p) => p.order === cp.order - 1);
+      if (prev?.state === "completed") {
+        cp.state = "guarding";
+        const room = getRoomById(cp.roomId);
+        const pt = room
+          ? getSafeSpawnPointInRoom(room, 180, 60)
+          : null;
+        if (room && pt) {
+          spawnMiniBoss(pt.x, pt.y, cp.miniBossId, room.id, cp.order);
+        }
+        const bossName =
+          state.ghosts.find((g) => g.id === cp.miniBossId)?.miniBossName || "Thủ vệ";
+        state.floatingTexts.push({
+          x: cp.x,
+          y: cp.y - 120,
+          text: `🚩 CỨ ĐIỂM ${cp.order} — DIỆT ${bossName.toUpperCase()}!`,
+          color: "#FFD700",
+          life: 160,
+          opacity: 1,
+        });
+      }
+      return;
+    }
 
     if (cp.state === "guarding") {
       // Tìm boss theo id (đáng tin cậy hơn), fallback theo vị trí nhưng bán kính lớn hơn
@@ -1093,10 +1489,8 @@ function updateCapturePoints(ctx, canvas, changeStateFn) {
 
       if (isInside) {
         cp.progress = Math.min(cp.totalProgress, cp.progress + 0.15);
-        state.playerStatus.slowTimer = Math.max(
-          state.playerStatus.slowTimer || 0,
-          5,
-        );
+        // (Bỏ slow khi giữ trụ — 50% slow + bị hút quái + đứng yên = quá nặng.
+        //  Áp lực giữ từ swarm pull bên dưới.)
         const ratio = Math.max(0, Math.min(1, cp.progress / cp.totalProgress));
         cp.radius = Math.max(
           cp.minRadius,
@@ -1175,18 +1569,19 @@ function updateCapturePoints(ctx, canvas, changeStateFn) {
       }
 
       if (isInside && state.frameCount % 120 === 0) {
+        const cpRoom = getRoomById(cp.roomId);
         for (let i = 0; i < 2 + Math.floor(state.currentLevel / 3); i++) {
-          const spawnAngle = Math.random() * Math.PI * 2;
-          const spawnDist = cp.radius + 200;
+          const pt = cpRoom ? getSafeSpawnPointInRoom(cpRoom, 130) : null;
           state.ghosts.push({
             id: `horde_${Date.now()}_${i}`,
-            x: cp.x + Math.cos(spawnAngle) * spawnDist,
-            y: cp.y + Math.sin(spawnAngle) * spawnDist,
+            x: pt?.x ?? cp.x,
+            y: pt?.y ?? cp.y,
             radius: 12,
             hp: 20 + state.currentLevel * 5,
             maxHp: 20 + state.currentLevel * 5,
             speed: 1.5 + Math.random() * 0.5,
             isHorde: true,
+            roomId: cp.roomId,
             isStunned: 0,
             historyPath: [],
           });
@@ -1279,17 +1674,18 @@ function updateStagePortal() {
       (state.capturePoints?.filter((cp) => cp.state === "completed").length ||
         0) >= 2;
 
-    if (puzzleSolved && swarmsDone && specialsDone) {
+    if (puzzleSolved && swarmsDone && specialsDone && isMapObjectiveDone()) {
+      const portalPos = getBossGatePortalPosition();
       state.stagePortal = {
-        x: state.world.width / 2 + (Math.random() - 0.5) * 400,
-        y: state.world.height / 2 + (Math.random() - 0.5) * 400,
+        x: portalPos.x,
+        y: portalPos.y,
         radius: 65,
         active: true,
         pulse: 0,
       };
       state.floatingTexts.push({
-        x: state.world.width / 2,
-        y: state.world.height / 2 - 200,
+        x: portalPos.x,
+        y: portalPos.y - 200,
         text: "⚡ CỔNG BOSS ĐÃ MỞ! ⚡",
         color: "#cc00ff",
         size: 40,

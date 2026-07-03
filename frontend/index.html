@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bóng Ma - Huyết Chiến Thời Gian</title>
     <link rel="stylesheet" href="css/style.css" />
+    <link rel="stylesheet" href="css/ui-polish.css" />
     <link rel="stylesheet" href="css/multiplayer.css" />
   </head>
 
@@ -13,6 +14,10 @@
 
     <div id="game-container">
       <canvas id="gameCanvas" width="1536" height="864"></canvas>
+      <div id="boss-cutscene-skip" class="boss-cutscene-skip hidden">
+        <button id="btn-skip-cutscene" type="button">⏭ Bỏ qua cutscene (Esc)</button>
+      </div>
+      <div id="fps-counter" style="display:none">— FPS</div>
 
       <div class="hud-layer">
         <div id="level-display">Màn: 1</div>
@@ -112,13 +117,24 @@
         </div>
       </div>
 
+      <!-- Màn hình thua -->
+      <div id="screen-gameover" class="overlay hidden">
+        <div class="panel" style="max-width: 380px; text-align: center;">
+          <h2 class="title-main text-red" style="margin-bottom: 8px;">VÒNG LẶP DỪNG LẠI</h2>
+          <p class="desc" style="margin-bottom: 16px;">Quá khứ đã bắt kịp bạn.</p>
+          <div id="gameover-stats" style="margin-bottom: 22px; font-size: 15px; color: #cfd6e6; line-height: 1.8;"></div>
+          <button id="btn-retry" class="menu-btn-epic btn-restart" style="width: 100%; margin-bottom: 12px;">🔄 CHƠI LẠI (Màn 1)</button>
+          <button id="btn-to-menu" class="menu-btn-epic" style="width: 100%;">🏠 VỀ MENU</button>
+        </div>
+      </div>
+
       <!-- UI Screens -->
       <div id="screen-main" class="overlay">
         <div class="panel main-menu-panel">
-          <div class="menu-header">
+          <div class="menu-header panel-header-block">
             <h2 id="main-title" class="title-main text-cyan glitch-text" data-text="TRẠM KHÔNG GIAN">TRẠM KHÔNG GIAN</h2>
             <p id="main-desc" class="desc">
-              Hành trình đối mặt với những ảo ảnh của chính bạn. Hãy lựa chọn điểm đến tiếp theo.
+              Bạn là Echo — bóng ma của vòng lặp thời gian. Chọn điểm đến, sống sót, và đối đầu chính mình.
             </p>
           </div>
 
@@ -128,6 +144,13 @@
                 <span class="btn-icon">🗺️</span>
                 <span class="btn-text">CHỌN BẢN ĐỒ</span>
                 <span class="btn-subtext">Khám phá và sinh tồn các thế giới</span>
+              </div>
+            </button>
+            <button id="btn-tutorial" class="menu-btn-epic" style="background: linear-gradient(135deg,rgba(60,80,0,0.72),rgba(0,70,80,0.72)); border-color: rgba(255,220,120,0.4);">
+              <div class="btn-content">
+                <span class="btn-icon">ðŸ“˜</span>
+                <span class="btn-text">TUTORIAL</span>
+                <span class="btn-subtext">Hoc dieu khien, diet quai va doi dau boss cuoi bai</span>
               </div>
             </button>
             <button id="btn-boss-arena" class="menu-btn-epic btn-danger">
@@ -144,10 +167,27 @@
                 <span class="btn-subtext">Co-op Boss Arena — Online toàn cầu</span>
               </div>
             </button>
+            <button id="btn-echo-mode" class="menu-btn-epic" style="background: linear-gradient(135deg,rgba(70,0,110,0.7),rgba(20,0,60,0.7)); border-color: rgba(184,112,255,0.45);">
+              <div class="btn-content">
+                <span class="btn-icon">🔁</span>
+                <span class="btn-text">VÒNG LẶP</span>
+                <span class="btn-subtext">Sinh tồn vô tận — đối đầu Bóng Ma của chính bạn</span>
+              </div>
+            </button>
+            <button id="btn-tower-mode" class="menu-btn-epic" style="background: linear-gradient(135deg,rgba(110,70,0,0.7),rgba(60,20,0,0.7)); border-color: rgba(255,200,80,0.45);">
+              <div class="btn-content">
+                <span class="btn-icon">🏰</span>
+                <span class="btn-text">CÔNG THÀNH</span>
+                <span class="btn-subtext">Đẩy lane cùng lính — phá trụ, công phá nhà chính địch</span>
+              </div>
+            </button>
             
             <div class="menu-btn-row">
               <button id="btn-select-character" class="menu-btn-utility">👥 NHÂN VẬT</button>
               <button id="btn-shop" class="menu-btn-utility">🛒 CỬA HÀNG</button>
+            </div>
+            <div class="menu-btn-row">
+              <button id="btn-settings" class="menu-btn-utility">⚙️ CÀI ĐẶT</button>
             </div>
           </div>
           
@@ -158,14 +198,114 @@
           </button>
         </div>
       </div>
+      <div id="screen-tutorial" class="overlay hidden">
+        <div class="panel tutorial-screen-panel">
+          <div class="panel-header-block">
+            <h2 class="title-main text-cyan">HUONG DAN TAN THU</h2>
+            <p class="desc">
+              Tutorial nay dung nhan vat <b style="color:#00ffcc">Tia Chop</b> de ban lam quen voi cac nut bam, cach diet quai va tran boss cuoi bai.
+            </p>
+          </div>
+
+          <div class="tutorial-grid">
+            <div class="tutorial-card">
+              <div class="tutorial-card-title">DI CHUYEN</div>
+              <div class="tutorial-card-body">
+                <span class="tutorial-key">W</span>
+                <span class="tutorial-key">A</span>
+                <span class="tutorial-key">S</span>
+                <span class="tutorial-key">D</span>
+                <span class="tutorial-key tutorial-key-wide">ARROWS</span>
+              </div>
+              <div class="tutorial-card-text">Di chuyen lien tuc de tranh bi ep goc.</div>
+            </div>
+
+            <div class="tutorial-card">
+              <div class="tutorial-card-title">TAN CONG</div>
+              <div class="tutorial-card-body">
+                <span class="tutorial-key tutorial-key-wide">CHUOT TRAI</span>
+              </div>
+              <div class="tutorial-card-text">Giu chuot trai de ban va quet sach quai huan luyen.</div>
+            </div>
+
+            <div class="tutorial-card">
+              <div class="tutorial-card-title">DASH</div>
+              <div class="tutorial-card-body">
+                <span class="tutorial-key tutorial-key-wide">SPACE</span>
+              </div>
+              <div class="tutorial-card-text">Lot nhanh de thoat dan, hazard va telegraph cua boss.</div>
+            </div>
+
+            <div class="tutorial-card">
+              <div class="tutorial-card-title">KY NANG</div>
+              <div class="tutorial-card-body">
+                <span class="tutorial-key">Q</span>
+                <span class="tutorial-key">E</span>
+                <span class="tutorial-key">R</span>
+              </div>
+              <div class="tutorial-card-text">Q: Gia toc. E: Qua tai. R: Bao dien tu (ultimate, khoa 30s dau).</div>
+            </div>
+          </div>
+
+          <div class="tutorial-flow-box">
+            <div class="tutorial-flow-title">LO TRINH TUTORIAL</div>
+            <div class="tutorial-flow-item">1. Hoc di chuyen va dash trong khu luyen tap.</div>
+            <div class="tutorial-flow-item">2. Diet 4 bong ma huan luyen de lam quen aim va ban.</div>
+            <div class="tutorial-flow-item">3. Dung it nhat 1 ky nang Q/E truoc khi vao boss.</div>
+            <div class="tutorial-flow-item">4. Ha guc Hoa Vuong mo phong o cuoi bai.</div>
+          </div>
+
+          <div class="tutorial-actions">
+            <button id="btn-tutorial-start" class="menu-btn-epic btn-restart" style="width: 100%; justify-content: center;">BAT DAU TUTORIAL</button>
+            <button id="btn-tutorial-back" class="menu-btn-utility" style="width: 100%;">Quay lai menu</button>
+          </div>
+        </div>
+      </div>
+      <div id="screen-settings" class="overlay hidden">
+        <div class="panel" style="max-width: 520px;">
+          <h2 class="title-main text-cyan" style="text-shadow: 0 0 15px cyan;">⚙️ CÀI ĐẶT</h2>
+          <p class="desc">Hiệu năng kém? Hạ mức đồ họa hoặc giới hạn FPS.</p>
+
+          <div class="settings-row">
+            <label class="settings-label">Mức đồ họa</label>
+            <select id="setting-graphics" class="settings-select">
+              <option value="low">Thấp — ít hiệu ứng, mượt nhất (render 0.7×)</option>
+              <option value="medium">Vừa — cân bằng (render 0.85×)</option>
+              <option value="high">Cao — đầy đủ hiệu ứng</option>
+              <option value="ultra">Tối đa — thêm hiệu ứng, máy khỏe</option>
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <label class="settings-label">Giới hạn FPS</label>
+            <select id="setting-fps" class="settings-select">
+              <option value="30">30 FPS — tiết kiệm, máy yếu</option>
+              <option value="60">60 FPS</option>
+              <option value="120">120 FPS</option>
+              <option value="0">Không giới hạn (theo màn hình)</option>
+            </select>
+          </div>
+
+          <div class="settings-row">
+            <label class="settings-label">Hiện số FPS</label>
+            <input id="setting-show-fps" type="checkbox" class="settings-checkbox" />
+          </div>
+
+          <p class="desc" style="font-size: 12px; color: #888; margin-top: 10px;">
+            Tốc độ game luôn cố định 60 — giảm FPS chỉ giảm tải vẽ, không làm chậm nhân vật.
+          </p>
+
+          <button id="btn-settings-back" class="menu-btn-utility" style="margin-top: 25px; padding: 10px 40px;">Quay Lại</button>
+        </div>
+      </div>
       <div id="screen-map-select" class="overlay hidden">
-        <div class="panel" style="max-width: 800px;">
-          <h2 class="title-main text-cyan" style="text-shadow: 0 0 15px cyan;">CHỌN BẢN ĐỒ</h2>
-          <p class="desc">Đánh bại boss để mở khóa map mới. Chọn chiến trường của bạn.</p>
-
+        <div class="panel" style="max-width: 860px;">
+          <div class="panel-header-block">
+            <h2 class="title-main text-cyan">CHỌN BẢN ĐỒ</h2>
+            <p class="desc">Đánh bại Bá Chủ từng miền để mở khóa chiến trường tiếp theo. Mỗi map là một mảnh vỡ của Trạm Không Gian.</p>
+          </div>
           <div id="map-list" class="premium-card-container"></div>
-
-          <button id="btn-map-back" class="menu-btn-utility" style="margin-top: 25px; padding: 10px 40px;">Quay Lại</button>
+          <button id="btn-map-back" class="menu-btn-utility" style="margin-top: 25px; padding: 10px 40px;">← Quay Lại</button>
         </div>
       </div>
       <div id="screen-upgrade" class="overlay hidden">
@@ -267,15 +407,110 @@
       </div>
     </div>
     <div id="screen-boss-arena" class="overlay hidden">
-      <div class="panel" style="max-width: 900px;">
-        <h2 class="title-main" style="color: #ff4444; text-shadow: 0 0 15px #ff4444;">⚔️ BOSS ARENA</h2>
-        <p class="desc">
-          Đấu trường sinh tử vô tận. Hạ gục Boss để nhận mảnh ghép Mythical.
-        </p>
+      <div class="panel boss-arena-panel">
+        <div class="panel-header-block">
+          <h2 class="title-main" style="color: #ff5566; text-shadow: 0 0 20px rgba(255,80,80,0.5);">⚔ BOSS ARENA</h2>
+          <p class="desc">
+            Đấu trường riêng cho từng Bá Chủ — cutscene hoành tráng, vòng đấu theo nguyên tố, rồi chiến đấu sinh tử. Hạ boss để farm mảnh Mythical.
+          </p>
+        </div>
         <div class="premium-card-container" id="boss-arena-cards"></div>
-        <button id="btn-arena-back" class="menu-btn-utility" style="margin-top: 25px; padding: 10px 40px;">Quay Lại</button>
+        <button id="btn-arena-back" class="menu-btn-utility" style="margin-top: 25px; padding: 10px 40px;">← Quay Lại</button>
       </div>
     </div>
+    <!-- ========== ECHO MODE (Vòng Lặp) ========== -->
+    <div id="screen-echo" class="overlay hidden">
+      <div class="panel" style="max-width: 520px; text-align: center;">
+        <div class="panel-header-block">
+          <h2 class="title-main" style="color: #b870ff; text-shadow: 0 0 20px rgba(184,112,255,0.5);">🔁 VÒNG LẶP</h2>
+          <p class="desc">
+            Arena cố định, sóng quái vô tận. Mỗi lần bạn gục ngã, run đó trở thành một <b style="color:#00ffcc">Bóng Ma</b> — nó đi lại đúng con đường bạn đã đi, bắn vào những nơi bạn từng nhắm, và chết đúng chỗ bạn đã chết, để lại <b style="color:#ffd700">mộ bia chứa vàng</b>.
+          </p>
+        </div>
+        <div id="echo-menu-stats" style="margin: 18px 0 14px; font-size: 15px; color: #cfd6e6; line-height: 1.9;"></div>
+        <div id="echo-menu-runs" style="margin: 0 0 18px; max-height: 180px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;"></div>
+        <div id="echo-remote-toggle-row" style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 12px; padding: 10px 14px; background: rgba(184,112,255,0.08); border: 1px solid rgba(184,112,255,0.3); border-radius: 8px;">
+          <div style="text-align: left;">
+            <div style="font-size: 14px; color: #cfd6e6;">🌐 Bóng Ma người chơi khác</div>
+            <div id="echo-remote-hint" style="font-size: 12px; color: #8899aa; margin-top: 2px;"></div>
+          </div>
+          <button id="btn-echo-remote-toggle" class="menu-btn-utility" style="min-width: 92px; padding: 8px 14px;">BẬT</button>
+        </div>
+        <div style="margin: 0 0 16px; text-align: left;">
+          <label style="font-size: 13px; color: #8899aa;">⚔ Thách đấu (tùy chọn) — nhập username để tải Bóng Ma của họ vào arena:</label>
+          <input id="echo-rival-input" type="text" maxlength="30" placeholder="Để trống = ghép ngẫu nhiên theo trình độ" style="width: 100%; margin-top: 6px; padding: 10px 12px; background: rgba(0,0,0,0.45); border: 1px solid rgba(184,112,255,0.35); border-radius: 6px; color: #fff; font-size: 14px;" />
+        </div>
+        <button id="btn-echo-start" class="menu-btn-epic btn-restart" style="width: 100%; margin-bottom: 12px;">▶ BẮT ĐẦU VÒNG LẶP</button>
+        <button id="btn-echo-leaderboard" class="menu-btn-epic" style="width: 100%; margin-bottom: 12px;">🏆 BẢNG XẾP HẠNG</button>
+        <button id="btn-echo-back" class="menu-btn-utility" style="width: 100%;">← Quay Lại</button>
+      </div>
+    </div>
+
+    <div id="screen-echo-choice" class="overlay hidden" style="z-index: 55;">
+      <div class="panel" style="max-width: 560px; text-align: center;">
+        <h2 class="title-main" style="color: #b870ff;">CHỌN HƯỚNG ĐI</h2>
+        <p class="desc" style="margin-bottom: 20px;">Trước wave kế — chọn an toàn hay đánh cược đổi thưởng lớn.</p>
+        <div style="display: flex; gap: 16px;">
+          <button id="echo-choice-a" class="premium-card" style="flex: 1; min-height: 130px; border-color: rgba(255,85,102,0.5); cursor: pointer;"></button>
+          <button id="echo-choice-b" class="premium-card" style="flex: 1; min-height: 130px; border-color: rgba(0,255,204,0.5); cursor: pointer;"></button>
+        </div>
+      </div>
+    </div>
+
+    <div id="screen-echo-gameover" class="overlay hidden">
+      <div class="panel" style="max-width: 420px; text-align: center;">
+        <h2 class="title-main" style="color: #b870ff; margin-bottom: 8px;">VÒNG LẶP KHÉP LẠI</h2>
+        <p class="desc" style="margin-bottom: 16px;">Bạn đã trở thành một Bóng Ma.</p>
+        <div id="echo-gameover-stats" style="margin-bottom: 22px; font-size: 15px; color: #cfd6e6; line-height: 1.8;"></div>
+        <button id="btn-echo-retry" class="menu-btn-epic btn-restart" style="width: 100%; margin-bottom: 12px;">🔁 LẶP LẠI — ĐỐI ĐẦU BÓNG MA MỚI</button>
+        <button id="btn-echo-gameover-leaderboard" class="menu-btn-epic" style="width: 100%; margin-bottom: 12px;">🏆 BẢNG XẾP HẠNG</button>
+        <button id="btn-echo-gameover-menu" class="menu-btn-utility" style="width: 100%;">🏠 VỀ MENU</button>
+      </div>
+    </div>
+
+    <div id="screen-echo-leaderboard" class="overlay hidden" style="z-index: 60;">
+      <div class="panel" style="max-width: 640px;">
+        <h2 class="title-main" style="color: #ffd700; text-shadow: 0 0 15px rgba(255,215,0,0.4);">🏆 BẢNG XẾP HẠNG VÒNG LẶP</h2>
+        <p class="desc">Top 20 toàn cầu — xếp theo Wave cao nhất, rồi thời gian sống sót.</p>
+        <div id="echo-lb-list" style="margin: 18px 0; max-height: 420px; overflow-y: auto; text-align: left; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;"></div>
+        <button id="btn-echo-lb-close" class="menu-btn-utility" style="padding: 10px 40px;">Đóng</button>
+      </div>
+    </div>
+
+    <!-- ========== TOWER MODE (Công Thành) ========== -->
+    <div id="screen-tower" class="overlay hidden">
+      <div class="panel" style="max-width: 520px; text-align: center;">
+        <div class="panel-header-block">
+          <h2 class="title-main" style="color: #ffd700; text-shadow: 0 0 20px rgba(255,200,80,0.5);">🏰 CÔNG THÀNH</h2>
+          <p class="desc">
+            Chiến trường 1 lane kiểu MOBA. Lính 2 phe spawn theo đợt và tự đẩy lane — nhiệm vụ của bạn: nghiêng cán cân, <b style="color:#ff4455">phá 2 trụ</b> rồi công phá <b style="color:#ffd700">NHÀ CHÍNH</b> địch trước khi mất nhà.
+          </p>
+        </div>
+        <div style="margin: 14px 0 14px; font-size: 14px; color: #cfd6e6; line-height: 1.9; text-align: left; padding: 12px 16px; background: rgba(255,200,80,0.06); border: 1px solid rgba(255,200,80,0.25); border-radius: 8px;">
+          🗼 Trụ <b>miễn sát thương kỹ năng</b> — chỉ đạn thường phá được<br>
+          🛡 Chỉ phá được công trình <b>ngoài cùng</b> — không backdoor<br>
+          💀 Gục ngã sẽ <b>hồi sinh tại nhà chính</b> — thời gian chờ tăng dần<br>
+          ⚔ Kỹ năng Q/E/R vẫn dùng thoải mái để dọn lính
+        </div>
+        <div style="text-align: left; margin: 0 0 8px;">
+          <div style="font-size: 14px; color: #cfd6e6;">🤝 Chọn <b id="tower-ally-count">0/2</b> đồng minh AI (từ nhân vật đã sở hữu):</div>
+          <div id="tower-ally-hint" style="font-size: 12px; color: #8899aa; margin-top: 2px;">Bỏ trống = tự chọn 2 nhân vật đầu.</div>
+        </div>
+        <div id="tower-hero-select" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 0 0 16px; max-height: 168px; overflow-y: auto;"></div>
+        <button id="btn-tower-start" class="menu-btn-epic btn-restart" style="width: 100%; margin-bottom: 12px;">▶ XUẤT QUÂN</button>
+        <button id="btn-tower-back" class="menu-btn-utility" style="width: 100%;">← Quay Lại</button>
+      </div>
+    </div>
+
+    <div id="screen-tower-end" class="overlay hidden">
+      <div class="panel" style="max-width: 420px; text-align: center;">
+        <h2 id="tower-end-title" class="title-main" style="color: #ffd700; margin-bottom: 8px;">CÔNG THÀNH</h2>
+        <div id="tower-end-stats" style="margin-bottom: 22px; font-size: 15px; color: #cfd6e6; line-height: 1.8;"></div>
+        <button id="btn-tower-retry" class="menu-btn-epic btn-restart" style="width: 100%; margin-bottom: 12px;">🔄 ĐÁNH TRẬN MỚI</button>
+        <button id="btn-tower-end-menu" class="menu-btn-utility" style="width: 100%;">🏠 VỀ MENU</button>
+      </div>
+    </div>
+
     <div id="fragment-drop-overlay" class="overlay hidden">
       <div class="panel" style="text-align: center; max-width: 400px">
         <h2 class="title-main" style="color: #ff0088">
@@ -336,6 +571,24 @@
       </div>
     </div>
 
+    <div id="screen-tutorial-complete" class="overlay hidden">
+      <div class="panel tutorial-complete-panel">
+        <h2 class="title-main text-cyan">TUTORIAL HOAN THANH</h2>
+        <p class="desc">
+          Ban da hoan thanh phan huong dan co ban: di chuyen, dash, ban, dung skill va danh boss.
+        </p>
+        <div class="tutorial-complete-note">
+          Tip nhanh: giu nhan vat luon di chuyen, de danh skill cho tinh huong nguy hiem, va dash khi boss ve vung do.
+        </div>
+        <button id="btn-tutorial-replay" class="menu-btn-epic btn-restart" style="width: 100%; justify-content: center; margin-bottom: 12px;">
+          Choi lai tutorial
+        </button>
+        <button id="btn-tutorial-menu" class="menu-btn-utility" style="width: 100%;">
+          Ve menu chinh
+        </button>
+      </div>
+    </div>
+
     <!-- Fragment Get Toast -->
     <div id="fragment-toast" class="fragment-toast hidden">
       <div class="fragment-toast-content">
@@ -386,7 +639,10 @@
 
         <div class="mp-room-code-display">
           <div class="mp-room-code-label">Mã Phòng — Chia sẻ cho bạn bè</div>
-          <div id="mp-room-code-display" class="mp-room-code-value">——</div>
+          <div class="mp-room-code-value-wrap">
+            <span id="mp-room-code-display" class="mp-room-code-value">——</span>
+            <button id="btn-copy-room-code" class="mp-copy-btn" title="Sao chép mã">📋 Copy</button>
+          </div>
           <div class="mp-room-code-hint">Chia sẻ mã phòng để bạn bè tham gia — trên mọi thiết bị!</div>
         </div>
 

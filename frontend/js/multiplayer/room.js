@@ -123,6 +123,29 @@ export function openLobby(socket) {
     roomCodeDisplay.textContent = mpState.roomCode;
   }
 
+  // 2b. Nút copy mã phòng
+  const copyBtn = document.getElementById("btn-copy-room-code");
+  if (copyBtn) {
+    copyBtn.onclick = async () => {
+      const code = mpState.roomCode || "";
+      if (!code) return;
+      try {
+        await navigator.clipboard.writeText(code);
+      } catch (_) {
+        // Fallback khi clipboard API bị chặn (http / quyền): chọn text thủ công
+        const tmp = document.createElement("textarea");
+        tmp.value = code;
+        document.body.appendChild(tmp);
+        tmp.select();
+        try { document.execCommand("copy"); } catch (_) {}
+        document.body.removeChild(tmp);
+      }
+      const old = copyBtn.textContent;
+      copyBtn.textContent = "✅ Đã copy";
+      setTimeout(() => { copyBtn.textContent = old; }, 1500);
+    };
+  }
+
   // 3. Cập nhật danh sách người chơi
   updateLobbyUI();
 

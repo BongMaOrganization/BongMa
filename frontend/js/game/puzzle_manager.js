@@ -1,88 +1,50 @@
 import { state } from "../state.js";
-import {
-  initRunePuzzle,
-  updateRunePuzzle,
-  drawRunePuzzle,
-  getRuneMinimapMarkers,
-} from "./puzzle_rune.js";
-import {
-  initDominoPuzzle,
-  updateDominoPuzzle,
-  drawDominoPuzzle,
-  getDominoMinimapMarkers,
-} from "./puzzle_domino.js";
-
-import {
-  initTorchPuzzle,
-  updateTorchPuzzle,
-  drawTorchPuzzle,
-  getTorchMinimapMarkers,
-} from "./puzzle_torch.js";
-
-import {
-  initMelodyPuzzle,
-  updateMelodyPuzzle,
-  drawMelodyPuzzle,
-  getMelodyMinimapMarkers,
-} from "./puzzle_melody.js";
-
-const PUZZLES = {
-  rune: {
-    init: initRunePuzzle,
-    update: updateRunePuzzle,
-    draw: drawRunePuzzle,
-    getMinimapMarkers: getRuneMinimapMarkers,
-  },
-  domino: {
-    init: initDominoPuzzle,
-    update: updateDominoPuzzle,
-    draw: drawDominoPuzzle,
-    getMinimapMarkers: getDominoMinimapMarkers,
-  },
-
-  torch: {
-    init: initTorchPuzzle,
-    update: updateTorchPuzzle,
-    draw: drawTorchPuzzle,
-    getMinimapMarkers: getTorchMinimapMarkers,
-  },
-
-  melody: {
-    init: initMelodyPuzzle,
-    update: updateMelodyPuzzle,
-    draw: drawMelodyPuzzle,
-    getMinimapMarkers: getMelodyMinimapMarkers,
-  },
-};
+import { pickPuzzleForMap, getPuzzleDef } from "./puzzles/puzzleRegistry.js";
 
 export function initPuzzle() {
-  const types = Object.keys(PUZZLES);
-  const selected = types[Math.floor(Math.random() * types.length)];
-  state.currentPuzzleType = selected;
-  state.currentPuzzle = {};
+  const mapId = state.selectedMap || state.currentMapTheme || "fire";
+  const def = pickPuzzleForMap(mapId);
 
-  PUZZLES[selected].init(state.currentPuzzle);
+  state.currentPuzzleType = def.id;
+  state.currentPuzzle = {
+    mapId,
+    displayName: def.displayName,
+    hint: def.hint,
+    solved: false,
+  };
+
+  def.init(state.currentPuzzle);
 }
 
 export function updatePuzzle(ctx) {
-  if (!state.currentPuzzleType) return;
-  PUZZLES[state.currentPuzzleType].update(state.currentPuzzle, ctx);
+  const def = getPuzzleDef(state.currentPuzzleType);
+  if (!def || !state.currentPuzzle) return;
+  def.update(state.currentPuzzle, ctx);
 }
 
 export function drawPuzzle(ctx) {
-  if (!state.currentPuzzleType) return;
-  PUZZLES[state.currentPuzzleType].draw(state.currentPuzzle, ctx);
+  const def = getPuzzleDef(state.currentPuzzleType);
+  if (!def || !state.currentPuzzle) return;
+  def.draw(state.currentPuzzle, ctx);
 }
 
 export function getPuzzleMinimapMarkers() {
-  if (!state.currentPuzzle) return [];
+  const def = getPuzzleDef(state.currentPuzzleType);
+  if (!def || !state.currentPuzzle) return [];
+  return def.getMinimapMarkers?.(state.currentPuzzle) || [];
+}
 
-  const type = state.currentPuzzleType;
+export function getPuzzleHUDInfo() {
+  const def = getPuzzleDef(state.currentPuzzleType);
   const puzzle = state.currentPuzzle;
-
-  if (PUZZLES[type].getMinimapMarkers) {
-    return PUZZLES[type].getMinimapMarkers(puzzle);
+  if (!def || !puzzle) {
+    return { name: "🧩 Puzzle", progress: "—", hint: "", done: false };
   }
 
-  return [];
+  return {
+    name: def.displayName || puzzle.displayName || "🧩 Puzzle",
+    progress: def.getProgress?.(puzzle) || (puzzle.solved ? "Hoàn thành" : "—"),
+    hint: def.hint || puzzle.hint || "",
+    done: puzzle.solved === true,
+  };
 }

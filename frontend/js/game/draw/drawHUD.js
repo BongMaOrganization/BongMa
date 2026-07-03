@@ -1,4 +1,16 @@
 import { state } from "../../state.js";
+import { getPuzzleHUDInfo } from "../puzzle_manager.js";
+import {
+  getCurrentRoom,
+  roomRequiresClear,
+  isRoomExitAllowed,
+  getStartRoomGuidance,
+} from "../../world/dungeonLayout.js";
+import { getMiniBossDisplayName } from "../../entities/miniBosses.js";
+import {
+  getMapObjectiveLabel,
+  isMapObjectiveDone,
+} from "../mapMechanics.js";
 
 // ===== GLITCH EFFECTS (matrix mode, decoys, overload) =====
 export function drawGlitchEffects(ctx, canvas) {
@@ -74,27 +86,30 @@ export function drawHUD(ctx, canvas) {
     const pulse = Math.sin(state.frameCount * 0.2) * 0.5 + 0.5;
 
     if (s.type === "ULTIMATE") {
-      ctx.font = "bold 40px Arial";
+      ctx.font = "900 38px Orbitron, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillStyle = `rgba(255, 50, 50, ${0.7 + pulse * 0.3})`;
-      ctx.fillText("!!! TẤT SÁT !!!", centerX, centerY - 60);
+      ctx.shadowColor = "#ff0000";
+      ctx.shadowBlur = 20;
+      ctx.fillStyle = `rgba(255, 50, 50, ${0.75 + pulse * 0.25})`;
+      ctx.fillText("◆ TẤT SÁT ◆", centerX, centerY - 58);
+      ctx.shadowBlur = 0;
     } else {
-      ctx.font = "bold 24px Arial";
+      ctx.font = "700 22px Rajdhani, sans-serif";
       ctx.textAlign = "center";
       ctx.fillStyle = "#ffcc00";
-      ctx.fillText("ĐANG GỒNG CHIÊU", centerX, centerY - 60);
+      ctx.fillText("ĐANG GỒNG CHIÊU", centerX, centerY - 58);
     }
 
     ctx.fillStyle = "#fff";
-    ctx.font = "bold 32px Arial";
-    ctx.fillText(s.name.toUpperCase(), centerX, centerY - 15);
+    ctx.font = "bold 28px Orbitron, sans-serif";
+    ctx.fillText(s.name.toUpperCase(), centerX, centerY - 12);
 
-    const barWidth = 360;
+    const barWidth = 380;
     const progress = s.timer / s.duration;
-    ctx.fillStyle = "rgba(255, 255, 255, 0.1)";
-    ctx.fillRect(centerX - barWidth / 2, centerY + 10, barWidth, 6);
-    ctx.fillStyle = "#ffcc00";
-    ctx.fillRect(centerX - barWidth / 2, centerY + 10, barWidth * progress, 6);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+    ctx.fillRect(centerX - barWidth / 2 - 4, centerY + 8, barWidth + 8, 14);
+    ctx.fillStyle = s.type === "ULTIMATE" ? "#ff4444" : "#ffcc00";
+    ctx.fillRect(centerX - barWidth / 2, centerY + 11, barWidth * progress, 8);
   }
 
   // Boss shield bar
@@ -152,7 +167,6 @@ export function drawHUD(ctx, canvas) {
 // ===== STAGE CONDITIONS HUD =====
 export function drawStageConditionsHUD(ctx, canvas) {
   const pz = state.currentPuzzle;
-  const type = state.currentPuzzleType;
 
   const cp = state.capturePoints || [];
   const sz = state.swarmZones || [];
@@ -174,80 +188,20 @@ export function drawStageConditionsHUD(ctx, canvas) {
 
   const lines = [];
 
-  const nameMap = {
-    domino: "⚡ Domino",
-    melody: "🎵 Melody",
-    torch: "🔥 Torch",
-    rune: "🔮 Rune",
-  };
-  const pzName = nameMap[type] || "🧩 Puzzle";
-
-  if (pz && type) {
-    if (puzzleDone) {
-      lines.push({ text: `${pzName}: Hoàn thành ✔️`, color: "#00ffcc" });
+  const puzzleInfo = getPuzzleHUDInfo();
+  if (state.currentPuzzle && state.currentPuzzleType) {
+    if (puzzleInfo.done) {
+      lines.push({
+        text: `${puzzleInfo.name}: Hoàn thành ✔️`,
+        color: "#00ffcc",
+      });
     } else {
-      if (type === "rune") {
-        const activatedCount = pz.runes
-          ? pz.runes.filter((r) => r.activated).length
-          : 0;
-        const totalCount = pz.runes ? pz.runes.length : 4;
-
-        if (!pz.clueRevealed) {
-          lines.push({
-            text: `${pzName}: Tìm Bia Đá (Obelisk)`,
-            color: "#ffaa00",
-          });
-        } else {
-          lines.push({
-            text: `${pzName}: ${activatedCount}/${totalCount}`,
-            color: "#fff",
-          });
-
-          const RECIPES = {
-            steam: "Fire + Ice",
-            plasma: "Fire + Lightning",
-            blaze: "Fire + Wind",
-            magma: "Fire + Earth",
-            frostbite: "Ice + Lightning",
-            blizzard: "Ice + Wind",
-            glacier: "Ice + Earth",
-            storm: "Lightning + Wind",
-            magnet: "Lightning + Earth",
-            sandstorm: "Wind + Earth",
-          };
-
-          if (pz.runes) {
-            pz.runes.forEach((r) => {
-              const formula = RECIPES[r.element] || "? + ?";
-              const elName =
-                r.element.charAt(0).toUpperCase() + r.element.slice(1);
-
-              const isDone = r.activated;
-              const status = isDone ? "1/1 ✔️" : "0/1";
-              const color = isDone ? "#00ffcc" : "#aaaaaa";
-
-              lines.push({
-                text: `  ↳ ${elName} = ${formula} (${status})`,
-                color: color,
-              });
-            });
-          }
-        }
-      } else {
-        let puzzleLabel = "...";
-        switch (type) {
-          case "domino":
-            puzzleLabel = `${pz.currentIndex || 0}/${pz.tiles?.length || 0}`;
-            break;
-          case "melody":
-            puzzleLabel = `${pz.input?.length || 0}/${pz.sequence?.length || 0}`;
-            break;
-          case "torch":
-            const lit = pz.torches?.filter((t) => t.lit).length || 0;
-            puzzleLabel = `${lit}/${pz.torches?.length || 0}`;
-            break;
-        }
-        lines.push({ text: `${pzName}: ${puzzleLabel}`, color: "#fff" });
+      lines.push({
+        text: `${puzzleInfo.name}: ${puzzleInfo.progress}`,
+        color: "#fff",
+      });
+      if (puzzleInfo.hint) {
+        lines.push({ text: `  ↳ ${puzzleInfo.hint}`, color: "#aaaaaa" });
       }
     }
   }
@@ -259,29 +213,76 @@ export function drawStageConditionsHUD(ctx, canvas) {
   });
 
   const specialColor = specialCount >= 2 ? "#00ffcc" : "#fff";
-  lines.push({ text: `🚩 Cứ điểm: ${specialCount}/2`, color: specialColor });
+  const cp1 = cp.find((c) => c.order === 1);
+  const cp2 = cp.find((c) => c.order === 2);
+  const cp1Done = cp1?.state === "completed";
+  const cp2Done = cp2?.state === "completed";
+  const cp1Boss =
+    state.ghosts?.find((g) => g.id === cp1?.miniBossId)?.miniBossName ||
+    getMiniBossDisplayName(1);
+  const cp2Boss =
+    state.ghosts?.find((g) => g.id === cp2?.miniBossId)?.miniBossName ||
+    getMiniBossDisplayName(2);
+  lines.push({
+    text: `🚩 CP1: ${cp1Done ? "✔️" : cp1?.state === "locked" ? "🔒" : cp1?.state === "guarding" ? `Diệt ${cp1Boss}` : "Đang chiếm"}`,
+    color: cp1Done ? "#00ffcc" : "#fff",
+  });
+  lines.push({
+    text: `🚩 CP2: ${cp2Done ? "✔️" : !cp1Done ? "🔒 (cần CP1)" : cp2?.state === "guarding" ? `Diệt ${cp2Boss}` : "Đang chiếm"}`,
+    color: cp2Done ? "#00ffcc" : !cp1Done ? "#888" : "#fff",
+  });
+
+  const curRoom = state.player ? getCurrentRoom(state.player.x, state.player.y) : null;
+  if (curRoom?.type === "start") {
+    const guide = getStartRoomGuidance();
+    if (guide) {
+      lines.unshift({ text: guide, color: "#00ffcc" });
+    }
+  } else if (curRoom && roomRequiresClear(curRoom) && !isRoomExitAllowed(curRoom)) {
+    lines.unshift({ text: "🔒 Cửa khóa — hoàn thành phòng!", color: "#ff8866" });
+  }
+
+  const loreCount = state.storyLog?.length || 0;
+  if (loreCount > 0) {
+    lines.push({ text: `📜 Manh cốt truyện: ${loreCount}`, color: "#e0c080" });
+  }
+
+  // Điều kiện đặc thù của map (sống sót N đợt sự kiện)
+  const mapLabel = getMapObjectiveLabel();
+  if (mapLabel) {
+    lines.push({
+      text: mapLabel,
+      color: isMapObjectiveDone() ? "#00ffcc" : "#ff9955",
+    });
+  }
 
   const lineHeight = 20;
-  const padding = 15;
-  const panelW = 270;
-  const panelH = padding * 2 + (lines.length - 1) * lineHeight;
+  const padding = 14;
+  const headerH = 28;
+  const panelW = 290;
+  const panelH = headerH + padding * 2 + lines.length * lineHeight;
 
-  const panelX = canvas.width - panelW - 10;
-  const panelY = 310;
+  const panelX = canvas.width - panelW - 12;
+  const panelY = 300;
 
-  ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
-  ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+  ctx.fillStyle = "rgba(6, 8, 16, 0.88)";
+  ctx.strokeStyle = "rgba(0, 255, 204, 0.25)";
   ctx.lineWidth = 1;
   ctx.beginPath();
-  if (ctx.roundRect) ctx.roundRect(panelX, panelY, panelW, panelH, 8);
+  if (ctx.roundRect) ctx.roundRect(panelX, panelY, panelW, panelH, 10);
   else ctx.rect(panelX, panelY, panelW, panelH);
   ctx.fill();
   ctx.stroke();
 
-  ctx.font = "bold 13px Arial";
+  ctx.fillStyle = "rgba(0, 255, 204, 0.12)";
+  ctx.fillRect(panelX + 1, panelY + 1, panelW - 2, headerH);
+  ctx.fillStyle = "#00ffcc";
+  ctx.font = "bold 11px Orbitron, sans-serif";
   ctx.textAlign = "left";
+  ctx.fillText("◆ MỤC TIÊU MÀN", panelX + padding, panelY + 18);
 
-  let currentY = panelY + padding + 10;
+  ctx.font = "600 13px Rajdhani, sans-serif";
+  let currentY = panelY + headerH + padding;
   lines.forEach((line) => {
     ctx.fillStyle = line.color;
     if (line.color === "#00ffcc") {

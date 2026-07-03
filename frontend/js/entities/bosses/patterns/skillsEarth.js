@@ -1,6 +1,5 @@
 import { state } from "../../../state.js";
 import { spawnWarning, spawnHazard, spawnSafeZone } from "../../helpers.js";
-import { dist } from "../../../utils.js";
 import { activateShield, aim } from "./patternHelpers.js";
 
 export const EARTH_SKILLS = {
@@ -34,13 +33,11 @@ export const EARTH_SKILLS = {
           state.delayedTasks.push({
             delay: 50,
             action: () => {
-              spawnHazard("rock", px, py, 45, 240);
+              // Rock active → damage qua hazard loop (i-frame + gate 30f, không melt)
+              spawnHazard("rock", px, py, 45, 240, 1, "boss");
               state.screenShake.timer = 5;
               state.screenShake.intensity = 8;
               state.screenShake.type = "earth";
-              if (dist(state.player.x, state.player.y, px, py) < 45 + state.player.radius) {
-                state.player.hp -= 1;
-              }
             },
           });
         },

@@ -164,7 +164,7 @@ export function setupSocketIO(io) {
     // ==============================
     // RELAY VỊ TRÍ PLAYER
     // ==============================
-    socket.on("player_update", ({ roomCode, x, y, hp, maxHp, isDead }) => {
+    socket.on("player_update", ({ roomCode, x, y, hp, maxHp, isDead, buffs }) => {
       const room = rooms.get(roomCode);
       if (!room) return;
       const player = room.players.get(socket.id);
@@ -183,6 +183,7 @@ export function setupSocketIO(io) {
         hp,
         maxHp,
         isDead,
+        buffs, // sync aura chiêu cho đồng đội
       });
     });
 
