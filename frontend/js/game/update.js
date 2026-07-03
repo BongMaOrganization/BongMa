@@ -1410,7 +1410,9 @@ function updatePlayerBuffs() {
 }
 
 function updateCrates() {
-  if (state.isBossLevel || !state.crates) return;
+  // Chỉ campaign mới có hòm tiếp tế — echo/tower/bossArena không spawn (trước
+  // đây rò "cục đỏ" vào các mode này vì chỉ chặn isBossLevel).
+  if (state.gameMode !== "campaign" || state.isBossLevel || !state.crates) return;
   if (state.crates.length <= 3 && state.frameCount % 120 === 0) spawnCrate();
 }
 

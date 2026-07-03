@@ -460,11 +460,11 @@ export function drawDamageNumbers(ctx) {
   ctx.textAlign = "center";
   for (const d of arr) {
     const alpha = Math.max(0, Math.min(1, d.life / 14));
-    const scale = 1 + (d.pop || 0) * 0.6;
-    const size = (d.crit ? 22 : 15) * scale;
+    const scale = 1 + (d.pop || 0) * 0.3;
+    const size = (d.crit ? 16 : 11) * scale;
     ctx.globalAlpha = alpha;
     ctx.font = `bold ${size}px Orbitron, Arial, sans-serif`;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2.5;
     ctx.strokeStyle = "rgba(0,0,0,0.75)";
     ctx.fillStyle = d.crit ? "#ffd23f" : "#ffffff";
     const txt = (d.crit ? "" : "") + fmtDmg(d.value);
