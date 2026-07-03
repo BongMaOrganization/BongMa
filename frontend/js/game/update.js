@@ -74,6 +74,7 @@ import {
   handleTowerPlayerDown,
   constrainToTowerArena,
 } from "./towerMode.js";
+import { registerTutorialEnemyKill, updateTutorial } from "./tutorial.js";
 
 function moveGhostInDungeon(g, dx, dy) {
   const radius = g.radius || 12;
@@ -686,6 +687,9 @@ export function update(ctx, canvas, changeStateFn) {
       continue;
     }
     if (isHit && !g.isRespawning) {
+      if (state.gameMode === "tutorial" && g.tutorialEnemy) {
+        registerTutorialEnemyKill();
+      }
       if (g.parentZoneId) {
         const zone = state.swarmZones.find((sz) => sz.id === g.parentZoneId);
         if (zone && !zone.isCompleted) {
@@ -1367,6 +1371,10 @@ export function update(ctx, canvas, changeStateFn) {
   // Puzzle chỉ update khi KHÔNG ở boss arena
   if (!state.isBossLevel && !state.bossArenaMode) {
     updatePuzzle(ctx);
+  }
+
+  if (state.gameMode === "tutorial") {
+    updateTutorial();
   }
 
   return null;

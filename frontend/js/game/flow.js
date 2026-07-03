@@ -42,6 +42,11 @@ import {
   unlockOmniMap,
   mergeMapProgress,
 } from "../world/dungeonLayout.js";
+import {
+  finishTutorialRun,
+  restoreTutorialMenuState,
+  startTutorialRun,
+} from "./tutorial.js";
 export function initGame(isNextLevel = false) {
   let saved = JSON.parse(localStorage.getItem(GHOST_DATA_KEY) || "{}");
 
@@ -275,6 +280,11 @@ export function changeState(newGameState, gameLoopFn) {
     }
 
     // Lưu số liệu trước khi reset để hiển thị trên màn hình thua
+    if (state.gameMode === "tutorial") {
+      showGameOverScreen(gameLoopFn, 0, 0, { isTutorial: true });
+      return;
+    }
+
     const reachedLevel = state.currentLevel;
     const coins = state.player?.coins || 0;
 
@@ -309,7 +319,7 @@ export function changeState(newGameState, gameLoopFn) {
 }
 
 // Màn hình thua riêng: Chơi lại (về Màn 1) hoặc Về Menu — thay vì văng thẳng vào menu chính.
-function showGameOverScreen(gameLoopFn, reachedLevel, coins) {
+function showGameOverScreen(gameLoopFn, reachedLevel, coins, options = {}) {
   const screen = document.getElementById("screen-gameover");
   if (!screen) {
     // Thiếu overlay → fallback về menu để không kẹt
@@ -326,6 +336,12 @@ function showGameOverScreen(gameLoopFn, reachedLevel, coins) {
 
   screen.classList.remove("hidden");
 
+  if (options.isTutorial && statsEl) {
+    statsEl.innerHTML =
+      `Ban da dung lai o tutorial.` +
+      `<br>Thu lai de luyen dash, skill va cach ne boss.`;
+  }
+
   const retry = document.getElementById("btn-retry");
   if (retry) {
     retry.onclick = () => {
@@ -335,9 +351,23 @@ function showGameOverScreen(gameLoopFn, reachedLevel, coins) {
     };
   }
 
+  if (options.isTutorial && retry) {
+    retry.onclick = () => {
+      screen.classList.add("hidden");
+      startTutorialRun((newState) => changeState(newState, gameLoopFn));
+    };
+  }
+
   const toMenu = document.getElementById("btn-to-menu");
   if (toMenu) {
     toMenu.onclick = () => {
+      changeState("MENU", gameLoopFn);
+    };
+  }
+
+  if (options.isTutorial && toMenu) {
+    toMenu.onclick = () => {
+      restoreTutorialMenuState();
       changeState("MENU", gameLoopFn);
     };
   }
@@ -455,6 +485,15 @@ export function startBossFight() {
 }
 
 export function nextStage(gameLoopFn) {
+  if (state.gameMode === "tutorial") {
+    finishTutorialRun({
+      changeStateFn: (newState) => changeState(newState, gameLoopFn),
+      replayTutorial: () =>
+        startTutorialRun((newState) => changeState(newState, gameLoopFn)),
+    });
+    return;
+  }
+
   saveGame(state, GHOST_DATA_KEY);
   persistState();
   if (state.isBossLevel) {

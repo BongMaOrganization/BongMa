@@ -2,6 +2,7 @@ export const state = {
   gameState: "MENU",
   // Chế độ đang chơi: "campaign" | "bossArena" | "echo" (Vòng Lặp) | "tower" (Công Thành)
   gameMode: "campaign",
+  tutorial: null,
   frameCount: 0,
   scoreTime: 0,
   currentLevel: 1,

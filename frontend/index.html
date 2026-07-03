@@ -146,6 +146,13 @@
                 <span class="btn-subtext">Khám phá và sinh tồn các thế giới</span>
               </div>
             </button>
+            <button id="btn-tutorial" class="menu-btn-epic" style="background: linear-gradient(135deg,rgba(60,80,0,0.72),rgba(0,70,80,0.72)); border-color: rgba(255,220,120,0.4);">
+              <div class="btn-content">
+                <span class="btn-icon">ðŸ“˜</span>
+                <span class="btn-text">TUTORIAL</span>
+                <span class="btn-subtext">Hoc dieu khien, diet quai va doi dau boss cuoi bai</span>
+              </div>
+            </button>
             <button id="btn-boss-arena" class="menu-btn-epic btn-danger">
               <div class="btn-content">
                 <span class="btn-icon">⚔️</span>
@@ -189,6 +196,69 @@
           <button id="btn-logout" class="menu-btn-logout">
             🚪 Đăng Xuất
           </button>
+        </div>
+      </div>
+      <div id="screen-tutorial" class="overlay hidden">
+        <div class="panel tutorial-screen-panel">
+          <div class="panel-header-block">
+            <h2 class="title-main text-cyan">HUONG DAN TAN THU</h2>
+            <p class="desc">
+              Tutorial nay dung nhan vat <b style="color:#00ffcc">Tia Chop</b> de ban lam quen voi cac nut bam, cach diet quai va tran boss cuoi bai.
+            </p>
+          </div>
+
+          <div class="tutorial-grid">
+            <div class="tutorial-card">
+              <div class="tutorial-card-title">DI CHUYEN</div>
+              <div class="tutorial-card-body">
+                <span class="tutorial-key">W</span>
+                <span class="tutorial-key">A</span>
+                <span class="tutorial-key">S</span>
+                <span class="tutorial-key">D</span>
+                <span class="tutorial-key tutorial-key-wide">ARROWS</span>
+              </div>
+              <div class="tutorial-card-text">Di chuyen lien tuc de tranh bi ep goc.</div>
+            </div>
+
+            <div class="tutorial-card">
+              <div class="tutorial-card-title">TAN CONG</div>
+              <div class="tutorial-card-body">
+                <span class="tutorial-key tutorial-key-wide">CHUOT TRAI</span>
+              </div>
+              <div class="tutorial-card-text">Giu chuot trai de ban va quet sach quai huan luyen.</div>
+            </div>
+
+            <div class="tutorial-card">
+              <div class="tutorial-card-title">DASH</div>
+              <div class="tutorial-card-body">
+                <span class="tutorial-key tutorial-key-wide">SPACE</span>
+              </div>
+              <div class="tutorial-card-text">Lot nhanh de thoat dan, hazard va telegraph cua boss.</div>
+            </div>
+
+            <div class="tutorial-card">
+              <div class="tutorial-card-title">KY NANG</div>
+              <div class="tutorial-card-body">
+                <span class="tutorial-key">Q</span>
+                <span class="tutorial-key">E</span>
+                <span class="tutorial-key">R</span>
+              </div>
+              <div class="tutorial-card-text">Q: Gia toc. E: Qua tai. R: Bao dien tu (ultimate, khoa 30s dau).</div>
+            </div>
+          </div>
+
+          <div class="tutorial-flow-box">
+            <div class="tutorial-flow-title">LO TRINH TUTORIAL</div>
+            <div class="tutorial-flow-item">1. Hoc di chuyen va dash trong khu luyen tap.</div>
+            <div class="tutorial-flow-item">2. Diet 4 bong ma huan luyen de lam quen aim va ban.</div>
+            <div class="tutorial-flow-item">3. Dung it nhat 1 ky nang Q/E truoc khi vao boss.</div>
+            <div class="tutorial-flow-item">4. Ha guc Hoa Vuong mo phong o cuoi bai.</div>
+          </div>
+
+          <div class="tutorial-actions">
+            <button id="btn-tutorial-start" class="menu-btn-epic btn-restart" style="width: 100%; justify-content: center;">BAT DAU TUTORIAL</button>
+            <button id="btn-tutorial-back" class="menu-btn-utility" style="width: 100%;">Quay lai menu</button>
+          </div>
         </div>
       </div>
       <div id="screen-settings" class="overlay hidden">
@@ -497,6 +567,24 @@
           style="margin-top: 30px; width: 100%"
         >
           VỀ MENU CHÍNH
+        </button>
+      </div>
+    </div>
+
+    <div id="screen-tutorial-complete" class="overlay hidden">
+      <div class="panel tutorial-complete-panel">
+        <h2 class="title-main text-cyan">TUTORIAL HOAN THANH</h2>
+        <p class="desc">
+          Ban da hoan thanh phan huong dan co ban: di chuyen, dash, ban, dung skill va danh boss.
+        </p>
+        <div class="tutorial-complete-note">
+          Tip nhanh: giu nhan vat luon di chuyen, de danh skill cho tinh huong nguy hiem, va dash khi boss ve vung do.
+        </div>
+        <button id="btn-tutorial-replay" class="menu-btn-epic btn-restart" style="width: 100%; justify-content: center; margin-bottom: 12px;">
+          Choi lai tutorial
+        </button>
+        <button id="btn-tutorial-menu" class="menu-btn-utility" style="width: 100%;">
+          Ve menu chinh
         </button>
       </div>
     </div>
