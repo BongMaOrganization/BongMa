@@ -266,7 +266,7 @@ export function startEchoRun(gameLoopFn) {
     state.storyToast = {
       title: "🔁 VÒNG LẶP",
       text: `${state.ghosts.length} Bóng Ma từ các vòng lặp trước đang đi lại chính con đường bạn đã đi — và bắn vào những nơi bạn từng nhắm. Diệt chúng (hoặc chờ chúng lặp lại cái chết) để nhặt mộ bia.`,
-      timer: 420,
+      timer: 300, // ~5s tự biến mất, đỡ che skill bar
     };
   }
 
@@ -819,6 +819,110 @@ function spawnFromDesc(kind, wave, player) {
       timer: 0,
     });
   }
+}
+
+// ---------------------------------------------------------------------------
+// MAP RIÊNG CỦA VÒNG LẶP — "Vực Thời Gian"
+// Nền void tím/cyan + vòng đồng tâm kiểu mặt đồng hồ + nan hoa xoay. Khác hẳn
+// map nguyên tố (không dùng theme lửa/băng…). Vòng ngoài = biên arena (chặn player).
+// ---------------------------------------------------------------------------
+
+// Nhốt thực thể trong vòng arena — gọi từ update.js cho player.
+export function constrainToEchoArena(e, radius = 0) {
+  const dx = e.x - ECHO.CX;
+  const dy = e.y - ECHO.CY;
+  const d = Math.hypot(dx, dy);
+  const maxR = ECHO.RADIUS - radius - 8;
+  if (d > maxR && d > 0) {
+    e.x = ECHO.CX + (dx / d) * maxR;
+    e.y = ECHO.CY + (dy / d) * maxR;
+  }
+}
+
+export function drawEchoBackground(ctx) {
+  const cx = ECHO.CX;
+  const cy = ECHO.CY;
+  const R = ECHO.RADIUS;
+  const t = state.frameCount || 0;
+  const PI2 = Math.PI * 2;
+  const cam = state.camera;
+
+  ctx.save();
+
+  // Nền void bao trùm vùng nhìn (ngoài arena = hư không)
+  ctx.fillStyle = "#06060f";
+  ctx.fillRect(cam.x - 120, cam.y - 120, cam.width + 240, cam.height + 240);
+
+  // Sàn arena — gradient tím sâu
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
+  g.addColorStop(0, "rgba(48,24,84,0.55)");
+  g.addColorStop(0.7, "rgba(22,12,44,0.4)");
+  g.addColorStop(1, "rgba(8,6,18,0.05)");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, 0, PI2);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, 0, PI2);
+  ctx.clip(); // mọi thứ dưới đây chỉ trong arena
+
+  // Vòng đồng tâm (các "vòng lặp thời gian")
+  ctx.lineWidth = 1.5;
+  for (let i = 1; i <= 6; i++) {
+    ctx.strokeStyle = `rgba(184,112,255,${0.05 + (i % 2) * 0.035})`;
+    ctx.beginPath();
+    ctx.arc(cx, cy, (R * i) / 6, 0, PI2);
+    ctx.stroke();
+  }
+
+  // Nan hoa xoay (kim đồng hồ)
+  const rot = t * 0.002;
+  ctx.strokeStyle = "rgba(0,255,204,0.05)";
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 12; i++) {
+    const a = rot + (i / 12) * PI2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R);
+    ctx.stroke();
+  }
+
+  // Vạch tick sát biên (mặt đồng hồ)
+  for (let i = 0; i < 60; i++) {
+    const a = (i / 60) * PI2;
+    const big = i % 5 === 0;
+    const r1 = R - (big ? 28 : 14);
+    ctx.strokeStyle = big ? "rgba(0,255,204,0.25)" : "rgba(184,112,255,0.15)";
+    ctx.lineWidth = big ? 2 : 1;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+    ctx.lineTo(cx + Math.cos(a) * (R - 4), cy + Math.sin(a) * (R - 4));
+    ctx.stroke();
+  }
+
+  ctx.restore(); // bỏ clip
+
+  // Biên arena — vành sáng đôi (đây là "tường" chặn player)
+  ctx.save();
+  ctx.shadowBlur = 18;
+  ctx.shadowColor = "#b870ff";
+  ctx.strokeStyle = `rgba(184,112,255,${0.45 + Math.sin(t * 0.05) * 0.15})`;
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.arc(cx, cy, R, 0, PI2);
+  ctx.stroke();
+  // vòng gạch xoay bên trong
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = "rgba(0,255,204,0.5)";
+  ctx.lineWidth = 2;
+  ctx.setLineDash([22, 16]);
+  ctx.lineDashOffset = -t * 0.7;
+  ctx.beginPath();
+  ctx.arc(cx, cy, R - 10, 0, PI2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
 }
 
 // ---------------------------------------------------------------------------

@@ -14,7 +14,7 @@ import {
 } from "./draw/drawHazards.js";
 import { drawBoss, drawBossBeams, drawBossEntityPhase, drawSuctionParticles } from "./draw/drawBoss.js";
 import { drawEnemies } from "./draw/drawEnemies.js";
-import { drawEchoBanner } from "./echoMode.js";
+import { drawEchoBanner, drawEchoBackground } from "./echoMode.js";
 import {
   drawTowerWorld,
   drawTowerMinions,
@@ -97,17 +97,19 @@ export function draw(ctx, canvas) {
   ctx.translate(-state.camera.x, -state.camera.y);
 
   // --- Background ---
-  // Tower mode có map riêng: bỏ theme lửa + dungeon, vẽ corridor trong drawTowerWorld
+  // Tower & Echo có MAP RIÊNG: bỏ theme nguyên tố + dungeon, vẽ nền riêng
   const towerMode = state.gameMode === "tower" && state.tower;
-  if (!towerMode) {
+  const echoMode = state.gameMode === "echo" && state.echo;
+  if (!towerMode && !echoMode) {
     drawThemedBackground(ctx);
     drawDungeon(ctx);
   }
   drawBossArenaVisual(ctx);
   drawPermanentScars(ctx);
 
-  // --- Tower mode: nền corridor + lane + công trình (dưới thực thể) ---
+  // --- Map riêng: corridor (tower) / vực thời gian (echo) — dưới thực thể ---
   if (towerMode) drawTowerWorld(ctx);
+  else if (echoMode) drawEchoBackground(ctx);
 
   // --- World objects (crates, puzzles, portals, swarm zones, items, floating texts) ---
   drawWorldObjects(ctx);

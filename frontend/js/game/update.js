@@ -64,7 +64,11 @@ import {
   onMultiplayerPlayerDead,
 } from "../multiplayer/mpFlow.js";
 import { enforceBulletBudget, enforceVfxBudget } from "./vfxBudget.js";
-import { updateEchoWaves, onEchoGhostDeath } from "./echoMode.js";
+import {
+  updateEchoWaves,
+  onEchoGhostDeath,
+  constrainToEchoArena,
+} from "./echoMode.js";
 import {
   updateTowerMode,
   handleTowerPlayerDown,
@@ -410,6 +414,10 @@ export function update(ctx, canvas, changeStateFn) {
   // Tower mode: nhốt player trong corridor (giới hạn di chuyển)
   if (state.gameMode === "tower" && state.tower) {
     constrainToTowerArena(player, player.radius);
+  }
+  // Echo mode: nhốt player trong vòng arena "Vực Thời Gian"
+  if (state.gameMode === "echo" && state.echo) {
+    constrainToEchoArena(player, player.radius);
   }
 
   resolveDungeonCollision(player, player.radius);
