@@ -267,6 +267,13 @@ export function changeState(newGameState, gameLoopFn) {
       return;
     }
 
+    // Chế độ Công Thành: GAME_OVER chỉ bắn khi nhà chính sập (thắng/thua đều
+    // qua đây) — KHÔNG reset level/pastRuns campaign.
+    if (state.gameMode === "tower") {
+      import("./towerMode.js").then((m) => m.handleTowerGameOver(gameLoopFn));
+      return;
+    }
+
     // Lưu số liệu trước khi reset để hiển thị trên màn hình thua
     const reachedLevel = state.currentLevel;
     const coins = state.player?.coins || 0;
@@ -365,6 +372,7 @@ export async function startGame(gameLoopFn) {
   state.gameMode = "campaign";
   state.echo = null;
   state.echoGraves = [];
+  state.tower = null;
   initGame(false);
   changeState("PLAYING", gameLoopFn);
 }
@@ -635,6 +643,7 @@ export function startBossArenaFight(bossType, changeStateFn, gameLoopFn) {
   state.gameMode = "bossArena";
   state.echo = null;
   state.echoGraves = [];
+  state.tower = null;
   state.bossArenaMode = true;
   state.bossArenaType = bossType;
   initGame(false);

@@ -65,6 +65,7 @@ import {
 } from "../multiplayer/mpFlow.js";
 import { enforceBulletBudget, enforceVfxBudget } from "./vfxBudget.js";
 import { updateEchoWaves, onEchoGhostDeath } from "./echoMode.js";
+import { updateTowerMode, handleTowerPlayerDown } from "./towerMode.js";
 
 function moveGhostInDungeon(g, dx, dy) {
   const radius = g.radius || 12;
@@ -156,6 +157,9 @@ export function update(ctx, canvas, changeStateFn) {
   if (player && player.hp <= 0 && !player.isDead) {
     if (state.isMultiplayer) {
       onMultiplayerPlayerDead();
+    } else if (state.gameMode === "tower" && state.tower && !state.tower.result) {
+      // Công Thành: gục ngã → hồi sinh tại nhà chính, KHÔNG game over
+      handleTowerPlayerDown();
     } else {
       changeStateFn("GAME_OVER");
     }
@@ -190,6 +194,10 @@ export function update(ctx, canvas, changeStateFn) {
   // Chế độ Vòng Lặp: waves + mộ bia + HUD
   if (state.gameMode === "echo" && state.echo) {
     updateEchoWaves(player, changeStateFn);
+  }
+  // Chế độ Công Thành: waves + lính 2 phe + trụ + HUD
+  if (state.gameMode === "tower" && state.tower) {
+    updateTowerMode(player, changeStateFn);
   }
   updateElementalEnemies(state.player);
   updateHealStations();
@@ -649,6 +657,7 @@ export function update(ctx, canvas, changeStateFn) {
         !g.isMiniBoss &&
         !g.isEchoGhost &&
         !g.isEchoEnemy &&
+        !g.isTowerMinion &&
         g.isStunned > 0);
     if (isHit && g.isEchoGhost) {
       // Diệt được chính mình → thưởng đậm + rơi mộ bia
@@ -690,7 +699,10 @@ export function update(ctx, canvas, changeStateFn) {
           }
         }
       } else {
-        addExperience(g.isEchoElite ? 20 : g.isHorde ? 2 : 4, changeStateFn);
+        addExperience(
+          g.xpValue ?? (g.isEchoElite ? 20 : g.isHorde ? 2 : 4),
+          changeStateFn,
+        );
         // Echo: bounty quái/elite chịu hệ số solo (tắt Bóng Ma người khác → ít vàng hơn)
         const rMult = state.gameMode === "echo" ? state.echo?.rewardMult || 1 : 1;
         const coinGain = Math.round(
@@ -1279,15 +1291,17 @@ export function update(ctx, canvas, changeStateFn) {
     }
   }
 
-  // Cập nhật UI Text
-  setTextIfChanged(
-    UI.ghosts,
-    state.isBossLevel
-      ? boss?.ghostsActive
-        ? `Quái đợt này: ${activeGhosts}`
-        : `Boss triệu hồi (${Math.ceil(boss?.summonCooldown / FPS || 0)}s)...`
-      : `Quái: ${activeGhosts}`,
-  );
+  // Cập nhật UI Text (tower mode tự ghi label riêng trong updateTowerMode)
+  if (state.gameMode !== "tower") {
+    setTextIfChanged(
+      UI.ghosts,
+      state.isBossLevel
+        ? boss?.ghostsActive
+          ? `Quái đợt này: ${activeGhosts}`
+          : `Boss triệu hồi (${Math.ceil(boss?.summonCooldown / FPS || 0)}s)...`
+        : `Quái: ${activeGhosts}`,
+    );
+  }
   setTextIfChanged(getCoinsCountEl(), `Tiền: ${state.player?.coins || 0}`);
 
   // Kiểm tra qua màn: player bước vào cổng dịch chuyển
@@ -1300,11 +1314,12 @@ export function update(ctx, canvas, changeStateFn) {
     }
   }
 
-  // Timer (echo mode tự ghi UI.timer theo WAVE trong updateEchoWaves)
+  // Timer (echo/tower mode tự ghi UI.timer theo WAVE trong update riêng)
   state.frameCount++;
   if (
     !state.isBossLevel &&
     state.gameMode !== "echo" &&
+    state.gameMode !== "tower" &&
     state.frameCount % FPS === 0
   ) {
     state.scoreTime++;

@@ -167,6 +167,13 @@
                 <span class="btn-subtext">Sinh tồn vô tận — đối đầu Bóng Ma của chính bạn</span>
               </div>
             </button>
+            <button id="btn-tower-mode" class="menu-btn-epic" style="background: linear-gradient(135deg,rgba(110,70,0,0.7),rgba(60,20,0,0.7)); border-color: rgba(255,200,80,0.45);">
+              <div class="btn-content">
+                <span class="btn-icon">🏰</span>
+                <span class="btn-text">CÔNG THÀNH</span>
+                <span class="btn-subtext">Đẩy lane cùng lính — phá trụ, công phá nhà chính địch</span>
+              </div>
+            </button>
             
             <div class="menu-btn-row">
               <button id="btn-select-character" class="menu-btn-utility">👥 NHÂN VẬT</button>
@@ -397,6 +404,35 @@
         <p class="desc">Top 20 toàn cầu — xếp theo Wave cao nhất, rồi thời gian sống sót.</p>
         <div id="echo-lb-list" style="margin: 18px 0; max-height: 420px; overflow-y: auto; text-align: left; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;"></div>
         <button id="btn-echo-lb-close" class="menu-btn-utility" style="padding: 10px 40px;">Đóng</button>
+      </div>
+    </div>
+
+    <!-- ========== TOWER MODE (Công Thành) ========== -->
+    <div id="screen-tower" class="overlay hidden">
+      <div class="panel" style="max-width: 520px; text-align: center;">
+        <div class="panel-header-block">
+          <h2 class="title-main" style="color: #ffd700; text-shadow: 0 0 20px rgba(255,200,80,0.5);">🏰 CÔNG THÀNH</h2>
+          <p class="desc">
+            Chiến trường 1 lane kiểu MOBA. Lính 2 phe spawn theo đợt và tự đẩy lane — nhiệm vụ của bạn: nghiêng cán cân, <b style="color:#ff4455">phá 2 trụ</b> rồi công phá <b style="color:#ffd700">NHÀ CHÍNH</b> địch trước khi mất nhà.
+          </p>
+        </div>
+        <div style="margin: 14px 0 18px; font-size: 14px; color: #cfd6e6; line-height: 1.9; text-align: left; padding: 12px 16px; background: rgba(255,200,80,0.06); border: 1px solid rgba(255,200,80,0.25); border-radius: 8px;">
+          🗼 Trụ <b>miễn sát thương kỹ năng</b> — chỉ đạn thường phá được<br>
+          🛡 Chỉ phá được công trình <b>ngoài cùng</b> — không backdoor<br>
+          💀 Gục ngã sẽ <b>hồi sinh tại nhà chính</b> — thời gian chờ tăng dần<br>
+          ⚔ Kỹ năng Q/E/R vẫn dùng thoải mái để dọn lính
+        </div>
+        <button id="btn-tower-start" class="menu-btn-epic btn-restart" style="width: 100%; margin-bottom: 12px;">▶ XUẤT QUÂN</button>
+        <button id="btn-tower-back" class="menu-btn-utility" style="width: 100%;">← Quay Lại</button>
+      </div>
+    </div>
+
+    <div id="screen-tower-end" class="overlay hidden">
+      <div class="panel" style="max-width: 420px; text-align: center;">
+        <h2 id="tower-end-title" class="title-main" style="color: #ffd700; margin-bottom: 8px;">CÔNG THÀNH</h2>
+        <div id="tower-end-stats" style="margin-bottom: 22px; font-size: 15px; color: #cfd6e6; line-height: 1.8;"></div>
+        <button id="btn-tower-retry" class="menu-btn-epic btn-restart" style="width: 100%; margin-bottom: 12px;">🔄 ĐÁNH TRẬN MỚI</button>
+        <button id="btn-tower-end-menu" class="menu-btn-utility" style="width: 100%;">🏠 VỀ MENU</button>
       </div>
     </div>
 

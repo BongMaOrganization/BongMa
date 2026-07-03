@@ -136,6 +136,7 @@ export function startEchoRun(gameLoopFn) {
   const saved = JSON.parse(localStorage.getItem(GHOST_DATA_KEY) || "{}");
 
   state.gameMode = "echo";
+  state.tower = null;
   state.isMultiplayer = false;
   state.isBossLevel = false;
   state.bossArenaMode = false;

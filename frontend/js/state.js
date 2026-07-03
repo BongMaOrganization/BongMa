@@ -1,6 +1,6 @@
 export const state = {
   gameState: "MENU",
-  // Chế độ đang chơi: "campaign" | "bossArena" | "echo" (Vòng Lặp)
+  // Chế độ đang chơi: "campaign" | "bossArena" | "echo" (Vòng Lặp) | "tower" (Công Thành)
   gameMode: "campaign",
   frameCount: 0,
   scoreTime: 0,
@@ -239,6 +239,10 @@ export const state = {
   // Runtime của chế độ Vòng Lặp — khởi tạo tại echoMode.initEchoRunState()
   echo: null, // { wave, waveTimer, timeFrames, coinsAtStart, kills, ... }
   echoGraves: [], // [{ x, y, coins, pulse }] — mộ bia rơi từ Bóng Ma
+
+  // ===== Tower Mode (Công Thành) =====
+  // Runtime chế độ đánh trụ — khởi tạo tại towerMode.startTowerRun()
+  tower: null, // { wave, structures, allyMinions, beams, result, ... }
 
   // ===== Multiplayer State =====
   isMultiplayer: false,

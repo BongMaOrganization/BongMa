@@ -58,6 +58,33 @@ export function drawMinimap(ctx, canvas) {
     });
   }
 
+  // 1.7. Tower mode (Công Thành): công trình + lính đồng minh
+  if (state.gameMode === "tower" && state.tower) {
+    state.tower.structures.forEach((s) => {
+      const x = mmX + s.x * scaleX;
+      const y = mmY + s.y * scaleY;
+      const color = !s.alive
+        ? "#555"
+        : s.team === "ally"
+          ? "#00ffcc"
+          : "#ff4455";
+      const size = s.kind === "nexus" ? 5 : 3.5;
+      ctx.fillStyle = color;
+      ctx.fillRect(x - size, y - size, size * 2, size * 2);
+      if (s.kind === "nexus" && s.alive) {
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x - size - 2, y - size - 2, (size + 2) * 2, (size + 2) * 2);
+      }
+    });
+    state.tower.allyMinions.forEach((m) => {
+      ctx.fillStyle = "#00ffcc";
+      ctx.beginPath();
+      ctx.arc(mmX + m.x * scaleX, mmY + m.y * scaleY, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+
   // 2. Boss
   if (state.boss && state.boss.hp > 0) {
     drawDot(state.boss, state.boss.color || "#ff00ff", 4);

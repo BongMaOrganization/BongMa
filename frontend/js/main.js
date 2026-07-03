@@ -17,6 +17,7 @@ import {
 } from "./game/flow.js";
 import { skipBossCutscene } from "./game/bossCutscene.js";
 import { openEchoMenu, handleEchoBossKilled } from "./game/echoMode.js";
+import { openTowerMenu } from "./game/towerMode.js";
 import { update } from "./game/update.js";
 import { draw } from "./game/draw.js";
 import { initGraphics, needsAutoDetect, sampleAutoDetect } from "./game/graphics.js";
@@ -248,6 +249,11 @@ if (arenaBtn) {
 const echoBtn = document.getElementById("btn-echo-mode");
 if (echoBtn) {
   echoBtn.onclick = () => openEchoMenu(gameLoop);
+}
+// Tower Mode (Công Thành) — PvE đẩy lane, chơi được offline
+const towerBtn = document.getElementById("btn-tower-mode");
+if (towerBtn) {
+  towerBtn.onclick = () => openTowerMenu(gameLoop);
 }
 // Arena back button
 const arenaBack = document.getElementById("btn-arena-back");

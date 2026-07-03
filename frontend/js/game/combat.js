@@ -236,6 +236,8 @@ export function playerTakeDamage(ctx, canvas, changeStateFn, amount = 1) {
       import("../multiplayer/mpFlow.js").then(({ onMultiplayerPlayerDead }) => {
         onMultiplayerPlayerDead();
       });
+    } else if (state.gameMode === "tower") {
+      // Công Thành: check tập trung trong update.js sẽ hồi sinh tại nhà chính
     } else {
       changeStateFn("GAME_OVER");
     }
@@ -776,7 +778,8 @@ export function updateBullets(
               !g.isMiniBoss &&
               !g.isSubBoss &&
               !g.isEchoGhost &&
-              !g.isEchoEnemy
+              !g.isEchoEnemy &&
+              !g.isTowerMinion
             ) {
               g.isStunned = finalDmg >= 2 ? 600 : 300;
             } else if (g.isEchoGhost || g.isEchoEnemy || !g.isMiniBoss) {

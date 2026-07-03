@@ -15,6 +15,11 @@ import {
 import { drawBoss, drawBossBeams, drawBossEntityPhase, drawSuctionParticles } from "./draw/drawBoss.js";
 import { drawEnemies } from "./draw/drawEnemies.js";
 import { drawEchoBanner } from "./echoMode.js";
+import {
+  drawTowerWorld,
+  drawTowerMinions,
+  drawTowerHud,
+} from "./towerMode.js";
 import { drawBullets } from "./draw/drawBullets.js";
 import {
   drawPlayer,
@@ -100,6 +105,9 @@ export function draw(ctx, canvas) {
   // --- World objects (crates, puzzles, portals, swarm zones, items, floating texts) ---
   drawWorldObjects(ctx);
 
+  // --- Tower mode: lane + công trình (dưới thực thể) ---
+  if (state.gameMode === "tower" && state.tower) drawTowerWorld(ctx);
+
   // --- Satellite & God Mode (above world, below shake) ---
   // These are now included in drawCharacterVFX
 
@@ -157,6 +165,9 @@ export function draw(ctx, canvas) {
   // --- Enemies (ghosts + elemental) ---
   drawEnemies(ctx);
 
+  // --- Tower mode: lính đồng minh + thanh máu lính địch ---
+  if (state.gameMode === "tower" && state.tower) drawTowerMinions(ctx);
+
   // --- Bullets ---
   drawBullets(ctx);
 
@@ -213,10 +224,16 @@ export function draw(ctx, canvas) {
 
   // --- HUD ---
   drawHUD(ctx, canvas);
-  // Echo mode (Vòng Lặp) không có mục tiêu màn — HUD wave tự quản trong echoMode.js
-  if (!state.isBossLevel && !state.bossArenaMode && state.gameMode !== "echo")
+  // Echo/Tower mode không có mục tiêu màn — HUD tự quản trong mode riêng
+  if (
+    !state.isBossLevel &&
+    !state.bossArenaMode &&
+    state.gameMode !== "echo" &&
+    state.gameMode !== "tower"
+  )
     drawStageConditionsHUD(ctx, canvas);
   if (state.gameMode === "echo") drawEchoBanner(ctx, canvas);
+  if (state.gameMode === "tower" && state.tower) drawTowerHud(ctx, canvas);
 
   // --- Player burn vignette ---
   if (state.playerStatus.burnTimer > 0) {
