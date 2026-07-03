@@ -698,7 +698,9 @@ export function updateBullets(
         if (b.hitList.includes(g)) continue;
 
         if (
-          (g.isStunned <= 0 || g.parentZoneId) && // SỬA: Quái bầy không được hưởng "miễn nhiễm" khi bị stun
+          // Quái bầy + MiniBoss/SubBoss (thủ vệ) KHÔNG được "miễn nhiễm" khi stun:
+          // stun-vỡ-khiên (180f) là cửa sổ trừng phạt, phải trúng đạn — không phải 3s bất tử.
+          (g.isStunned <= 0 || g.parentZoneId || g.isMiniBoss || g.isSubBoss) &&
           g.x > 0 &&
           withinRadiusSq(b.x, b.y, g.x, g.y, g.radius + b.radius)
         ) {
@@ -771,12 +773,17 @@ export function updateBullets(
               finalDmg *= 1.5;
             }
 
-            if (b.element === "ice") {
-              g.isStunned = Math.max(g.isStunned, 20);
-            }
+            // MiniBoss/SubBoss (thủ vệ): KHÔNG cho sét/băng refresh stun mỗi viên.
+            // Trước đây stun 40/20 + cổng miễn-sát-thương (dòng ~700) khiến thủ vệ
+            // chỉ ăn 1 hit / stun window → freeze + "bắn không vào máu" với build sét.
+            if (!g.isMiniBoss && !g.isSubBoss) {
+              if (b.element === "ice") {
+                g.isStunned = Math.max(g.isStunned, 20);
+              }
 
-            if (b.element === "lightning") {
-              g.isStunned = Math.max(g.isStunned, 40);
+              if (b.element === "lightning") {
+                g.isStunned = Math.max(g.isStunned, 40);
+              }
             }
 
             if (b.element === "wind") {
@@ -797,8 +804,15 @@ export function updateBullets(
               finalDmg *= 2;
             }
 
-            // Đánh dấu thời điểm trúng đòn → chặn leash full-heal khi đang bị bắn
-            if (g.isMiniBoss || g.isSubBoss) g.lastHitFrame = state.frameCount;
+            // Ngoài vùng gác (leashInvuln) → miễn nhiễm poke từ xa (deflect). Chống
+            // farm + chống "cạn máu không chết". Vào hẳn trong vùng mới đánh được.
+            if ((g.isMiniBoss || g.isSubBoss) && g.leashInvuln) {
+              finalDmg = 0;
+              spawnHitImpact(b.x, b.y, "rgba(150,200,255,0.85)", false);
+            } else if (g.isMiniBoss || g.isSubBoss) {
+              // Đánh dấu thời điểm trúng đòn → chặn leash regen khi đang bị bắn
+              g.lastHitFrame = state.frameCount;
+            }
 
             if (g.isMiniBoss && g.shieldActive && (g.shield || 0) > 0) {
               // CƠ CHẾ GIÁP BOSS: Giảm trừ vào giáp trước

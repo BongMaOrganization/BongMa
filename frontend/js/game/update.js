@@ -934,7 +934,12 @@ export function update(ctx, canvas, changeStateFn) {
             g.originalX,
             g.originalY,
           );
-          if (sameRoom && dToPlayer < 420 && dPlayerFromHome < 520) {
+          // ENGAGE = player CÓ TRONG vùng gác. KHÔNG gate bằng dToPlayer nữa —
+          // trước đây dToPlayer<420 cho phép đứng ~450 poke mà thủ vệ không đuổi/bắn.
+          const GUARD_ZONE = 520;
+          const engaged = sameRoom && dPlayerFromHome < GUARD_ZONE;
+          if (engaged) {
+            g.leashInvuln = false;
             let angle = Math.atan2(player.y - g.y, player.x - g.x);
             let moveSpeed = (g.speedRate || 1.0) * (g.speed || 1.1);
             moveGhostInDungeon(
@@ -944,24 +949,29 @@ export function update(ctx, canvas, changeStateFn) {
             );
             updateMiniBossCombat(g, player, true);
           } else {
+            // NGOÀI vùng gác → BẤT TỬ (leashInvuln). Chặn farm-từ-xa + chặn
+            // "cạn máu không chết": muốn giết phải vào hẳn trong vùng, không poke được.
+            g.leashInvuln = true;
+            // Poke-back: cùng phòng + còn trong tầm → bắn đạn chậm cảnh cáo, ép player vào.
+            if (sameRoom && dToPlayer < 700 && state.frameCount % 90 === 0) {
+              spawnBullet(g.x, g.y, player.x, player.y, false, 2, g.element || "ghost", 1);
+              const pb = state.bullets[state.bullets.length - 1];
+              if (pb) { pb.vx *= 0.7; pb.vy *= 0.7; }
+            }
             // Rút về nhà — KHÔNG hồi máu trong khi di chuyển
             const dHome = dist(g.x, g.y, g.originalX, g.originalY);
             if (dHome > 15) {
               let angleHome = Math.atan2(g.originalY - g.y, g.originalX - g.x);
               moveGhostInDungeon(g, Math.cos(angleHome) * 4.5, Math.sin(angleHome) * 4.5);
             } else {
-              // Đã về đến nhà + 3s không trúng đòn → mới hồi máu/khiên
-              // (tránh reset full khi player vẫn đang bắn từ xa = hp không bao giờ tụt)
-              const sinceHit = state.frameCount - (g.lastHitFrame || -9999);
-              if (
-                sinceHit > 180 &&
-                (g.hp < g.maxHp || (g.shield || 0) < (g.maxShield || 0))
-              ) {
-                g.hp = g.maxHp;
-                g.shield = g.maxShield;
-                g.shieldActive = true;
-                g.isStunned = 0;
-              }
+              // Về đến nhà: hồi máu/khiên TỪ TỪ (không full tức thì). Rời zone ngắn chỉ
+              // hồi chút; bỏ đi lâu mới đầy. Đang immune nên không lo bị chip lúc hồi.
+              g.shieldActive = true;
+              g.isStunned = 0;
+              if (g.hp < g.maxHp)
+                g.hp = Math.min(g.maxHp, g.hp + g.maxHp / 300);
+              if ((g.shield || 0) < (g.maxShield || 0))
+                g.shield = Math.min(g.maxShield, (g.shield || 0) + g.maxShield / 240);
             }
           }
         } else if (g.isEchoElite) {

@@ -396,12 +396,15 @@ export function getCurrentRoom(x, y) {
 export function countElementalsInRoom(room) {
   if (!room || !state.elementalEnemies) return 0;
   const pad = 40;
-  return state.elementalEnemies.filter(
-    (e) =>
-      e.x >= room.x + pad &&
-      e.x <= room.x + room.w - pad &&
-      e.y >= room.y + pad &&
-      e.y <= room.y + room.h - pad,
+  // Ưu tiên đếm theo roomId (quái bị ràng trong phòng) → không sót con nấp góc/burrow
+  // khiến "phòng không mở dù hết quái". Fallback vị trí cho quái không có roomId.
+  return state.elementalEnemies.filter((e) =>
+    e.roomId
+      ? e.roomId === room.id
+      : e.x >= room.x + pad &&
+        e.x <= room.x + room.w - pad &&
+        e.y >= room.y + pad &&
+        e.y <= room.y + room.h - pad,
   ).length;
 }
 
@@ -1109,6 +1112,73 @@ export function drawDungeon(ctx) {
   drawUpgradePedestals(ctx);
   drawLockedDoors(ctx);
   drawStorySigns(ctx);
+  drawRoomClearLocator(ctx);
+  ctx.restore();
+}
+
+// Chỉ điểm quái còn lại khi phòng bị khóa chưa clear → sửa "phòng không mở dù
+// hết quái": player không thấy con cuối (nấp góc / ngoài màn hình / đang burrow).
+function drawRoomClearLocator(ctx) {
+  const room = getCurrentRoom(state.player.x, state.player.y);
+  if (!room || !roomRequiresClear(room) || room.cleared) return;
+  if (!(room.type === "combat" || room.type === "treasure" || room.type === "swarm"))
+    return;
+  const enemies = (state.elementalEnemies || []).filter((e) =>
+    e.roomId ? e.roomId === room.id : getCurrentRoom(e.x, e.y)?.id === room.id,
+  );
+  if (!enemies.length) return;
+
+  const t = state.frameCount;
+  const cx = state.camera.x;
+  const cy = state.camera.y;
+  const cw = state.camera.width;
+  const ch = state.camera.height;
+  const margin = 60;
+
+  for (const e of enemies) {
+    const onScreen =
+      e.x >= cx && e.x <= cx + cw && e.y >= cy && e.y <= cy + ch;
+    ctx.save();
+    if (onScreen) {
+      const pr = 26 + Math.sin(t * 0.2) * 6;
+      ctx.strokeStyle = e.burrowed
+        ? "rgba(255,180,60,0.9)"
+        : "rgba(255,70,70,0.95)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, pr, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.font = "bold 16px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(e.burrowed ? "⛏" : "▼", e.x, e.y - pr - 6);
+    } else {
+      const px = Math.max(cx + margin, Math.min(cx + cw - margin, e.x));
+      const py = Math.max(cy + margin, Math.min(cy + ch - margin, e.y));
+      const ang = Math.atan2(e.y - py, e.x - px);
+      ctx.translate(px, py);
+      ctx.rotate(ang);
+      ctx.fillStyle = "rgba(255,70,70,0.95)";
+      ctx.beginPath();
+      ctx.moveTo(18, 0);
+      ctx.lineTo(-10, -12);
+      ctx.lineTo(-10, 12);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  const c = getRoomCenter(room);
+  ctx.save();
+  ctx.font = "bold 13px Arial";
+  ctx.textAlign = "center";
+  ctx.fillStyle = `rgba(255,120,120,${0.55 + Math.sin(t * 0.1) * 0.25})`;
+  ctx.fillText(
+    `Còn ${enemies.length} quái — diệt hết để mở cửa`,
+    c.x,
+    c.y,
+  );
   ctx.restore();
 }
 
