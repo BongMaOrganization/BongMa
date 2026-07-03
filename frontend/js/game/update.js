@@ -934,6 +934,36 @@ export function update(ctx, canvas, changeStateFn) {
               }
             }
           }
+        } else if (g.isEchoElite) {
+          // ELITE "Kẻ Nuốt Vòng Lặp": lao nhanh khi gần + bắn vòng đạn định kỳ
+          const angle = Math.atan2(player.y - g.y, player.x - g.x);
+          const d = dist(g.x, g.y, player.x, player.y);
+          let moveSpeed = (g.speedRate || 1) * (g.speed || 1);
+          // Lunge: trong 260px thì tăng tốc gấp đôi để không né dễ
+          if (d < 260) moveSpeed *= 2.2;
+          moveGhostInDungeon(
+            g,
+            Math.cos(angle) * moveSpeed,
+            Math.sin(angle) * moveSpeed,
+          );
+          // Bắn đón đầu mỗi 45 frame
+          if (state.frameCount % 45 === 0)
+            spawnBullet(g.x, g.y, player.x, player.y, false, 2, "ghost", 1.5);
+          // Vòng đạn 10 tia mỗi ~2.5s — ép player di chuyển
+          if (state.frameCount % 150 === 0) {
+            for (let a = 0; a < Math.PI * 2; a += Math.PI / 5) {
+              spawnBullet(
+                g.x,
+                g.y,
+                g.x + Math.cos(a) * 100,
+                g.y + Math.sin(a) * 100,
+                false,
+                1,
+                "ghost",
+                1,
+              );
+            }
+          }
         } else if (g.isSubBoss || g.isMiniBoss) {
           let angle = Math.atan2(player.y - g.y, player.x - g.x);
           let moveSpeed = (g.speedRate || 1.0) * (g.speed || 1.1);
@@ -965,7 +995,7 @@ export function update(ctx, canvas, changeStateFn) {
           !isInvulnerable &&
           dist(g.x, g.y, player.x, player.y) < player.radius + g.radius - 2
         )
-          playerTakeDamage(ctx, canvas, changeStateFn);
+          playerTakeDamage(ctx, canvas, changeStateFn, g.isEchoElite ? 2 : 1);
       }
       // 4. Record Dummy AI
       else if (g.record) {
