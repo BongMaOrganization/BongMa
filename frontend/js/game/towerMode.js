@@ -296,13 +296,64 @@ const HERO_ROLE_BY_ID = {
 };
 
 const HERO_ROLE_META = {
-  tank: { icon: "🛡", hp: 46, range: 210, speed: 1.05, fireFloor: 28, dmgMul: 1.4, special: "smash", specialMax: 6 },
-  support: { icon: "✚", hp: 24, range: 300, speed: 1.2, fireFloor: 24, dmgMul: 0.7, special: "heal", specialMax: 5 },
-  assassin: { icon: "🗡", hp: 20, range: 270, speed: 2.0, fireFloor: 15, dmgMul: 1.1, special: "dash", specialMax: 7 },
-  ranged: { icon: "✦", hp: 26, range: 330, speed: 1.3, fireFloor: 18, dmgMul: 1.0, special: "nova", specialMax: 8 },
+  tank: { icon: "🛡", label: "Đấu Sĩ", hp: 46, range: 210, speed: 1.05, fireFloor: 28, dmgMul: 1.4, special: "smash", specialMax: 6, specialLabel: "Giẫm Choáng" },
+  support: { icon: "✚", label: "Hỗ Trợ", hp: 24, range: 300, speed: 1.2, fireFloor: 24, dmgMul: 0.7, special: "heal", specialMax: 5, specialLabel: "Hồi Máu Đồng Đội" },
+  assassin: { icon: "🗡", label: "Sát Thủ", hp: 20, range: 270, speed: 2.0, fireFloor: 15, dmgMul: 1.1, special: "dash", specialMax: 7, specialLabel: "Lướt Bùng Nổ" },
+  ranged: { icon: "✦", label: "Xạ Thủ", hp: 26, range: 330, speed: 1.3, fireFloor: 18, dmgMul: 1.0, special: "nova", specialMax: 8, specialLabel: "Nova Diện" },
 };
 
 const RARITY_DMG = { common: 1, rare: 1.3, legendary: 1.6, mythical: 2 };
+
+// ĐẶC QUYỀN theo độ hiếm — legendary/mythical KHÔNG chỉ hơn số sát thương mà có
+// CƠ CHẾ riêng để "đáng công cày sở hữu": chiêu mạnh hơn + hồi nhanh, tự hồi máu,
+// và mythical hồi sinh tức thì 1 lần/trận. Common/rare vẫn dùng được bình thường.
+//  specialPow: nhân hệ số sát thương/bán kính của CHIÊU.
+//  cdMul:      nhân hồi chiêu (nhỏ hơn 1 = hồi nhanh hơn).
+//  regenPct:   % máu tối đa tự hồi mỗi GIÂY khi còn sống.
+//  reviveOnce: hồi sinh tại chỗ 1 lần/trận thay vì chờ respawn.
+const RARITY_PERK = {
+  common:    { specialPow: 1.0,  cdMul: 1.0,  regenPct: 0,    reviveOnce: false, tier: "", perk: "" },
+  rare:      { specialPow: 1.0,  cdMul: 1.0,  regenPct: 0,    reviveOnce: false, tier: "", perk: "" },
+  legendary: { specialPow: 1.35, cdMul: 0.75, regenPct: 0.06, reviveOnce: false, tier: "Ưu Việt",
+    perk: "Chiêu +35% & hồi nhanh 25%, tự hồi 6% máu/giây" },
+  mythical:  { specialPow: 1.7,  cdMul: 0.6,  regenPct: 0.10, reviveOnce: true,  tier: "Thần Thoại",
+    perk: "Chiêu +70% & hồi nhanh 40%, tự hồi 10% máu/giây, HỒI SINH tức thì 1 lần/trận" },
+};
+
+// CHIÊU CHỮ KÝ riêng từng nhân vật (thay chiêu-theo-vai). Đợt 1: chỉ mythical.
+//  tag:       nhánh xử lý trong castHeroSpecial().
+//  proactive: true = xả cả khi không có địch gần (summon/heal chủ động).
+//  name/desc: hiển thị ở tooltip/picker/màn nhân vật.
+const SIGNATURE_BY_ID = {
+  scout:        { tag: "gale",     proactive: false, name: "Cuồng Phong Trảm", desc: "Lướt xuyên chém mọi địch trên đường bay." },
+  phoenix:      { tag: "firenova", proactive: false, name: "Bùng Lửa Phượng Hoàng", desc: "Nova lửa cực lớn, đẩy lùi + thiêu địch." },
+  necromancer:  { tag: "summon",   proactive: true,  name: "Triệu Hồn", desc: "Triệu hồi 3 lính bảo vệ chiến đấu cùng." },
+  painter:      { tag: "paint",    proactive: false, name: "Màu Nổ", desc: "Ném màu vào cụm địch, nổ diện rộng + choáng." },
+  destroyer:    { tag: "rift",     proactive: false, name: "Vết Nứt", desc: "Bắn laser xuyên tuyến, sát thương mọi địch trên đường." },
+  creator:      { tag: "bless",    proactive: true,  name: "Ban Phước", desc: "Hồi máu mạnh toàn đội + triệu 1 vệ binh." },
+  elementalist: { tag: "eleburst", proactive: false, name: "Nộ Nguyên Tố", desc: "Bùng nổ nguyên tố ngẫu nhiên, sát thương + choáng lâu." },
+};
+
+// Thông tin vai + đặc quyền của 1 nhân vật để hiển thị ở picker / màn chọn nhân
+// vật. Export để select.js dùng chung, tránh lặp bảng role ở 2 nơi.
+export function getTowerRoleInfo(ch) {
+  const role = HERO_ROLE_BY_ID[ch?.id] || "ranged";
+  const m = HERO_ROLE_META[role];
+  const perk = RARITY_PERK[ch?.rarity] || RARITY_PERK.common;
+  const sig = SIGNATURE_BY_ID[ch?.id];
+  return {
+    role,
+    icon: m.icon,
+    roleLabel: m.label,
+    // Có chiêu chữ ký → hiện tên chiêu độc thay chiêu-theo-vai
+    specialLabel: sig ? sig.name : m.specialLabel,
+    signature: sig ? sig.name : "", // tên chiêu độc, "" nếu không có
+    signatureDesc: sig ? sig.desc : "",
+    color: RARITY_COLORS[ch?.rarity] || COLOR_ALLY,
+    tier: perk.tier, // "" nếu common/rare
+    perk: perk.perk, // mô tả đặc quyền, "" nếu không có
+  };
+}
 
 function heroProfile(ch) {
   const role = HERO_ROLE_BY_ID[ch?.id] || "ranged";
@@ -310,6 +361,8 @@ function heroProfile(ch) {
   const fr = ch?.baseStats?.fireRate || 16;
   const ms = Math.max(1, Math.min(3, ch?.baseStats?.multiShot || 1));
   const rarityDmg = RARITY_DMG[ch?.rarity] || 1;
+  const perk = RARITY_PERK[ch?.rarity] || RARITY_PERK.common;
+  const sig = SIGNATURE_BY_ID[ch?.id];
   return {
     role,
     icon: m.icon,
@@ -319,8 +372,14 @@ function heroProfile(ch) {
     fireInterval: Math.max(m.fireFloor, Math.min(48, fr)),
     multiShot: role === "tank" || role === "support" ? 1 : ms,
     dmg: rarityDmg * m.dmgMul,
-    special: m.special,
-    specialMax: m.specialMax * FPS,
+    // Chiêu chữ ký ghi đè chiêu-theo-vai (nếu có), cùng cờ proactive
+    special: sig ? sig.tag : m.special,
+    signatureProactive: sig ? sig.proactive : false,
+    specialMax: Math.round(m.specialMax * FPS * perk.cdMul),
+    // Đặc quyền độ hiếm — đọc trong updateAllyHeroes / castHeroSpecial
+    specialPow: perk.specialPow,
+    regenPerFrame: (perk.regenPct * m.hp) / FPS,
+    reviveOnce: perk.reviveOnce,
   };
 }
 
@@ -360,8 +419,13 @@ function spawnAllyHeroes(t) {
       multiShot: p.multiShot,
       dmg: p.dmg,
       special: p.special,
+      signatureProactive: p.signatureProactive,
       specialCd: p.specialMax,
       specialMax: p.specialMax,
+      specialPow: p.specialPow,
+      regenPerFrame: p.regenPerFrame,
+      reviveOnce: p.reviveOnce,
+      usedRevive: false,
       fireCd: 0,
       respawnTimer: 0,
       hitFlash: 0,
@@ -380,23 +444,195 @@ function fireHeroVolley(h, tx, ty) {
   }
 }
 
-// Chiêu riêng theo vai — trả true nếu đã kích hoạt (để reset cooldown)
+// Gây sát thương cho mọi địch nằm gần đoạn thẳng (x0,y0)->(x1,y1) — dùng cho
+// chiêu lướt/laser xuyên tuyến. Lấy mẫu vài điểm dọc đường cho rẻ.
+function damageAlongLine(x0, y0, x1, y1, rad, dmg, stun, enemyMinions) {
+  const steps = 6;
+  let hit = false;
+  for (const g of enemyMinions) {
+    if ((g.hp || 0) <= 0) continue;
+    for (let s = 0; s <= steps; s++) {
+      const px = x0 + ((x1 - x0) * s) / steps;
+      const py = y0 + ((y1 - y0) * s) / steps;
+      if (dist(px, py, g.x, g.y) < rad) {
+        g.hp -= dmg;
+        if (stun) g.isStunned = Math.max(g.isStunned || 0, stun);
+        hit = true;
+        break;
+      }
+    }
+  }
+  return hit;
+}
+
+// Triệu 1 lính đồng minh tại vị trí bất kỳ (chiêu summon của necromancer/creator)
+function summonAllyMinionAt(x, y, brute) {
+  const t = state.tower;
+  if (!t || t.allyMinions.length >= TOWER.MAX_MINIONS_PER_SIDE) return;
+  const sc = minionScale(t.wave);
+  t.allyMinions.push({
+    x, y, laneOff: y - TOWER.LANE_Y,
+    radius: brute ? 16 : 11,
+    hp: Math.round((brute ? 16 : 5) * sc),
+    maxHp: Math.round((brute ? 16 : 5) * sc),
+    speed: brute ? 1.15 : 1.6,
+    atkCd: 0,
+    minionDmg: brute ? 2 : 1,
+    brute,
+  });
+}
+
+// Chiêu riêng theo vai / chữ ký — trả true nếu đã kích hoạt (để reset cooldown)
 function castHeroSpecial(h, enemyMinions, t, player) {
+  const pow = h.specialPow || 1; // hệ số uy lực chiêu theo độ hiếm
+
+  // ===== CHIÊU CHỮ KÝ (mythical) — kiểm tra trước chiêu-theo-vai =====
+  if (h.special === "gale") {
+    // Lướt xuyên tới cụm địch xa nhất trong tầm, chém MỌI địch trên đường
+    let target = null, far = 0;
+    for (const g of enemyMinions) {
+      if ((g.hp || 0) <= 0) continue;
+      const d = dist(h.x, h.y, g.x, g.y);
+      if (d < 480 && d > far) { far = d; target = g; }
+    }
+    if (!target) return false;
+    const a = Math.atan2(target.y - h.y, target.x - h.x);
+    const reach = Math.min(far, 260);
+    const nx = h.x + Math.cos(a) * reach;
+    const ny = h.y + Math.sin(a) * reach;
+    const hit = damageAlongLine(h.x, h.y, nx, ny, 70, 3 * pow, 22, enemyMinions);
+    h.x = nx; h.y = ny;
+    constrainToTowerArena(h, h.radius);
+    state.explosions.push({ x: h.x, y: h.y, radius: 80 * pow, life: 16, color: "rgba(120,255,220,0.4)" });
+    return hit;
+  }
+
+  if (h.special === "firenova") {
+    // Nova lửa cực lớn: sát thương cao + đẩy lùi + rung màn
+    let hit = false;
+    const rad = 220 * pow;
+    for (const g of enemyMinions) {
+      if ((g.hp || 0) <= 0) continue;
+      const d = dist(h.x, h.y, g.x, g.y);
+      if (d < rad) {
+        g.hp -= 4 * pow;
+        g.isStunned = Math.max(g.isStunned || 0, 25);
+        const a = Math.atan2(g.y - h.y, g.x - h.x);
+        g.x += Math.cos(a) * 45;
+        g.y += Math.sin(a) * 45;
+        hit = true;
+      }
+    }
+    if (hit) {
+      state.screenShake = { x: 0, y: 0, timer: 12, intensity: 7 };
+      state.explosions.push({ x: h.x, y: h.y, radius: rad, life: 24, color: "rgba(255,120,30,0.4)" });
+    }
+    return hit;
+  }
+
+  if (h.special === "summon") {
+    // Triệu 3 lính bảo vệ quanh mình
+    for (let i = 0; i < 3; i++) {
+      summonAllyMinionAt(h.x + (Math.random() - 0.5) * 60, h.y + (i - 1) * 30, i === 1);
+    }
+    state.explosions.push({ x: h.x, y: h.y, radius: 90, life: 22, color: "rgba(150,80,255,0.4)" });
+    return true;
+  }
+
+  if (h.special === "paint") {
+    // Ném màu vào cụm địch gần nhất → nổ diện rộng tại đó + choáng
+    let target = null, bestD = 360;
+    for (const g of enemyMinions) {
+      if ((g.hp || 0) <= 0) continue;
+      const d = dist(h.x, h.y, g.x, g.y);
+      if (d < bestD) { bestD = d; target = g; }
+    }
+    if (!target) return false;
+    const rad = 130 * pow;
+    let hit = false;
+    for (const g of enemyMinions) {
+      if ((g.hp || 0) <= 0) continue;
+      if (dist(target.x, target.y, g.x, g.y) < rad) {
+        g.hp -= 3.5 * pow;
+        g.isStunned = Math.max(g.isStunned || 0, 30);
+        hit = true;
+      }
+    }
+    state.explosions.push({ x: target.x, y: target.y, radius: rad, life: 22, color: "rgba(255,80,200,0.4)" });
+    return hit;
+  }
+
+  if (h.special === "rift") {
+    // Laser xuyên tuyến về phía cụm địch xa nhất — sát thương mọi địch trên đường
+    let target = null, far = 0;
+    for (const g of enemyMinions) {
+      if ((g.hp || 0) <= 0) continue;
+      const d = dist(h.x, h.y, g.x, g.y);
+      if (d < 620 && d > far) { far = d; target = g; }
+    }
+    if (!target) return false;
+    const a = Math.atan2(target.y - h.y, target.x - h.x);
+    const ex = h.x + Math.cos(a) * 620;
+    const ey = h.y + Math.sin(a) * 620;
+    const hit = damageAlongLine(h.x, h.y, ex, ey, 55, 5 * pow, 12, enemyMinions);
+    state.explosions.push({ x: target.x, y: target.y, radius: 70 * pow, life: 18, color: "rgba(255,60,60,0.42)" });
+    return hit;
+  }
+
+  if (h.special === "bless") {
+    // Hồi máu mạnh toàn đội + triệu 1 vệ binh
+    const allies = [...t.allyHeroes, ...t.allyMinions, player];
+    let did = false;
+    for (const a of allies) {
+      if (!a || a === h) continue;
+      if ((a.respawnTimer || 0) > 0) continue;
+      if (a.hp < (a.maxHp || 0)) {
+        a.hp = Math.min(a.maxHp, a.hp + Math.max(3, Math.round(a.maxHp * 0.28)));
+        did = true;
+      }
+    }
+    summonAllyMinionAt(h.x + 20, h.y, true);
+    if (player === state.player) updateHealthUI();
+    state.explosions.push({ x: h.x, y: h.y, radius: 260, life: 22, color: "rgba(255,240,150,0.32)" });
+    return true;
+  }
+
+  if (h.special === "eleburst") {
+    // Bùng nổ nguyên tố ngẫu nhiên: nova sát thương + choáng lâu, màu ngẫu nhiên
+    const cols = ["rgba(255,80,40,0.4)", "rgba(80,180,255,0.4)", "rgba(120,255,120,0.4)", "rgba(220,120,255,0.4)", "rgba(255,220,80,0.4)"];
+    const col = cols[Math.floor(Math.random() * cols.length)];
+    const rad = 175 * pow;
+    let hit = false;
+    for (const g of enemyMinions) {
+      if ((g.hp || 0) <= 0) continue;
+      if (dist(h.x, h.y, g.x, g.y) < rad) {
+        g.hp -= 3.5 * pow;
+        g.isStunned = Math.max(g.isStunned || 0, 45);
+        hit = true;
+      }
+    }
+    if (hit) state.explosions.push({ x: h.x, y: h.y, radius: rad, life: 22, color: col });
+    return hit;
+  }
+
+  // ===== CHIÊU THEO VAI (mặc định) =====
   if (h.special === "heal") {
     // Hồi máu đồng đội quanh mình (hero + lính ta + player) nếu có ai thương
     const allies = [...t.allyHeroes, ...t.allyMinions, player];
     let healed = false;
+    const healRad = 260 * pow;
+    const healPct = 0.18 * pow;
     for (const a of allies) {
       if (!a || a === h) continue;
       if ((a.respawnTimer || 0) > 0) continue;
-      if (a.hp < (a.maxHp || 0) && dist(h.x, h.y, a.x, a.y) < 260) {
-        a.hp = Math.min(a.maxHp, a.hp + Math.max(2, Math.round(a.maxHp * 0.18)));
+      if (a.hp < (a.maxHp || 0) && dist(h.x, h.y, a.x, a.y) < healRad) {
+        a.hp = Math.min(a.maxHp, a.hp + Math.max(2, Math.round(a.maxHp * healPct)));
         healed = true;
       }
     }
     if (healed) {
       if (player === state.player) updateHealthUI();
-      state.explosions.push({ x: h.x, y: h.y, radius: 260, life: 20, color: "rgba(0,255,150,0.28)" });
+      state.explosions.push({ x: h.x, y: h.y, radius: healRad, life: 20, color: "rgba(0,255,150,0.28)" });
     }
     return healed;
   }
@@ -404,11 +640,12 @@ function castHeroSpecial(h, enemyMinions, t, player) {
   if (h.special === "smash") {
     // Giẫm đất: đẩy lùi + choáng + sát thương lính địch quanh mình
     let hit = false;
+    const rad = 120 * pow;
     for (const g of enemyMinions) {
       if ((g.hp || 0) <= 0) continue;
       const d = dist(h.x, h.y, g.x, g.y);
-      if (d < 120) {
-        g.hp -= 2;
+      if (d < rad) {
+        g.hp -= 2 * pow;
         g.isStunned = Math.max(g.isStunned || 0, 40);
         const a = Math.atan2(g.y - h.y, g.x - h.x);
         g.x += Math.cos(a) * 60;
@@ -418,7 +655,7 @@ function castHeroSpecial(h, enemyMinions, t, player) {
     }
     if (hit) {
       state.screenShake = { x: 0, y: 0, timer: 10, intensity: 6 };
-      state.explosions.push({ x: h.x, y: h.y, radius: 120, life: 22, color: "rgba(255,200,80,0.35)" });
+      state.explosions.push({ x: h.x, y: h.y, radius: rad, life: 22, color: "rgba(255,200,80,0.35)" });
     }
     return hit;
   }
@@ -436,28 +673,30 @@ function castHeroSpecial(h, enemyMinions, t, player) {
     h.x += Math.cos(a) * Math.min(bestD - 20, 200);
     h.y += Math.sin(a) * Math.min(bestD - 20, 200);
     constrainToTowerArena(h, h.radius);
+    const rad = 90 * pow;
     for (const g of enemyMinions) {
       if ((g.hp || 0) <= 0) continue;
-      if (dist(h.x, h.y, g.x, g.y) < 90) {
-        g.hp -= 3;
+      if (dist(h.x, h.y, g.x, g.y) < rad) {
+        g.hp -= 3 * pow;
         g.isStunned = Math.max(g.isStunned || 0, 20);
       }
     }
-    state.explosions.push({ x: h.x, y: h.y, radius: 90, life: 18, color: "rgba(0,255,204,0.4)" });
+    state.explosions.push({ x: h.x, y: h.y, radius: rad, life: 18, color: "rgba(0,255,204,0.4)" });
     return true;
   }
 
   // nova: vòng sát thương diện quanh mình
   let hit = false;
+  const rad = 150 * pow;
   for (const g of enemyMinions) {
     if ((g.hp || 0) <= 0) continue;
-    if (dist(h.x, h.y, g.x, g.y) < 150) {
-      g.hp -= 2.5;
+    if (dist(h.x, h.y, g.x, g.y) < rad) {
+      g.hp -= 2.5 * pow;
       g.isStunned = Math.max(g.isStunned || 0, 15);
       hit = true;
     }
   }
-  if (hit) state.explosions.push({ x: h.x, y: h.y, radius: 150, life: 20, color: `rgba(184,112,255,0.32)` });
+  if (hit) state.explosions.push({ x: h.x, y: h.y, radius: rad, life: 20, color: `rgba(184,112,255,0.32)` });
   return hit;
 }
 
@@ -948,9 +1187,23 @@ function updateAllyHeroes(t, enemyMinions, enemyObj, player) {
       continue;
     }
     if (h.hp <= 0) {
-      smallExplosion(h.x, h.y, "rgba(0,255,204,0.7)", 40);
-      h.respawnTimer = TOWER.HERO_RESPAWN_S * FPS;
-      continue;
+      // Mythical: HỒI SINH tức thì tại chỗ 1 lần/trận thay vì chờ respawn về nhà
+      if (h.reviveOnce && !h.usedRevive) {
+        h.usedRevive = true;
+        h.hp = Math.round(h.maxHp * 0.6);
+        h.specialCd = h.specialMax;
+        smallExplosion(h.x, h.y, "rgba(255,0,136,0.85)", 60);
+        state.explosions.push({ x: h.x, y: h.y, radius: 140, life: 26, color: "rgba(255,0,136,0.4)" });
+        state.screenShake = { x: 0, y: 0, timer: 12, intensity: 7 };
+      } else {
+        smallExplosion(h.x, h.y, "rgba(0,255,204,0.7)", 40);
+        h.respawnTimer = TOWER.HERO_RESPAWN_S * FPS;
+        continue;
+      }
+    }
+    // Legendary/Mythical: tự hồi máu mỗi frame khi còn sống (đặc quyền độ hiếm)
+    if (h.regenPerFrame && h.hp < h.maxHp) {
+      h.hp = Math.min(h.maxHp, h.hp + h.regenPerFrame);
     }
     if (h.fireCd > 0) h.fireCd--;
 
@@ -970,9 +1223,13 @@ function updateAllyHeroes(t, enemyMinions, enemyObj, player) {
     // CHIÊU riêng — kích khi sẵn sàng: heal luôn được thử (tự lọc đồng đội thương),
     // các vai công cần có địch gần thì mới xả.
     if (h.specialCd <= 0) {
-      const enemyNear =
-        !!target && bestD < (h.special === "smash" ? 130 : 200);
-      if (h.special === "heal" || enemyNear) {
+      // Proactive = heal + chiêu chữ ký summon/bless: xả cả khi chưa có địch gần
+      const proactive = h.special === "heal" || h.signatureProactive;
+      let reach = 200;
+      if (h.special === "smash") reach = 130;
+      else if (["gale", "rift", "firenova", "paint", "eleburst"].includes(h.special)) reach = 280;
+      const enemyNear = !!target && bestD < reach;
+      if (proactive || enemyNear) {
         if (castHeroSpecial(h, enemyMinions, t, player)) h.specialCd = h.specialMax;
       }
     }
@@ -1440,14 +1697,23 @@ function renderTowerHeroPicker() {
     const color = RARITY_COLORS[ch.rarity] || "#aaa";
     const order = picks.indexOf(id);
     const sel = order >= 0;
+    const info = getTowerRoleInfo(ch);
     const card = document.createElement("div");
     card.style.cssText =
-      `min-width:92px; padding:8px 10px; border-radius:8px; cursor:pointer; text-align:center; position:relative;` +
+      `min-width:100px; padding:8px 10px; border-radius:8px; cursor:pointer; text-align:center; position:relative;` +
       `border:2px solid ${sel ? color : "rgba(255,255,255,0.12)"};` +
       `background:${sel ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.35)"};`;
+    // Tooltip hover: vai + chiêu (+ mô tả chiêu độc) + đặc quyền độ hiếm
+    card.title =
+      `${info.icon} ${info.roleLabel} — Chiêu: ${info.specialLabel}` +
+      (info.signatureDesc ? `\n✦ ${info.signatureDesc}` : "") +
+      (info.perk ? `\n★ ${info.tier}: ${info.perk}` : "");
     card.innerHTML =
       `<div style="font-weight:bold; color:${color}; font-size:13px;">${ch.name}</div>` +
-      `<div style="font-size:10px; color:#8899aa;">${ch.rarity}</div>` +
+      `<div style="font-size:11px; color:#cbd5e1; margin-top:2px;">${info.icon} ${info.roleLabel}</div>` +
+      (info.tier
+        ? `<div style="font-size:9px; color:${color}; font-weight:bold;">★ ${info.tier}</div>`
+        : `<div style="font-size:10px; color:#8899aa;">${ch.rarity}</div>`) +
       (sel
         ? `<div style="position:absolute; top:-8px; right:-8px; width:20px; height:20px; border-radius:50%; background:${color}; color:#111; font-weight:bold; font-size:12px; line-height:20px;">${order + 1}</div>`
         : "");
