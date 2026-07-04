@@ -614,10 +614,10 @@ export function drawTutorialOverlay(ctx, canvas) {
   const tutorial = state.tutorial;
   const steps = getTutorialSteps(tutorial);
   const current = getActiveTutorialStep(tutorial);
-  const panelW = 328;
+  const panelW = 360;
   const panelH = 252;
-  const panelX = canvas.width - panelW - 20;
-  const panelY = 82;
+  const panelX = 20;
+  const panelY = 110;
   const pulse = tutorial.stepPulse > 0 ? tutorial.stepPulse / 36 : 0;
 
   ctx.save();
@@ -676,10 +676,10 @@ export function drawTutorialOverlay(ctx, canvas) {
     y += 38;
   });
 
-  const tipW = 620;
+  const tipW = 560;
   const tipH = 48;
-  const tipX = (canvas.width - tipW) / 2;
-  const tipY = canvas.height - 126;
+  const tipX = 20;
+  const tipY = canvas.height - 118;
   const hintText = state.boss
     ? "Boss do se canh bao bang vung do. Dash de thoat telegraph, giu chuot trai de duy tri sat thuong."
     : current?.detail || "Lam theo checklist de mo boss tutorial.";
