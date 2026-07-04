@@ -2,6 +2,7 @@ import { state } from "../state.js";
 import { GHOST_DATA_KEY } from "../config.js";
 import { CHARACTERS } from "./data.js";
 import { saveGame, saveGameToServer } from "../utils.js";
+import { getTowerRoleInfo } from "../game/towerMode.js";
 
 // ==========================================
 // 🎨 INJECT CSS CHO GIAO DIỆN ĐỈNH CAO
@@ -213,6 +214,23 @@ export function renderCharacterSelect() {
     let titleClass = char.rarity === "mythical" ? "text-rainbow" : "";
     let titleStyle = char.rarity === "mythical" ? "" : `color: ${rColor};`;
 
+    // Vai trò trong chế độ Công Thành + đặc quyền độ hiếm (nếu có)
+    let rInfo = getTowerRoleInfo(char);
+    let roleBadge =
+      `<div title="${rInfo.perk || "Vai trò khi làm đồng minh trong Công Thành"}" ` +
+      `style="width:100%; margin-bottom:8px; padding:5px 6px; border-radius:6px; font-size:11px; ` +
+      `background:rgba(0,0,0,0.4); border:1px solid ${rInfo.color}55; text-align:center;">` +
+      `<span style="color:#8899aa;">Công Thành:</span> ` +
+      `<b style="color:${rInfo.color};">${rInfo.icon} ${rInfo.roleLabel}</b> ` +
+      `<span style="color:#778;">· ${rInfo.specialLabel}</span>` +
+      (rInfo.signatureDesc
+        ? `<div style="margin-top:3px; color:#cbd5e1; font-size:10px;">✦ <b style="color:${rInfo.color};">${rInfo.signature}</b>: ${rInfo.signatureDesc}</div>`
+        : "") +
+      (rInfo.perk
+        ? `<div style="margin-top:3px; color:${rInfo.color}; font-size:10px; font-weight:bold;">★ ${rInfo.tier}: ${rInfo.perk}</div>`
+        : "") +
+      `</div>`;
+
     card.innerHTML = `
       <div class="shimmer"></div>
       <h3 class="${titleClass}" style="${titleStyle} text-align: center; margin-top: 0;">
@@ -220,7 +238,7 @@ export function renderCharacterSelect() {
         <span style="font-size: 11px; letter-spacing: 1px;">(${rLabel})</span>
       </h3>
       ${selected ? "<div style='color:#ffd700; font-size:12px; font-weight:bold; margin-bottom:5px; text-shadow: 0 0 5px #ffd700;'>🌟 ĐANG CHỌN 🌟</div>" : ""}
-      
+      ${roleBadge}
       <div style="width: 100%; background: rgba(0,0,0,0.5); padding: 8px; border-radius: 6px; margin-bottom: 10px; font-size: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
         <span style="color:#ffaa00; font-weight:bold;">HP:</span> ${actualHp} | 
         <span style="color:#00ffcc; font-weight:bold;">CD:</span> ${cdrPercent}%<br>
