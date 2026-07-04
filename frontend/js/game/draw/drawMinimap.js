@@ -3,6 +3,9 @@ import { getPuzzleMinimapMarkers } from "../puzzle_manager.js";
 import { drawDungeonMinimap } from "../../world/dungeonLayout.js";
 
 export function drawMinimap(ctx, canvas) {
+  // Tutorial dùng panel hướng dẫn lớn ở góc phải trên, nên ẩn minimap để tránh đè UI.
+  if (state.gameMode === "tutorial") return;
+
   const mmSize = 220;
   const padding = 20;
   const mmX = canvas.width - mmSize - padding;
